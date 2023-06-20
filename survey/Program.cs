@@ -1,7 +1,12 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 
 namespace IntelOrca.Biohazard.Survey
 {
@@ -24,7 +29,7 @@ namespace IntelOrca.Biohazard.Survey
             {
                 ReadCommentHandling = JsonCommentHandling.Skip,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            })!;
+            });
         }
 
         private static void SaveJSON()
@@ -84,12 +89,12 @@ namespace IntelOrca.Biohazard.Survey
                 {
                     if (i == j)
                         continue;
-            
+
                     var b = _enemyPositions[j];
                     var dist = a.DistanceTo(b);
                     if (dist == int.MaxValue)
                         continue;
-            
+
                     if (dist < closestOtherEnemyDistance)
                         closestOtherEnemyDistance = dist;
                 }
@@ -99,7 +104,7 @@ namespace IntelOrca.Biohazard.Survey
             }
         }
 
-        private static void Console_CancelKeyPress(object? sender, ConsoleCancelEventArgs e)
+        private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
         {
             _exit = true;
         }
@@ -261,12 +266,12 @@ namespace IntelOrca.Biohazard.Survey
 
             public string RtdId => $"{Stage + 1:X}{Room:X2}";
 
-            public override bool Equals(object? obj)
+            public override bool Equals(object obj)
             {
                 return Equals(obj as GameState);
             }
 
-            public bool Equals(GameState? other)
+            public bool Equals(GameState other)
             {
                 return other is GameState state &&
                        Key == state.Key &&
@@ -283,31 +288,42 @@ namespace IntelOrca.Biohazard.Survey
 
             public override int GetHashCode()
             {
-                HashCode hash = new HashCode();
-                hash.Add(Key);
-                hash.Add(Stage);
-                hash.Add(Room);
-                hash.Add(Cut);
-                hash.Add(LastCut);
-                hash.Add(X);
-                hash.Add(Y);
-                hash.Add(Z);
-                hash.Add(D);
-                hash.Add(Floor);
-                return hash.ToHashCode();
+                int hashCode = 1576073333;
+                hashCode = hashCode * -1521134295 + Key.GetHashCode();
+                hashCode = hashCode * -1521134295 + Stage.GetHashCode();
+                hashCode = hashCode * -1521134295 + Room.GetHashCode();
+                hashCode = hashCode * -1521134295 + Cut.GetHashCode();
+                hashCode = hashCode * -1521134295 + LastCut.GetHashCode();
+                hashCode = hashCode * -1521134295 + X.GetHashCode();
+                hashCode = hashCode * -1521134295 + Y.GetHashCode();
+                hashCode = hashCode * -1521134295 + Z.GetHashCode();
+                hashCode = hashCode * -1521134295 + D.GetHashCode();
+                hashCode = hashCode * -1521134295 + Floor.GetHashCode();
+                hashCode = hashCode * -1521134295 + RtdId.GetHashCode();
+                return hashCode;
+            }
+
+            public static bool operator ==(GameState left, GameState right)
+            {
+                return EqualityComparer<GameState>.Default.Equals(left, right);
+            }
+
+            public static bool operator !=(GameState left, GameState right)
+            {
+                return !(left == right);
             }
         }
 
         public struct EnemyPosition : IEquatable<EnemyPosition>
         {
-            public string? Room { get; set; }
+            public string Room { get; set; }
             public int X { get; set; }
             public int Y { get; set; }
             public int Z { get; set; }
             public int D { get; set; }
             public int F { get; set; }
 
-            public override bool Equals(object? obj)
+            public override bool Equals(object obj)
             {
                 return obj is EnemyPosition pos ? Equals(pos) : false;
             }
@@ -325,10 +341,17 @@ namespace IntelOrca.Biohazard.Survey
 
             public override int GetHashCode()
             {
-                return HashCode.Combine(Room, X, Y, Z, D, F);
+                int hashCode = 1967392198;
+                hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(Room);
+                hashCode = hashCode * -1521134295 + X.GetHashCode();
+                hashCode = hashCode * -1521134295 + Y.GetHashCode();
+                hashCode = hashCode * -1521134295 + Z.GetHashCode();
+                hashCode = hashCode * -1521134295 + D.GetHashCode();
+                hashCode = hashCode * -1521134295 + F.GetHashCode();
+                return hashCode;
             }
 
-            public int DistanceTo(string? room, int x, int y, int z)
+            public int DistanceTo(string room, int x, int y, int z)
             {
                 if (Room != room)
                     return int.MaxValue;
@@ -350,6 +373,16 @@ namespace IntelOrca.Biohazard.Survey
             public override string ToString()
             {
                 return $"{Room}: {X}, {Y}, {Z}, {D}, {F}";
+            }
+
+            public static bool operator ==(EnemyPosition left, EnemyPosition right)
+            {
+                return left.Equals(right);
+            }
+
+            public static bool operator !=(EnemyPosition left, EnemyPosition right)
+            {
+                return !(left == right);
             }
         }
     }

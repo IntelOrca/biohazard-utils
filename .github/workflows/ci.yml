@@ -1,0 +1,42 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  build:
+    name: Build
+    runs-on: windows-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+    - name: Restore
+      run: dotnet restore
+    - name: Build
+      shell: cmd
+      run: |
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+        msbuild biohazard-utils.sln /t:build /p:Configuration=Release
+    - name: Publish
+      shell: cmd
+      run: |
+        dotnet publish -c Release --no-build -o out emd
+        dotnet publish -c Release --no-build -o out emdui
+        dotnet publish -c Release --no-build -o out sap
+        dotnet publish -c Release --no-build -o out scd
+        dotnet publish -c Release --no-build -o out survey
+        copy ${{ github.workspace }}/README.md out
+        copy ${{ github.workspace }}/CHANGELOG.md out
+        copy ${{ github.workspace }}/LICENSE out
+        del out\*.pdb
+        cd out
+        7z -r a ${{ github.workspace }}/biohazard-utils.zip *.exe *.dll *.config README.md CHANGELOG.md LICENSE
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: biohazard-utils
+        path: out/**/*
+    - name: Create release
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/v')
+      with:
+        fail_on_unmatched_files: true
+        files: |
+          biohazard-utils.zip

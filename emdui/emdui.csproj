@@ -1,8 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net472</TargetFramework>
     <UseWPF>true</UseWPF>
+    <Product>Resident Evil Model Editor</Product>
+    <IsTool>true</IsTool>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\IntelOrca.Biohazard\IntelOrca.Biohazard.csproj" />

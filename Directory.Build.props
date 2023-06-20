@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <Copyright>Copyright (C) Ted John 2022-2023</Copyright>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+</Project>

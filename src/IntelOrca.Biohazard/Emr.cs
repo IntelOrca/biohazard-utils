@@ -18,7 +18,7 @@ namespace IntelOrca.Biohazard
 
         public ushort ArmatureOffset => BitConverter.ToUInt16(_data, 0);
         public ushort KeyFrameOffset => BitConverter.ToUInt16(_data, 2);
-        public ushort NumParts => BitConverter.ToUInt16(_data, 4);
+        public ushort NumParts => _data.Length >= 6 ? BitConverter.ToUInt16(_data, 4) : (ushort)0;
         public ushort KeyFrameSize => BitConverter.ToUInt16(_data, 6);
 
         public Vector GetRelativePosition(int partIndex)

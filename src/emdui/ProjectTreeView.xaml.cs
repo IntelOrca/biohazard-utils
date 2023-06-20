@@ -213,8 +213,8 @@ namespace emdui
             Items.Add(new EmrTreeViewItem(ProjectFile, Emd.GetEmr(0), 0));
             Items.Add(new EddTreeViewItem(ProjectFile, Emd.GetEdd(1), 1));
             Items.Add(new EmrTreeViewItem(ProjectFile, Emd.GetEmr(1), 1));
-            // Items.Add(new EddTreeViewItem(ProjectFile, Emd.GetEdd(2), 2));
-            // Items.Add(new EmrTreeViewItem(ProjectFile, Emd.GetEmr(2), 2));
+            Items.Add(new EddTreeViewItem(ProjectFile, Emd.GetEdd(2), 2));
+            Items.Add(new EmrTreeViewItem(ProjectFile, Emd.GetEmr(2), 2));
             if (Emd.Version == BioVersion.Biohazard2)
                 Items.Add(new MeshTreeViewItem(ProjectFile, Emd.Md1));
             else
@@ -483,6 +483,8 @@ namespace emdui
             AddMenuItem("Import...", Import);
             AddMenuItem("Export...", Export);
             AddSeperator();
+            AddMenuItem("Open in Blender...", OpenInBlender);
+            AddSeperator();
             AddMenuItem("Add part", AddPart);
             if (Model is EmdFile && mesh.Version == BioVersion.Biohazard3)
             {
@@ -631,24 +633,43 @@ namespace emdui
                 {
                     if (path.EndsWith(".obj", StringComparison.OrdinalIgnoreCase))
                     {
-                        var project = MainWindow.Instance.Project;
-                        var tim = project.MainTexture;
-                        var emr = Model.GetEmr(0);
-                        if (Mesh is Md1 md1)
-                        {
-                            var numPages = tim.Width / 128;
-                            var objExporter = new ObjExporter();
-                            objExporter.Export(Model.Md1, path, numPages, emr.GetFinalPosition);
-
-                            var texturePath = Path.ChangeExtension(path, ".png");
-                            tim.ToBitmap().Save(texturePath);
-                        }
+                        ExportToObj(path);
                     }
                     else
                     {
                         File.WriteAllBytes(path, Mesh.GetBytes());
                     }
                 });
+        }
+
+        private void ExportToObj(string path)
+        {
+            var project = MainWindow.Instance.Project;
+            var tim = project.MainTexture;
+            var emr = Model.GetEmr(0);
+            if (Mesh is Md1 md1)
+            {
+                var numPages = tim.Width / 128;
+                var objExporter = new ObjExporter();
+                objExporter.Export(Model.Md1, path, numPages, emr.GetFinalPosition);
+
+                var texturePath = Path.ChangeExtension(path, ".png");
+                tim.ToBitmap().Save(texturePath);
+            }
+        }
+
+        private void OpenInBlender()
+        {
+            using (var blenderSupport = new BlenderSupport())
+            {
+                ExportToObj(blenderSupport.ImportedObjectPath);
+                if (blenderSupport.EditInBlender())
+                {
+                    ImportFromObj(blenderSupport.ExportedObjectPath);
+                    CreateChildren();
+                    MainWindow.Instance.LoadModel(Model, MainWindow.Instance.Project.MainTexture);
+                }
+            }
         }
 
         private void AddPart()
@@ -709,6 +730,8 @@ namespace emdui
 
             AddMenuItem("Import...", Import);
             AddMenuItem("Export...", Export);
+            AddSeperator();
+            AddMenuItem("Open in Blender...", OpenInBlender);
         }
 
         public override void OnSelect()
@@ -796,27 +819,11 @@ namespace emdui
                 .AddExtension(ExtensionPattern)
                 .Show(path =>
                 {
-                    if (Model.Version == BioVersion.Biohazard2)
-                    {
-                        var srcBuilder = new Md1(File.ReadAllBytes(path)).ToBuilder();
-                        if (srcBuilder.Parts.Count > 0)
-                        {
-                            var builder = Model.Md1.ToBuilder();
-                            builder.Parts[PartIndex] = srcBuilder.Parts[0];
-                            Model.Md1 = builder.ToMd1();
-                        }
-                    }
-                    else
-                    {
-                        var srcBuilder = new Md2(File.ReadAllBytes(path)).ToBuilder();
-                        if (srcBuilder.Parts.Count > 0)
-                        {
-                            var builder = Model.Md2.ToBuilder();
-                            builder.Parts[PartIndex] = srcBuilder.Parts[0];
-                            Model.Md2 = builder.ToMd2();
-                        }
-                    }
-                    MainWindow.Instance.LoadModel(Model, MainWindow.Instance.Project.MainTexture);
+                    var data = File.ReadAllBytes(path);
+                    var mesh = Model.Version == BioVersion.Biohazard2 ?
+                        (IModelMesh)new Md1(data) :
+                        (IModelMesh)new Md2(data);
+                    ImportMesh(mesh);
                 });
         }
 
@@ -831,23 +838,93 @@ namespace emdui
                 .AddExtension(ExtensionPattern)
                 .Show(path =>
                 {
-                    if (Model.Version == BioVersion.Biohazard2)
-                    {
-                        var builder = Model.Md1.ToBuilder();
-                        var interestedPart = builder.Parts[PartIndex];
-                        builder.Parts.Clear();
-                        builder.Parts.Add(interestedPart);
-                        File.WriteAllBytes(path, builder.ToMd1().GetBytes());
-                    }
-                    else
-                    {
-                        var builder = Model.Md2.ToBuilder();
-                        var interestedPart = builder.Parts[PartIndex];
-                        builder.Parts.Clear();
-                        builder.Parts.Add(interestedPart);
-                        File.WriteAllBytes(path, builder.ToMd2().GetBytes());
-                    }
+                    File.WriteAllBytes(path, ExportMesh().GetBytes());
                 });
+        }
+
+        private void ImportMesh(IModelMesh mesh)
+        {
+            if (mesh is Md1 md1)
+            {
+                var srcBuilder = md1.ToBuilder();
+                if (srcBuilder.Parts.Count > 0)
+                {
+                    var builder = Model.Md1.ToBuilder();
+                    builder.Parts[PartIndex] = srcBuilder.Parts[0];
+                    Model.Md1 = builder.ToMd1();
+                }
+            }
+            else if (mesh is Md2 md2)
+            {
+                var srcBuilder = md2.ToBuilder();
+                if (srcBuilder.Parts.Count > 0)
+                {
+                    var builder = Model.Md2.ToBuilder();
+                    builder.Parts[PartIndex] = srcBuilder.Parts[0];
+                    Model.Md2 = builder.ToMd2();
+                }
+            }
+            MainWindow.Instance.LoadModel(Model, MainWindow.Instance.Project.MainTexture);
+        }
+
+        private IModelMesh ExportMesh()
+        {
+            if (Model.Version == BioVersion.Biohazard2)
+            {
+                var builder = Model.Md1.ToBuilder();
+                var interestedPart = builder.Parts[PartIndex];
+                builder.Parts.Clear();
+                builder.Parts.Add(interestedPart);
+                return builder.ToMd1();
+            }
+            else
+            {
+                var builder = Model.Md2.ToBuilder();
+                var interestedPart = builder.Parts[PartIndex];
+                builder.Parts.Clear();
+                builder.Parts.Add(interestedPart);
+                return builder.ToMd2();
+            }
+        }
+
+        private void ImportFromObj(string path)
+        {
+            var project = MainWindow.Instance.Project;
+            var tim = project.MainTexture;
+            var numPages = tim.Width / 128;
+            var objImporter = new ObjImporter();
+
+            var mesh = objImporter.ImportMd1(path, numPages);
+            ImportMesh(mesh);
+        }
+
+        private void ExportToObj(string path)
+        {
+            var project = MainWindow.Instance.Project;
+            var tim = project.MainTexture;
+            var mesh = ExportMesh();
+            if (mesh is Md1 md1)
+            {
+                var numPages = tim.Width / 128;
+                var objExporter = new ObjExporter();
+                objExporter.Export(md1, path, numPages);
+
+                var texturePath = Path.ChangeExtension(path, ".png");
+                tim.ToBitmap().Save(texturePath);
+            }
+        }
+
+        private void OpenInBlender()
+        {
+            using (var blenderSupport = new BlenderSupport())
+            {
+                ExportToObj(blenderSupport.ImportedObjectPath);
+                if (blenderSupport.EditInBlender())
+                {
+                    ImportFromObj(blenderSupport.ExportedObjectPath);
+                    MainWindow.Instance.LoadModel(Model, MainWindow.Instance.Project.MainTexture);
+                }
+            }
         }
     }
 

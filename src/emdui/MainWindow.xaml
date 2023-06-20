@@ -7,11 +7,46 @@
         mc:Ignorable="d"
         Title="emdui" Height="720" Width="1280"
         Loaded="mainWindow_Loaded">
+    <Window.Resources>
+        <RoutedUICommand x:Key="OpenCommand" Text="Open">
+            <RoutedUICommand.InputGestures>
+                <KeyGesture>CTRL+O</KeyGesture>
+            </RoutedUICommand.InputGestures>
+        </RoutedUICommand>
+        <RoutedUICommand x:Key="SaveCommand" Text="Save">
+            <RoutedUICommand.InputGestures>
+                <KeyGesture>CTRL+S</KeyGesture>
+            </RoutedUICommand.InputGestures>
+        </RoutedUICommand>
+        <RoutedUICommand x:Key="SaveAsCommand" Text="Save As" />
+        <RoutedUICommand x:Key="ExitCommand" Text="Exit">
+            <RoutedUICommand.InputGestures>
+                <KeyGesture>ALT+F4</KeyGesture>
+            </RoutedUICommand.InputGestures>
+        </RoutedUICommand>
+    </Window.Resources>
+    <Window.CommandBindings>
+        <CommandBinding Command="{StaticResource OpenCommand}" Executed="OpenCommandBinding_Executed" />
+        <CommandBinding Command="{StaticResource SaveCommand}" Executed="SaveCommandBinding_Executed" CanExecute="SaveCommandBinding_CanExecute" />
+        <CommandBinding Command="{StaticResource SaveAsCommand}" Executed="SaveAsCommandBinding_Executed" CanExecute="SaveCommandBinding_CanExecute" />
+        <CommandBinding Command="{StaticResource ExitCommand}" Executed="ExitCommandBinding_Executed" />
+    </Window.CommandBindings>
     <DockPanel>
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="File">
-                <MenuItem Header="Open" Click="menuOpen_Click" />
-                <MenuItem Header="Save" Click="menuSave_Click" />
+                <MenuItem Header="_Open" Command="{StaticResource OpenCommand}">
+                    <MenuItem.Icon>
+                        <Image Source="{StaticResource IconOpen}"></Image>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Save" Command="{StaticResource SaveCommand}">
+                    <MenuItem.Icon>
+                        <Image Source="{StaticResource IconSave}"></Image>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Save As..." Command="{StaticResource SaveAsCommand}" />
+                <Separator />
+                <MenuItem Header="_Exit" Command="{StaticResource ExitCommand}" />
             </MenuItem>
         </Menu>
         <StatusBar DockPanel.Dock="Bottom">

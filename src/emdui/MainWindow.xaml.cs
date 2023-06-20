@@ -24,6 +24,7 @@ namespace emdui
         private Md2 _md2;
         private Edd _edd;
         private Emr _emr;
+        private Emr _baseEmr;
         private TimFile _tim;
 
         private ModelScene _scene;
@@ -39,7 +40,6 @@ namespace emdui
         public MainWindow()
         {
             InitializeComponent();
-            Work();
             // viewport0.SetCameraOrthographic(new Vector3D(-1, 0, 0));
             viewport1.SetCameraOrthographic(new Vector3D(0, 0, 1));
             _timer = new DispatcherTimer(DispatcherPriority.Render);
@@ -90,10 +90,6 @@ namespace emdui
             _scene.SetKeyframe(emrKeyframeIndex);
 
             _time++;
-        }
-
-        private void Work()
-        {
         }
 
         private void SetTimFile(TimFile timFile)
@@ -301,41 +297,9 @@ namespace emdui
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re3\pld0\leon\PL00.PLD");
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\chris\PL00.PLD");
             // LoadProject(@"F:\games\re3\mod_biorand\DATA\PLD\PL00.PLD");
+            // LoadProject(@"F:\games\re2\data\Pl0\emd0\em041.emd");
             LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\emd\chris\em050.emd");
 #endif
-        }
-
-        private void menuOpen_Click(object sender, RoutedEventArgs e)
-        {
-            var openFileDialog = new OpenFileDialog();
-            openFileDialog.InitialDirectory = _project == null ? null : System.IO.Path.GetDirectoryName(_project.MainPath);
-            openFileDialog.Filter = "EMD/PLD Files (*.emd;*.pld)|*.emd;*.pld";
-            if (openFileDialog.ShowDialog() == true)
-            {
-                LoadProject(openFileDialog.FileName);
-            }
-        }
-
-        private void menuSave_Click(object sender, RoutedEventArgs e)
-        {
-            if (_project == null)
-                return;
-
-            var saveFileDialog = new SaveFileDialog();
-            saveFileDialog.InitialDirectory = System.IO.Path.GetDirectoryName(_project.MainPath);
-            if (_modelFile is PldFile)
-            {
-                saveFileDialog.Filter = "PLD Files (*.pld)|*.pld";
-            }
-            else
-            {
-                saveFileDialog.Filter = "EMD Files (*.emd)|*.emd";
-            }
-            saveFileDialog.FileName = _project.MainPath;
-            if (saveFileDialog.ShowDialog() == true)
-            {
-                SaveModel(saveFileDialog.FileName);
-            }
         }
 
         private void treeParts_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
@@ -459,7 +423,8 @@ namespace emdui
                 _md2 = model.Md2;
             _tim = texture;
             _edd = _modelFile.GetEdd(0);
-            _emr = _modelFile.GetEmr(0);
+            _baseEmr = _modelFile.GetEmr(0);
+            _emr = _baseEmr;
             _isolatedPartIndex = -1;
             _animationIndex = -1;
             _selectedPartIndex = -1;
@@ -470,7 +435,8 @@ namespace emdui
         public void LoadWeaponModel(PlwFile plw)
         {
             _edd = plw.GetEdd(0);
-            _emr = _emr.WithKeyframes(plw.GetEmr(0));
+            _baseEmr = _baseEmr.WithKeyframes(plw.GetEmr(0));
+            _emr = _baseEmr;
             _isolatedPartIndex = -1;
             _animationIndex = -1;
             _selectedPartIndex = -1;
@@ -496,17 +462,80 @@ namespace emdui
 
         public void LoadAnimation(Emr emr, Edd edd, int index)
         {
-            _emr = emr;
+            _emr = _baseEmr.WithKeyframes(emr);
             _edd = edd;
             _animationIndex = index;
             _time = 0;
             _selectedPartIndex = -1;
+            RefreshModelView();
         }
 
         public void SelectPart(int partIndex)
         {
             _selectedPartIndex = partIndex;
             RefreshHighlightedPart();
+        }
+
+        private void menuExit_Click(object sender, RoutedEventArgs e)
+        {
+            Application.Current.Shutdown();
+        }
+
+        private void OpenCommandBinding_Executed(object sender, System.Windows.Input.ExecutedRoutedEventArgs e)
+        {
+            var openFileDialog = new OpenFileDialog();
+            openFileDialog.InitialDirectory = _project == null ? null : System.IO.Path.GetDirectoryName(_project.MainPath);
+            openFileDialog.Filter = "EMD/PLD Files (*.emd;*.pld)|*.emd;*.pld";
+            if (openFileDialog.ShowDialog() == true)
+            {
+                LoadProject(openFileDialog.FileName);
+            }
+        }
+
+        private void SaveCommandBinding_Executed(object sender, System.Windows.Input.ExecutedRoutedEventArgs e)
+        {
+            if (_project == null)
+                return;
+
+            SaveModel(_project.MainPath);
+        }
+
+        private void SaveAsCommandBinding_Executed(object sender, System.Windows.Input.ExecutedRoutedEventArgs e)
+        {
+            if (_project == null)
+                return;
+
+            var saveFileDialog = new SaveFileDialog();
+            saveFileDialog.InitialDirectory = System.IO.Path.GetDirectoryName(_project.MainPath);
+            if (_modelFile is PldFile)
+            {
+                saveFileDialog.Filter = "PLD Files (*.pld)|*.pld";
+            }
+            else
+            {
+                saveFileDialog.Filter = "EMD Files (*.emd)|*.emd";
+            }
+            saveFileDialog.FileName = _project.MainPath;
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                SaveModel(saveFileDialog.FileName);
+            }
+        }
+
+        private void ExitCommandBinding_Executed(object sender, System.Windows.Input.ExecutedRoutedEventArgs e)
+        {
+            Application.Current.Shutdown();
+        }
+
+        private void CommandBinding_CanExecute(object sender, System.Windows.Input.CanExecuteRoutedEventArgs e)
+        {
+
+        }
+
+        private void SaveCommandBinding_CanExecute(object sender, System.Windows.Input.CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = _project != null;
+            e.Handled = true;
         }
     }
 }

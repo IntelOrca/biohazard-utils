@@ -298,7 +298,8 @@ namespace emdui
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\chris\PL00.PLD");
             // LoadProject(@"F:\games\re3\mod_biorand\DATA\PLD\PL00.PLD");
             // LoadProject(@"F:\games\re2\data\Pl0\emd0\em041.emd");
-            LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\emd\chris\em050.emd");
+            LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\chris\pl00.pld");
+            // ExportToBioRand(@"C:\Users\Ted\Desktop\ethan");
 #endif
         }
 
@@ -505,21 +506,11 @@ namespace emdui
             if (_project == null)
                 return;
 
-            var saveFileDialog = new SaveFileDialog();
-            saveFileDialog.InitialDirectory = System.IO.Path.GetDirectoryName(_project.MainPath);
-            if (_modelFile is PldFile)
-            {
-                saveFileDialog.Filter = "PLD Files (*.pld)|*.pld";
-            }
-            else
-            {
-                saveFileDialog.Filter = "EMD Files (*.emd)|*.emd";
-            }
-            saveFileDialog.FileName = _project.MainPath;
-            if (saveFileDialog.ShowDialog() == true)
-            {
-                SaveModel(saveFileDialog.FileName);
-            }
+            CommonFileDialog
+                .Save()
+                .AddExtension(_modelFile is PldFile ? "*.pld" : "*.emd")
+                .WithDefaultFileName(_project.MainPath)
+                .Show(SaveModel);
         }
 
         private void ExitCommandBinding_Executed(object sender, System.Windows.Input.ExecutedRoutedEventArgs e)
@@ -536,6 +527,14 @@ namespace emdui
         {
             e.CanExecute = _project != null;
             e.Handled = true;
+        }
+
+        private void ExportForBioRandCommandBinding_Executed(object sender, System.Windows.Input.ExecutedRoutedEventArgs e)
+        {
+            var exportToBioRandWindow = new ExportForBioRandWindow();
+            exportToBioRandWindow.Owner = this;
+            exportToBioRandWindow.Project = _project;
+            exportToBioRandWindow.ShowDialog();
         }
     }
 }

@@ -8,4 +8,12 @@
   <ItemGroup>
     <ProjectReference Include="..\IntelOrca.Biohazard\IntelOrca.Biohazard.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="WindowsAPICodePack-Shell" Version="1.1.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="template\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>

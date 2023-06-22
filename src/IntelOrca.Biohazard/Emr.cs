@@ -133,6 +133,19 @@ namespace IntelOrca.Biohazard
             return builder;
         }
 
+        public Emr WithSkeleton(Emr emr)
+        {
+            var builder = ToBuilder();
+            for (var i = 0; i < builder.RelativePositions.Count; i++)
+            {
+                if (emr.NumParts > i)
+                {
+                    builder.RelativePositions[i] = emr.GetRelativePosition(i);
+                }
+            }
+            return builder.ToEmr();
+        }
+
         public Emr WithKeyframes(Emr emr)
         {
             var builder = ToBuilder();

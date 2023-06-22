@@ -732,6 +732,8 @@ namespace emdui
             AddMenuItem("Export...", Export);
             AddSeperator();
             AddMenuItem("Open in Blender...", OpenInBlender);
+            AddSeperator();
+            AddMenuItem("Clear", Clear);
         }
 
         public override void OnSelect()
@@ -925,6 +927,30 @@ namespace emdui
                     MainWindow.Instance.LoadModel(Model, MainWindow.Instance.Project.MainTexture);
                 }
             }
+        }
+
+        private void Clear()
+        {
+            IModelMesh mesh;
+            if (Model.Version == BioVersion.Biohazard2)
+            {
+                var part = new Md1Builder.Part();
+                part.Positions.Add(new Md1.Vector());
+                part.Normals.Add(new Md1.Vector());
+                part.Triangles.Add(new Md1.Triangle());
+                part.TriangleTextures.Add(new Md1.TriangleTexture());
+
+                var md1Builder = new Md1Builder();
+                md1Builder.Parts.Add(part);
+                mesh = md1Builder.ToMd1();
+            }
+            else
+            {
+                var md2Builder = new Md2Builder();
+                md2Builder.Parts.Add(new Md2Builder.Part());
+                mesh = md2Builder.ToMd2();
+            }
+            ImportMesh(mesh);
         }
     }
 

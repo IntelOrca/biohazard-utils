@@ -19,6 +19,7 @@
             </RoutedUICommand.InputGestures>
         </RoutedUICommand>
         <RoutedUICommand x:Key="SaveAsCommand" Text="Save As" />
+        <RoutedUICommand x:Key="ExportForBioRandCommand" Text="Export For BioRand" />
         <RoutedUICommand x:Key="ExitCommand" Text="Exit">
             <RoutedUICommand.InputGestures>
                 <KeyGesture>ALT+F4</KeyGesture>
@@ -29,6 +30,7 @@
         <CommandBinding Command="{StaticResource OpenCommand}" Executed="OpenCommandBinding_Executed" />
         <CommandBinding Command="{StaticResource SaveCommand}" Executed="SaveCommandBinding_Executed" CanExecute="SaveCommandBinding_CanExecute" />
         <CommandBinding Command="{StaticResource SaveAsCommand}" Executed="SaveAsCommandBinding_Executed" CanExecute="SaveCommandBinding_CanExecute" />
+        <CommandBinding Command="{StaticResource ExportForBioRandCommand}" Executed="ExportForBioRandCommandBinding_Executed" CanExecute="SaveCommandBinding_CanExecute" />
         <CommandBinding Command="{StaticResource ExitCommand}" Executed="ExitCommandBinding_Executed" />
     </Window.CommandBindings>
     <DockPanel>
@@ -45,6 +47,8 @@
                     </MenuItem.Icon>
                 </MenuItem>
                 <MenuItem Header="_Save As..." Command="{StaticResource SaveAsCommand}" />
+                <Separator />
+                <MenuItem Header="_Export For BioRand..." Command="{StaticResource ExportForBioRandCommand}" />
                 <Separator />
                 <MenuItem Header="_Exit" Command="{StaticResource ExitCommand}" />
             </MenuItem>

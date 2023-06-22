@@ -346,7 +346,7 @@ namespace emdui
         {
             Emr = emr;
             EmrIndex = emrIndex;
-            if (emr.NumParts > 0 && !(Model is PlwFile))
+            if (EmrIndex == 0 && emr.NumParts > 0 && !(Model is PlwFile))
             {
                 Items.Add(new ArmatureTreeViewItem(ProjectFile, emr, emrIndex, 0));
             }

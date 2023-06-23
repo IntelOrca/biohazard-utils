@@ -17,6 +17,7 @@ namespace IntelOrca.Biohazard
             ChunkKind.Animation,
             ChunkKind.Armature,
             ChunkKind.Mesh,
+            ChunkKind.Dat,
             ChunkKind.Texture,
         };
 

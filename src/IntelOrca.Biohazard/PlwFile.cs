@@ -17,6 +17,11 @@ namespace IntelOrca.Biohazard
             ChunkKind.Animation,
             ChunkKind.Armature,
             ChunkKind.Mesh,
+            ChunkKind.Unknown,
+            ChunkKind.Unknown,
+            ChunkKind.Unknown,
+            ChunkKind.Unknown,
+            ChunkKind.Unknown,
             ChunkKind.Texture,
         };
 

@@ -202,22 +202,24 @@ namespace emdui
             for (var i = 0; i < model.NumChunks; i++)
             {
                 ProjectTreeViewItem tvi;
-                if (model.GetChunk(i) is Edd edd)
+                switch (model.GetChunk(i))
                 {
-                    tvi = new EddTreeViewItem(projectFile, i, edd);
-                }
-                else if (model.GetChunk(i) is Emr emr)
-                {
-                    tvi = new EmrTreeViewItem(projectFile, i, emr, isFirstEmr);
-                    isFirstEmr = false;
-                }
-                else if (model.GetChunk(i) is IModelMesh mesh)
-                {
-                    tvi = new MeshTreeViewItem(projectFile, i, mesh);
-                }
-                else
-                {
-                    continue;
+                    case Edd edd:
+                        tvi = new EddTreeViewItem(projectFile, i, edd);
+                        break;
+                    case Emr emr:
+                        tvi = new EmrTreeViewItem(projectFile, i, emr, isFirstEmr);
+                        isFirstEmr = false;
+                        break;
+                    case IModelMesh mesh:
+                        tvi = new MeshTreeViewItem(projectFile, i, mesh);
+                        break;
+                    case TimFile tim:
+                        tvi = new TimTreeViewItem(projectFile, tim);
+                        break;
+                    default:
+                        tvi = new UnknownChunkTreeViewItem(projectFile, i);
+                        break;
                 }
                 Items.Add(tvi);
             }
@@ -268,6 +270,16 @@ namespace emdui
             : base(projectFile)
         {
             ChunkIndex = chunkIndex;
+        }
+    }
+
+    public class UnknownChunkTreeViewItem : ChunkTreeViewItem
+    {
+        public override string Header => "UNKNOWN";
+
+        public UnknownChunkTreeViewItem(ProjectFile projectFile, int chunkIndex)
+            : base(projectFile, chunkIndex)
+        {
         }
     }
 
@@ -599,7 +611,10 @@ namespace emdui
             var emr = Model.GetEmr(0);
             var numPages = tim.Width / 128;
             var objImporter = new ObjImporter();
-            Mesh = Model.Md1 = objImporter.ImportMd1(path, numPages, emr.GetFinalPosition);
+            if (project.Version == BioVersion.Biohazard2)
+                Mesh = Model.Md1 = objImporter.ImportMd1(path, numPages, emr.GetFinalPosition);
+            else
+                Mesh = Model.Md2 = objImporter.ImportMd2(path, numPages, emr.GetFinalPosition);
         }
 
         private void ImportFromModel(string path)
@@ -695,15 +710,13 @@ namespace emdui
             var project = MainWindow.Instance.Project;
             var tim = GetTimFile();
             var emr = Model.GetEmr(0);
-            if (Mesh is Md1 md1)
-            {
-                var numPages = tim.Width / 128;
-                var objExporter = new ObjExporter();
-                objExporter.Export(Model.Md1, path, numPages, emr.GetFinalPosition);
 
-                var texturePath = Path.ChangeExtension(path, ".png");
-                tim.ToBitmap().Save(texturePath);
-            }
+            var numPages = tim.Width / 128;
+            var objExporter = new ObjExporter();
+            objExporter.Export(Mesh, path, numPages, emr.GetFinalPosition);
+
+            var texturePath = Path.ChangeExtension(path, ".png");
+            tim.ToBitmap().Save(texturePath);
         }
 
         private TimFile GetTimFile()
@@ -880,13 +893,21 @@ namespace emdui
             CommonFileDialog
                 .Open()
                 .AddExtension(ExtensionPattern)
+                .AddExtension("*.obj")
                 .Show(path =>
                 {
-                    var data = File.ReadAllBytes(path);
-                    var mesh = Model.Version == BioVersion.Biohazard2 ?
-                        (IModelMesh)new Md1(data) :
-                        (IModelMesh)new Md2(data);
-                    ImportMesh(mesh);
+                    if (path.EndsWith(".obj", StringComparison.OrdinalIgnoreCase))
+                    {
+                        ImportFromObj(path);
+                    }
+                    else
+                    {
+                        var data = File.ReadAllBytes(path);
+                        var mesh = Model.Version == BioVersion.Biohazard2 ?
+                            (IModelMesh)new Md1(data) :
+                            (IModelMesh)new Md2(data);
+                        ImportMesh(mesh);
+                    }
                 });
         }
 
@@ -899,9 +920,17 @@ namespace emdui
             }
             dialog
                 .AddExtension(ExtensionPattern)
+                .AddExtension("*.obj")
                 .Show(path =>
                 {
-                    File.WriteAllBytes(path, ExportMesh().Data.ToArray());
+                    if (path.EndsWith(".obj", StringComparison.OrdinalIgnoreCase))
+                    {
+                        ExportToObj(path);
+                    }
+                    else
+                    {
+                        File.WriteAllBytes(path, ExportMesh().Data.ToArray());
+                    }
                 });
         }
 
@@ -957,7 +986,9 @@ namespace emdui
             var numPages = tim.Width / 128;
             var objImporter = new ObjImporter();
 
-            var mesh = objImporter.ImportMd1(path, numPages);
+            var mesh = project.Version == BioVersion.Biohazard2 ?
+                (IModelMesh)objImporter.ImportMd1(path, numPages) :
+                (IModelMesh)objImporter.ImportMd2(path, numPages);
             ImportMesh(mesh);
         }
 
@@ -966,15 +997,13 @@ namespace emdui
             var project = MainWindow.Instance.Project;
             var tim = GetTimFile();
             var mesh = ExportMesh();
-            if (mesh is Md1 md1)
-            {
-                var numPages = tim.Width / 128;
-                var objExporter = new ObjExporter();
-                objExporter.Export(md1, path, numPages);
 
-                var texturePath = Path.ChangeExtension(path, ".png");
-                tim.ToBitmap().Save(texturePath);
-            }
+            var numPages = tim.Width / 128;
+            var objExporter = new ObjExporter();
+            objExporter.Export(mesh, path, numPages);
+
+            var texturePath = Path.ChangeExtension(path, ".png");
+            tim.ToBitmap().Save(texturePath);
         }
 
         private TimFile GetTimFile()

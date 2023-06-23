@@ -92,7 +92,7 @@ namespace IntelOrca.Biohazard
                     part.Quads.Add(quad);
                     part.QuadTextures.Add(quadTexture);
                 }
-                EndObject();
+                EndObject(translate);
 
                 if (_currentObject.vtx_count == 0)
                 {
@@ -123,17 +123,17 @@ namespace IntelOrca.Biohazard
             return md1Builder.ToMd1();
         }
 
-        public Md2 ImportMd2(string objPath, int numPages)
+        public Md2 ImportMd2(string objPath, int numPages, Func<int, Emr.Vector>? translate = null)
         {
             _objFile = new WavefrontObjFile(objPath);
             _dataStream = new MemoryStream();
             _textureWidth = numPages * 128;
             _textureHeight = 256;
-            Import();
+            Import(translate);
             return new Md2(GetData());
         }
 
-        private void Import()
+        private void Import(Func<int, Emr.Vector>? translate)
         {
             foreach (var objGroup in _objFile.Objects)
             {
@@ -184,7 +184,7 @@ namespace IntelOrca.Biohazard
                     quad.visible = 120;
                     _quads.Add(quad);
                 }
-                EndObject();
+                EndObject(translate);
             }
         }
 
@@ -200,16 +200,22 @@ namespace IntelOrca.Biohazard
             _maxVertexIndex = 0;
         }
 
-        private void EndObject()
+        private void EndObject(Func<int, Emr.Vector>? translate = null)
         {
             var dataBw = new BinaryWriter(_dataStream);
             _currentObject.vtx_offset = (ushort)_dataStream.Position;
             _currentObject.vtx_count = (ushort)(_maxVertexIndex - _minVertexIndex + 1);
             if (_minVertexIndex == int.MaxValue)
                 _currentObject.vtx_count = 0;
+
+            var origin = translate == null ? new Emr.Vector() : translate(_objects.Count);
             for (int i = 0; i < _currentObject.vtx_count; i++)
             {
-                dataBw.Write(_positions[i]);
+                var pos = _positions[i].ToMd2();
+                pos.x -= origin.x;
+                pos.y -= origin.y;
+                pos.z -= origin.z;
+                dataBw.Write(pos);
             }
             _currentObject.nor_offset = (ushort)_dataStream.Position;
             for (int i = 0; i < _currentObject.vtx_count; i++)

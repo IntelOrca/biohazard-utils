@@ -288,12 +288,12 @@ namespace emdui
         {
 #if DEBUG
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\barry\pl00.pld");
-            // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re3\pld0\hunk\PL00.PLD");
+            LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re3\pld0\hunk\PL00.PLD");
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re3\pld0\leon\PL00.PLD");
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\chris\PL00.PLD");
             // LoadProject(@"F:\games\re3\mod_biorand\DATA\PLD\PL00.PLD");
             // LoadProject(@"F:\games\re2\data\Pl0\emd0\em041.emd");
-            LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\chris\pl00.pld");
+            // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\chris\pl00.pld");
             // LoadProject(@"F:\games\re2\data\Pl0\emd0\em010.emd");
             // ExportToBioRand(@"C:\Users\Ted\Desktop\ethan");
             // LoadProject(@"M:\temp\re3extracted\ROOM\EMD\EM1A.EMD");

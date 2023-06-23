@@ -35,7 +35,15 @@ namespace IntelOrca.Biohazard
             File.WriteAllText(_objPath!, _sb.ToString());
         }
 
-        public void Export(Md1 md1, string objPath, int numPages, Func<int, Emr.Vector>? partTranslate = null)
+        public void Export(IModelMesh mesh, string objPath, int numPages, Func<int, Emr.Vector>? partTranslate = null)
+        {
+            if (mesh is Md1 md1)
+                Export(md1, objPath, numPages, partTranslate);
+            else if (mesh is Md2 md2)
+                Export(md2, objPath, numPages, partTranslate);
+        }
+
+        private void Export(Md1 md1, string objPath, int numPages, Func<int, Emr.Vector>? partTranslate = null)
         {
             Begin(objPath, numPages);
 
@@ -103,7 +111,8 @@ namespace IntelOrca.Biohazard
             }
             End();
         }
-        public void Export(Md2 md2, string objPath, int numPages)
+
+        private void Export(Md2 md2, string objPath, int numPages, Func<int, Emr.Vector>? partTranslate = null)
         {
             Begin(objPath, numPages);
 
@@ -112,10 +121,12 @@ namespace IntelOrca.Biohazard
             var tvIndex = 1;
             foreach (var obj in md2.Objects)
             {
+                var translate = partTranslate == null ? new Emr.Vector() : partTranslate(objIndex);
+
                 AppendLine($"o part_{objIndex:00}");
                 foreach (var v in md2.GetPositionData(obj))
                 {
-                    AppendDataLine("v", v.x / 1000.0, v.y / 1000.0, v.z / 1000.0);
+                    AppendDataLine("v", (translate.x + v.x) / 1000.0, (translate.y + v.y) / 1000.0, (translate.z + v.z) / 1000.0);
                 }
                 foreach (var v in md2.GetNormalData(obj))
                 {

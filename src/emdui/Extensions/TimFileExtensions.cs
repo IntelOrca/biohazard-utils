@@ -75,5 +75,19 @@ namespace emdui.Extensions
             }
             return palette;
         }
+
+        public static TimFile WithWeaponTexture(this TimFile texture, TimFile weaponTexture)
+        {
+            var tim = texture.Clone();
+            for (var y = 0; y < 32; y++)
+            {
+                for (var x = 0; x < 56; x++)
+                {
+                    var p = weaponTexture.GetPixel(x, y);
+                    tim.SetPixel(200 + x, 224 + y, 1, p);
+                }
+            }
+            return tim;
+        }
     }
 }

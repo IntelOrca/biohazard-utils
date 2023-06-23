@@ -511,7 +511,10 @@ namespace emdui
 
         public override void OnDefaultAction()
         {
-            MainWindow.Instance.LoadModel(Model, MainWindow.Instance.Project.MainTexture);
+            var texture = MainWindow.Instance.Project.MainTexture;
+            if (Model is PlwFile plwFile)
+                texture = texture.WithWeaponTexture(plwFile.Tim);
+            MainWindow.Instance.LoadModel(Model, texture);
         }
 
         private void Import()
@@ -645,7 +648,7 @@ namespace emdui
         private void ExportToObj(string path)
         {
             var project = MainWindow.Instance.Project;
-            var tim = project.MainTexture;
+            var tim = GetTimFile();
             var emr = Model.GetEmr(0);
             if (Mesh is Md1 md1)
             {
@@ -658,6 +661,20 @@ namespace emdui
             }
         }
 
+        private TimFile GetTimFile()
+        {
+            var project = MainWindow.Instance.Project;
+            var mainTexture = project.MainTexture;
+            if (Model is PlwFile plw)
+            {
+                return mainTexture.WithWeaponTexture(plw.Tim);
+            }
+            else
+            {
+                return mainTexture;
+            }
+        }
+
         private void OpenInBlender()
         {
             using (var blenderSupport = new BlenderSupport())
@@ -667,7 +684,7 @@ namespace emdui
                 {
                     ImportFromObj(blenderSupport.ExportedObjectPath);
                     CreateChildren();
-                    MainWindow.Instance.LoadModel(Model, MainWindow.Instance.Project.MainTexture);
+                    MainWindow.Instance.LoadModel(Model, GetTimFile());
                 }
             }
         }
@@ -866,7 +883,7 @@ namespace emdui
                     Model.Md2 = builder.ToMd2();
                 }
             }
-            MainWindow.Instance.LoadModel(Model, MainWindow.Instance.Project.MainTexture);
+            MainWindow.Instance.LoadModel(Model, GetTimFile());
         }
 
         private IModelMesh ExportMesh()
@@ -903,7 +920,7 @@ namespace emdui
         private void ExportToObj(string path)
         {
             var project = MainWindow.Instance.Project;
-            var tim = project.MainTexture;
+            var tim = GetTimFile();
             var mesh = ExportMesh();
             if (mesh is Md1 md1)
             {
@@ -916,6 +933,20 @@ namespace emdui
             }
         }
 
+        private TimFile GetTimFile()
+        {
+            var project = MainWindow.Instance.Project;
+            var mainTexture = project.MainTexture;
+            if (Model is PlwFile plw)
+            {
+                return mainTexture.WithWeaponTexture(plw.Tim);
+            }
+            else
+            {
+                return mainTexture;
+            }
+        }
+
         private void OpenInBlender()
         {
             using (var blenderSupport = new BlenderSupport())
@@ -924,7 +955,6 @@ namespace emdui
                 if (blenderSupport.EditInBlender())
                 {
                     ImportFromObj(blenderSupport.ExportedObjectPath);
-                    MainWindow.Instance.LoadModel(Model, MainWindow.Instance.Project.MainTexture);
                 }
             }
         }

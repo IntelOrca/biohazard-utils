@@ -105,6 +105,14 @@ namespace IntelOrca.Biohazard
             Read(stream);
         }
 
+        public TimFile Clone()
+        {
+            var ms = new MemoryStream();
+            Save(ms);
+            ms.Position = 0;
+            return new TimFile(ms);
+        }
+
         private void Read(Stream stream)
         {
             var br = new BinaryReader(stream);

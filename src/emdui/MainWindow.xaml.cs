@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Media3D;
 using System.Windows.Threading;
+using emdui.Extensions;
 using IntelOrca.Biohazard;
 using Microsoft.Win32;
 
@@ -298,8 +299,8 @@ namespace emdui
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\chris\PL00.PLD");
             // LoadProject(@"F:\games\re3\mod_biorand\DATA\PLD\PL00.PLD");
             // LoadProject(@"F:\games\re2\data\Pl0\emd0\em041.emd");
-            // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\chris\pl00.pld");
-            LoadProject(@"F:\games\re2\data\Pl0\emd0\em010.emd");
+            LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\chris\pl00.pld");
+            // LoadProject(@"F:\games\re2\data\Pl0\emd0\em010.emd");
             // ExportToBioRand(@"C:\Users\Ted\Desktop\ethan");
 #endif
         }
@@ -448,16 +449,7 @@ namespace emdui
             targetBuilder.Parts[11] = sourceBuilder.Parts[0];
             _md1 = targetBuilder.ToMd1();
 
-            var tim = _tim;
-            var plwTim = plw.Tim;
-            for (var y = 0; y < 32; y++)
-            {
-                for (var x = 0; x < 56; x++)
-                {
-                    var p = plwTim.GetPixel(x, y);
-                    tim.SetPixel(200 + x, 224 + y, 1, p);
-                }
-            }
+            _tim = _tim.WithWeaponTexture(plw.Tim);
             RefreshModelView();
             RefreshTimImage();
         }

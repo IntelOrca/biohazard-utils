@@ -296,7 +296,7 @@ namespace IntelOrca.Biohazard
         {
             var coord = _objFile.TextureCoordinates[index];
             var u = (int)(coord.u * _textureWidth);
-            var v = (int)(1 - (coord.v * _textureHeight));
+            var v = (int)((1 - coord.v) * _textureHeight);
             var page = (byte)(u / 128);
             u &= 127;
             return (page, (byte)u, (byte)v);

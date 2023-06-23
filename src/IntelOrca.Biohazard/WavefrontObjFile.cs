@@ -60,7 +60,7 @@ namespace IntelOrca.Biohazard
                                 c = ParseFaceVertex(parts[3])
                             });
                         }
-                        else if (parts.Length >= 5)
+                        else if (parts.Length == 5)
                         {
                             currentObject!.Quads.Add(new Quad()
                             {
@@ -69,6 +69,19 @@ namespace IntelOrca.Biohazard
                                 c = ParseFaceVertex(parts[3]),
                                 d = ParseFaceVertex(parts[4])
                             });
+                        }
+                        else if (parts.Length >= 6)
+                        {
+                            var numVertices = parts.Length - 1;
+                            for (var i = 1; i < numVertices - 1; i++)
+                            {
+                                currentObject!.Triangles.Add(new Triangle()
+                                {
+                                    a = ParseFaceVertex(parts[1]),
+                                    b = ParseFaceVertex(parts[1 + i]),
+                                    c = ParseFaceVertex(parts[2 + i])
+                                });
+                            }
                         }
                         break;
                 }

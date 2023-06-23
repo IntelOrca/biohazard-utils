@@ -97,16 +97,18 @@ namespace IntelOrca.Biohazard
             }
         }
 
-        public Span<KeyFrame> KeyFrames
+        public KeyFrame[] KeyFrames
         {
             get
             {
-                if (KeyFrameSize != 80)
-                    throw new InvalidOperationException("Invalid data width");
-
                 var offset = KeyFrameOffset;
                 var count = (_data.Length - offset) / KeyFrameSize;
-                return GetSpan<KeyFrame>(offset, count);
+                var result = new KeyFrame[count];
+                for (var i = 0; i < count; i++)
+                {
+                    result[i] = new KeyFrame(this, offset + (i * KeyFrameSize), KeyFrameSize);
+                }
+                return result;
             }
         }
 
@@ -170,15 +172,48 @@ namespace IntelOrca.Biohazard
 
         [DebuggerDisplay("offset = {offset} speed = {speed}")]
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
-        public unsafe struct KeyFrame
+        public readonly unsafe struct KeyFrame
         {
-            public Vector offset;
-            public Vector speed;
-            public fixed byte angles[68];
+            private readonly Emr _emr;
+            private readonly int _offset;
+            private readonly int _length;
+
+            public Vector Offset => GetSpan<Vector>(0, 1)[0];
+            public Vector Speed => GetSpan<Vector>(6, 1)[0];
+
+            public Span<byte> AngleData
+            {
+                get
+                {
+                    var count = _length - 12;
+                    return GetSpan<byte>(12, count);
+                }
+            }
+
+            public Vector[] Angles
+            {
+                get
+                {
+                    var numAngles = (AngleData.Length * 2) / 3;
+                    var result = new Vector[numAngles];
+                    for (var i = 0; i < numAngles; i++)
+                    {
+                        result[i] = GetAngle(i);
+                    }
+                    return result;
+                }
+            }
+
+            public KeyFrame(Emr emr, int offset, int length) : this()
+            {
+                _emr = emr;
+                _offset = offset;
+                _length = length;
+            }
 
             public Vector GetAngle(int i)
             {
-                fixed (byte* ptr = angles)
+                fixed (byte* ptr = AngleData)
                 {
                     var nibble = i * 9;
                     var byteIndex = nibble / 2;
@@ -189,9 +224,6 @@ namespace IntelOrca.Biohazard
                     var y = ReadAngle(ref src, ref nibble);
                     var z = ReadAngle(ref src, ref nibble);
 
-                    // var x = Read12(ptr, 0);
-                    // var y = Read12(ptr, 1);
-                    // var z = Read12(ptr, 2);
                     return new Vector()
                     {
                         x = x,
@@ -225,25 +257,10 @@ namespace IntelOrca.Biohazard
                 return value;
             }
 
-            private static short Read12(byte* array, int index)
+            private Span<T> GetSpan<T>(int offset, int count) where T : struct
             {
-                short val = 0;
-                switch (index & 1)
-                {
-                    case 0: /* XX and -X */
-                        val = (short)(array[index] | (array[index + 1] << 8));
-                        break;
-                    case 1: /* Y- and YY */
-                        val = (short)((array[index] >> 4) | (array[index + 1] << 4));
-                        break;
-                }
-                val &= 0xFFF;
-                if ((val & (1 << 11)) != 0)
-                {
-                    val = (short)(val | 0xF000);
-                }
-
-                return val;
+                var data = _emr.GetSpan<byte>(_offset + offset, _length - offset);
+                return MemoryMarshal.Cast<byte, T>(data).Slice(0, count);
             }
         }
     }

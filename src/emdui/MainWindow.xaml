@@ -6,7 +6,8 @@
         xmlns:local="clr-namespace:emdui"
         mc:Ignorable="d"
         Title="emdui" Height="720" Width="1280"
-        Loaded="mainWindow_Loaded">
+        Loaded="mainWindow_Loaded"
+        x:Name="mainWindow">
     <Window.Resources>
         <RoutedUICommand x:Key="OpenCommand" Text="Open">
             <RoutedUICommand.InputGestures>
@@ -51,6 +52,9 @@
                 <MenuItem Header="_Export For BioRand..." Command="{StaticResource ExportForBioRandCommand}" />
                 <Separator />
                 <MenuItem Header="_Exit" Command="{StaticResource ExitCommand}" />
+            </MenuItem>
+            <MenuItem Header="View">
+                <MenuItem Header="_Show Floor" IsCheckable="True" IsChecked="{Binding ShowFloor, ElementName=mainWindow}" />
             </MenuItem>
         </Menu>
         <StatusBar DockPanel.Dock="Bottom">

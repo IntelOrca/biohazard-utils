@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Win32;
 
 namespace emdui
 {
@@ -88,7 +89,30 @@ bpy.ops.wm.quit_blender()
 
         private string FindBlenderExe()
         {
-            var blenderRoot = @"C:\Program Files\Blender Foundation";
+            var blenderExe = Settings.Default.BlenderPath;
+            if (string.IsNullOrEmpty(blenderExe))
+            {
+                blenderExe = AutoFindBlender();
+                if (blenderExe == null)
+                {
+                    var openFileDialog = new OpenFileDialog();
+                    openFileDialog.Filter = "Executable Files (*.exe)|*.exe";
+                    if (openFileDialog.ShowDialog() != true)
+                        return null;
+
+                    blenderExe = openFileDialog.FileName;
+                }
+
+                Settings.Default.BlenderPath = blenderExe;
+                Settings.Save();
+            }
+            return blenderExe;
+        }
+
+        private string AutoFindBlender()
+        {
+            var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            var blenderRoot = Path.Combine(programFiles, "Blender Foundation");
             if (!Directory.Exists(blenderRoot))
                 return null;
 

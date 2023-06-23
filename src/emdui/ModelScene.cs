@@ -94,10 +94,13 @@ namespace emdui
             var rootGroup = new Model3DGroup();
 
             var armatureParts = new int[0];
-            if (_emr != null && _emr.NumParts != 0)
+
+            if (_emr != null && _emr.NumParts != 0 && Settings.Default.ShowFloor)
             {
                 rootGroup.Children.Add(CreateFloor());
-
+            }
+            if (_emr != null && _emr.NumParts != 0)
+            {
                 var main = CreateModelFromArmature(0);
                 rootGroup.Children.Add(main);
                 armatureParts = GetAllArmatureParts(0);
@@ -240,7 +243,7 @@ namespace emdui
                 var keyFrame = emr.KeyFrames[keyFrameIndex];
                 if (partIndex == 0)
                 {
-                    relativePosition = keyFrame.offset;
+                    relativePosition = keyFrame.Offset;
                 }
 
                 var angles = new List<Emr.Vector>();

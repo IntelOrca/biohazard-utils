@@ -537,5 +537,16 @@ namespace emdui
             exportToBioRandWindow.Project = _project;
             exportToBioRandWindow.ShowDialog();
         }
+
+        public bool ShowFloor
+        {
+            get => Settings.Default.ShowFloor;
+            set
+            {
+                Settings.Default.ShowFloor = value;
+                Settings.Save();
+                RefreshModelView();
+            }
+        }
     }
 }

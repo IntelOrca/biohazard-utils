@@ -1,9 +1,11 @@
-﻿namespace IntelOrca.Biohazard
+﻿using System;
+
+namespace IntelOrca.Biohazard
 {
     public interface IModelMesh
     {
         BioVersion Version { get; }
         int NumParts { get; }
-        byte[] GetBytes();
+        ReadOnlyMemory<byte> Data { get; }
     }
 }

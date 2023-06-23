@@ -7,19 +7,17 @@ namespace IntelOrca.Biohazard
 {
     public class Emr
     {
-        private byte[] _data;
+        public ReadOnlyMemory<byte> Data { get; }
 
-        public Emr(byte[] data)
+        public Emr(ReadOnlyMemory<byte> data)
         {
-            _data = data;
+            Data = data;
         }
 
-        public byte[] GetBytes() => _data;
-
-        public ushort ArmatureOffset => BitConverter.ToUInt16(_data, 0);
-        public ushort KeyFrameOffset => BitConverter.ToUInt16(_data, 2);
-        public ushort NumParts => _data.Length >= 6 ? BitConverter.ToUInt16(_data, 4) : (ushort)0;
-        public ushort KeyFrameSize => BitConverter.ToUInt16(_data, 6);
+        public ushort ArmatureOffset => GetSpan<ushort>(0, 1)[0];
+        public ushort KeyFrameOffset => GetSpan<ushort>(2, 1)[0];
+        public ushort NumParts => Data.Length >= 6 ? GetSpan<ushort>(4, 1)[0] : (ushort)0;
+        public ushort KeyFrameSize => GetSpan<ushort>(6, 1)[0];
 
         public Vector GetRelativePosition(int partIndex)
         {
@@ -80,19 +78,19 @@ namespace IntelOrca.Biohazard
             };
         }
 
-        public Span<byte> GetArmatureParts(int partIndex)
+        public ReadOnlySpan<byte> GetArmatureParts(int partIndex)
         {
             var armature = GetArmature(partIndex);
             var offset = ArmatureOffset + armature.offset;
             return GetSpan<byte>(offset, armature.count);
         }
 
-        public Span<byte> KeyFrameData
+        public ReadOnlySpan<byte> KeyFrameData
         {
             get
             {
                 var offset = KeyFrameOffset;
-                var count = _data.Length - offset;
+                var count = Data.Length - offset;
                 return GetSpan<byte>(offset, count);
             }
         }
@@ -102,7 +100,7 @@ namespace IntelOrca.Biohazard
             get
             {
                 var offset = KeyFrameOffset;
-                var count = (_data.Length - offset) / KeyFrameSize;
+                var count = (Data.Length - offset) / KeyFrameSize;
                 var result = new KeyFrame[count];
                 for (var i = 0; i < count; i++)
                 {
@@ -112,9 +110,9 @@ namespace IntelOrca.Biohazard
             }
         }
 
-        private Span<T> GetSpan<T>(int offset, int count) where T : struct
+        private ReadOnlySpan<T> GetSpan<T>(int offset, int count) where T : struct
         {
-            var data = new Span<byte>(_data, offset, _data.Length - offset);
+            var data = Data.Span.Slice(offset);
             return MemoryMarshal.Cast<byte, T>(data).Slice(0, count);
         }
 
@@ -181,7 +179,7 @@ namespace IntelOrca.Biohazard
             public Vector Offset => GetSpan<Vector>(0, 1)[0];
             public Vector Speed => GetSpan<Vector>(6, 1)[0];
 
-            public Span<byte> AngleData
+            public ReadOnlySpan<byte> AngleData
             {
                 get
                 {
@@ -257,7 +255,7 @@ namespace IntelOrca.Biohazard
                 return value;
             }
 
-            private Span<T> GetSpan<T>(int offset, int count) where T : struct
+            private ReadOnlySpan<T> GetSpan<T>(int offset, int count) where T : struct
             {
                 var data = _emr.GetSpan<byte>(_offset + offset, _length - offset);
                 return MemoryMarshal.Cast<byte, T>(data).Slice(0, count);

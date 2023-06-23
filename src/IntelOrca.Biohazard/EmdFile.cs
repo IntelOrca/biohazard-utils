@@ -4,54 +4,43 @@ namespace IntelOrca.Biohazard
 {
     public class EmdFile : ModelFile
     {
-        protected override int Md1ChunkIndex => 7;
-        protected override int Md2ChunkIndex => 14;
-        public override int NumPages => 2;
+        private readonly static ChunkKind[] g_chunkKinds2 = new[]
+        {
+            ChunkKind.Unknown,
+            ChunkKind.Animation,
+            ChunkKind.Armature,
+            ChunkKind.Animation,
+            ChunkKind.Armature,
+            ChunkKind.Animation,
+            ChunkKind.Armature,
+            ChunkKind.Mesh,
+        };
+
+        private readonly static ChunkKind[] g_chunkKinds3 = new[]
+        {
+            ChunkKind.Unknown,
+            ChunkKind.Unknown,
+            ChunkKind.Animation,
+            ChunkKind.Armature,
+            ChunkKind.Animation,
+            ChunkKind.Armature,
+            ChunkKind.Animation,
+            ChunkKind.Armature,
+            ChunkKind.Unknown,
+            ChunkKind.Unknown,
+            ChunkKind.Unknown,
+            ChunkKind.Unknown,
+            ChunkKind.Unknown,
+            ChunkKind.Mesh,
+            ChunkKind.Mesh,
+        };
 
         public EmdFile(BioVersion version, string path)
             : base(version, path)
         {
         }
 
-        private int GetEddChunkIndex(int index)
-        {
-            if (index < 0 || index > 2)
-                throw new ArgumentOutOfRangeException(nameof(index));
-
-            var offset = 1;
-            return offset + (index * 2);
-        }
-
-        public override Edd GetEdd(int index)
-        {
-            return new Edd(GetChunk(GetEddChunkIndex(index)));
-        }
-
-        public override void SetEdd(int index, Edd edd)
-        {
-            SetChunk(GetEddChunkIndex(index), edd.GetBytes());
-        }
-
-        private int GetEmrChunkIndex(int index)
-        {
-            if (index < 0 || index > 2)
-                throw new ArgumentOutOfRangeException(nameof(index));
-
-            var offset = 2;
-            if (Version == BioVersion.Biohazard3)
-                offset = 3;
-
-            return offset + (index * 2);
-        }
-
-        public override Emr GetEmr(int index)
-        {
-            return new Emr(GetChunk(GetEmrChunkIndex(index)));
-        }
-
-        public override void SetEmr(int index, Emr emr)
-        {
-            SetChunk(GetEmrChunkIndex(index), emr.GetBytes());
-        }
+        protected override ReadOnlySpan<ChunkKind> ChunkKinds =>
+            Version == BioVersion.Biohazard2 ? g_chunkKinds2 : g_chunkKinds3;
     }
 }

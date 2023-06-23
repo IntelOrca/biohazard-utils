@@ -6,31 +6,29 @@ namespace IntelOrca.Biohazard
 {
     public sealed class Md1 : IModelMesh
     {
-        private byte[] _data;
+        public ReadOnlyMemory<byte> Data { get; }
 
-        public Md1(byte[] data)
+        public Md1(ReadOnlyMemory<byte> data)
         {
-            _data = data;
+            Data = data;
         }
 
         public BioVersion Version => BioVersion.Biohazard2;
         public int NumParts => NumObjects / 2;
-        public byte[] GetBytes() => _data;
+        public byte[] GetBytes() => Data.ToArray();
+        public int Length => GetSpan<int>(0, 1)[0];
+        public int NumObjects => GetSpan<int>(8, 1)[0];
+        public ReadOnlySpan<ObjectDescriptor> Objects => GetSpan<ObjectDescriptor>(12, NumObjects);
+        public ReadOnlySpan<Vector> GetPositionData(in ObjectDescriptor obj) => GetSpan<Vector>(12 + obj.vtx_offset, obj.vtx_count);
+        public ReadOnlySpan<Vector> GetNormalData(in ObjectDescriptor obj) => GetSpan<Vector>(12 + obj.nor_offset, obj.nor_count);
+        public ReadOnlySpan<Triangle> GetTriangles(in ObjectDescriptor obj) => GetSpan<Triangle>(12 + obj.pri_offset, obj.pri_count);
+        public ReadOnlySpan<Quad> GetQuads(in ObjectDescriptor obj) => GetSpan<Quad>(12 + obj.pri_offset, obj.pri_count);
+        public ReadOnlySpan<TriangleTexture> GetTriangleTextures(in ObjectDescriptor obj) => GetSpan<TriangleTexture>(12 + obj.tex_offset, obj.pri_count);
+        public ReadOnlySpan<QuadTexture> GetQuadTextures(in ObjectDescriptor obj) => GetSpan<QuadTexture>(12 + obj.tex_offset, obj.pri_count);
 
-        public int Length => BitConverter.ToInt32(_data, 0);
-        public int NumObjects => BitConverter.ToInt32(_data, 8);
-        public Span<ObjectDescriptor> Objects => GetSpan<ObjectDescriptor>(12, NumObjects);
-
-        public Span<Vector> GetPositionData(in ObjectDescriptor obj) => GetSpan<Vector>(12 + obj.vtx_offset, obj.vtx_count);
-        public Span<Vector> GetNormalData(in ObjectDescriptor obj) => GetSpan<Vector>(12 + obj.nor_offset, obj.nor_count);
-        public Span<Triangle> GetTriangles(in ObjectDescriptor obj) => GetSpan<Triangle>(12 + obj.pri_offset, obj.pri_count);
-        public Span<Quad> GetQuads(in ObjectDescriptor obj) => GetSpan<Quad>(12 + obj.pri_offset, obj.pri_count);
-        public Span<TriangleTexture> GetTriangleTextures(in ObjectDescriptor obj) => GetSpan<TriangleTexture>(12 + obj.tex_offset, obj.pri_count);
-        public Span<QuadTexture> GetQuadTextures(in ObjectDescriptor obj) => GetSpan<QuadTexture>(12 + obj.tex_offset, obj.pri_count);
-
-        private Span<T> GetSpan<T>(int offset, int count) where T : struct
+        private ReadOnlySpan<T> GetSpan<T>(int offset, int count) where T : struct
         {
-            var data = new Span<byte>(_data, offset, _data.Length - offset);
+            var data = Data.Span.Slice(offset);
             return MemoryMarshal.Cast<byte, T>(data).Slice(0, count);
         }
 

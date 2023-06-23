@@ -6,29 +6,28 @@ namespace IntelOrca.Biohazard
 {
     public sealed class Md2 : IModelMesh
     {
-        private byte[] _data;
+        public ReadOnlyMemory<byte> Data { get; }
 
-        public Md2(byte[] data)
+        public Md2(ReadOnlyMemory<byte> data)
         {
-            _data = data;
+            Data = data;
         }
 
         public BioVersion Version => BioVersion.Biohazard3;
         public int NumParts => NumObjects;
-        public byte[] GetBytes() => _data;
+        public byte[] GetBytes() => Data.ToArray();
 
-        public int Length => BitConverter.ToInt32(_data, 0);
-        public int NumObjects => BitConverter.ToInt32(_data, 4);
-        public Span<ObjectDescriptor> Objects => GetSpan<ObjectDescriptor>(8, NumObjects);
+        public int Length => GetSpan<int>(0, 1)[0];
+        public int NumObjects => GetSpan<int>(4, 1)[0];
+        public ReadOnlySpan<ObjectDescriptor> Objects => GetSpan<ObjectDescriptor>(8, NumObjects);
+        public ReadOnlySpan<Vector> GetPositionData(in ObjectDescriptor obj) => GetSpan<Vector>(8 + obj.vtx_offset, obj.vtx_count);
+        public ReadOnlySpan<Vector> GetNormalData(in ObjectDescriptor obj) => GetSpan<Vector>(8 + obj.nor_offset, obj.vtx_count);
+        public ReadOnlySpan<Triangle> GetTriangles(in ObjectDescriptor obj) => GetSpan<Triangle>(8 + obj.tri_offset, obj.tri_count);
+        public ReadOnlySpan<Quad> GetQuads(in ObjectDescriptor obj) => GetSpan<Quad>(8 + obj.quad_offset, obj.quad_count);
 
-        public Span<Vector> GetPositionData(in ObjectDescriptor obj) => GetSpan<Vector>(8 + obj.vtx_offset, obj.vtx_count);
-        public Span<Vector> GetNormalData(in ObjectDescriptor obj) => GetSpan<Vector>(8 + obj.nor_offset, obj.vtx_count);
-        public Span<Triangle> GetTriangles(in ObjectDescriptor obj) => GetSpan<Triangle>(8 + obj.tri_offset, obj.tri_count);
-        public Span<Quad> GetQuads(in ObjectDescriptor obj) => GetSpan<Quad>(8 + obj.quad_offset, obj.quad_count);
-
-        private Span<T> GetSpan<T>(int offset, int count) where T : struct
+        private ReadOnlySpan<T> GetSpan<T>(int offset, int count) where T : struct
         {
-            var data = new Span<byte>(_data, offset, _data.Length - offset);
+            var data = Data.Span.Slice(offset);
             return MemoryMarshal.Cast<byte, T>(data).Slice(0, count);
         }
 

@@ -93,9 +93,9 @@ namespace IntelOrca.Emd
                         // Import OBJ
                         var objImporter = new ObjImporter();
                         if (version == BioVersion.Biohazard2)
-                            modelFile.Md1 = objImporter.ImportMd1(inputObjPath, modelFile.NumPages);
+                            modelFile.Md1 = objImporter.ImportMd1(inputObjPath, 3);
                         else
-                            modelFile.Md2 = objImporter.ImportMd2(inputObjPath, modelFile.NumPages);
+                            modelFile.Md2 = objImporter.ImportMd2(inputObjPath, 3);
                     }
                     if (inputPngPath != null)
                     {
@@ -123,12 +123,12 @@ namespace IntelOrca.Emd
                     {
                         File.WriteAllBytes(outputMd1Path, modelFile.Md1.GetBytes());
                         File.WriteAllBytes(outputMd2Path, modelFile.Md1.ToMd2().GetBytes());
-                        objExporter.Export(modelFile.Md1, outputObjPath, modelFile.NumPages);
+                        objExporter.Export(modelFile.Md1, outputObjPath, 3);
                     }
                     else
                     {
                         File.WriteAllBytes(outputMd2Path, modelFile.Md2.GetBytes());
-                        objExporter.Export(modelFile.Md2, outputObjPath, modelFile.NumPages);
+                        objExporter.Export(modelFile.Md2, outputObjPath, 3);
                     }
                     timFile?.ToBitmap((x, y) => x / 128).Save(outputPngPath);
                 }

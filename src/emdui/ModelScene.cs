@@ -217,7 +217,8 @@ namespace emdui
         {
             var armature = new Model3DGroup();
             var armatureMesh = CreateModelFromPart(partIndex);
-            armature.Children.Add(armatureMesh);
+            if (armatureMesh != null)
+                armature.Children.Add(armatureMesh);
 
             // Children
             var subParts = _emr.GetArmatureParts(partIndex);
@@ -274,10 +275,14 @@ namespace emdui
             var model = new GeometryModel3D();
             if (_md1 != null)
             {
+                if (_md1.NumParts <= partIndex)
+                    return null;
                 model.Geometry = CreateMesh(_md1, partIndex, textureSize);
             }
             else
             {
+                if (_md2.NumParts <= partIndex)
+                    return null;
                 model.Geometry = CreateMesh(_md2, partIndex, textureSize);
             }
             model.Material = CreateMaterial(false);

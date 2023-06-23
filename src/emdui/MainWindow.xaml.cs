@@ -19,14 +19,11 @@ namespace emdui
 
         private Project _project;
 
-        private ModelFile _modelFile;
-
-        private Md1 _md1;
-        private Md2 _md2;
-        private Edd _edd;
-        private Emr _emr;
-        private Emr _baseEmr;
+        private IModelMesh _mesh;
         private TimFile _tim;
+        private Emr _baseEmr;
+        private Emr _emr;
+        private Edd _edd;
 
         private ModelScene _scene;
         private DispatcherTimer _timer;
@@ -54,10 +51,12 @@ namespace emdui
 
         private void _timer_Tick(object sender, EventArgs e)
         {
-            if (_modelFile == null || _animationIndex == -1)
+            if (_mesh == null || _animationIndex == -1)
                 return;
 
             var edd = _edd;
+            if (edd == null)
+                return;
 
             if (animationDropdown.Items.Count != edd.AnimationCount)
             {
@@ -96,8 +95,7 @@ namespace emdui
         private void SetTimFile(TimFile timFile)
         {
             _tim = timFile;
-            if (_modelFile is PldFile pldFile)
-                pldFile.Tim = timFile;
+            _project.MainTexture = timFile;
             RefreshTimImage();
         }
 
@@ -106,7 +104,7 @@ namespace emdui
             _project = Project.FromFile(path);
             projectTreeView.Project = _project;
 
-            LoadModel(_project.MainModel, _project.MainTexture);
+            LoadMesh(_project.MainModel.GetMesh(0));
             RefreshStatusBar();
         }
 
@@ -121,20 +119,13 @@ namespace emdui
             timImage.Tim = _tim;
         }
 
-        private int GetNumParts()
-        {
-            if (_modelFile.Version == BioVersion.Biohazard2)
-                return _modelFile.Md1.NumObjects / 2;
-            return _modelFile.Md2.NumObjects;
-        }
-
         private void RefreshModelView()
         {
             _scene = new ModelScene();
-            if (_project.Version == BioVersion.Biohazard2)
-                _scene.GenerateFrom(_md1, _emr, _tim);
-            else
-                _scene.GenerateFrom(_md2, _emr, _tim);
+            if (_mesh is Md1 md1)
+                _scene.GenerateFrom(md1, _emr, _tim);
+            else if (_mesh is Md2 md2)
+                _scene.GenerateFrom(md2, _emr, _tim);
             viewport0.Scene = _scene;
             viewport1.Scene = _scene;
 
@@ -144,6 +135,9 @@ namespace emdui
 
         private void RefreshHighlightedPart()
         {
+            if (_scene == null)
+                return;
+
             _scene.HighlightPart(_isolatedPartIndex == -1 ? _selectedPartIndex : -1);
             RefreshTimPrimitives();
         }
@@ -166,7 +160,7 @@ namespace emdui
                 return;
             }
 
-            if (_md1 is Md1 md1)
+            if (_mesh is Md1 md1)
             {
                 var objTriangle = md1.Objects[partIndex * 2];
                 var objQuad = md1.Objects[(partIndex * 2) + 1];
@@ -202,7 +196,7 @@ namespace emdui
                 }
                 timImage.Primitives = primitives.ToArray();
             }
-            else if (_md2 is Md2 md2)
+            else if (_mesh is Md2 md2)
             {
                 var obj = md2.Objects[partIndex];
                 var triangles = md2.GetTriangles(in obj);
@@ -263,15 +257,15 @@ namespace emdui
 
         private void RefreshStatusBar()
         {
-            var game = _modelFile.Version == BioVersion.Biohazard2 ? "RE 2" : "RE 3";
-            var fileType = _modelFile is EmdFile ? ".EMD" : ".PLD";
+            var game = _project.Version == BioVersion.Biohazard2 ? "RE 2" : "RE 3";
+            var fileType = _project.MainModel is EmdFile ? ".EMD" : ".PLD";
             fileTypeLabel.Content = $"{game} {fileType} File";
-            numPartsLabel.Content = $"{GetNumParts()} parts";
+            // numPartsLabel.Content = $"{GetNumParts()} parts";
         }
 
         private void RefreshPrimitives()
         {
-            var md1 = _modelFile.Md1;
+            var md1 = _mesh as Md1;
             var selectedIndex = _selectedPartIndex * 2;
             if (selectedIndex >= 0 && selectedIndex < md1.NumObjects)
             {
@@ -302,6 +296,7 @@ namespace emdui
             LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\chris\pl00.pld");
             // LoadProject(@"F:\games\re2\data\Pl0\emd0\em010.emd");
             // ExportToBioRand(@"C:\Users\Ted\Desktop\ethan");
+            // LoadProject(@"M:\temp\re3extracted\ROOM\EMD\EM1A.EMD");
 #endif
         }
 
@@ -313,7 +308,7 @@ namespace emdui
 
         private void listPrimitives_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            var md1 = _modelFile.Md1;
+            var md1 = _mesh as Md1;
             var objIndex = _selectedPartIndex * 2;
             if (objIndex >= 0 && objIndex < md1.NumObjects)
             {
@@ -368,69 +363,54 @@ namespace emdui
             }
         }
 
-        private void menuCopyPage_Click(object sender, RoutedEventArgs e)
-        {
-            if (_tim.Width < 3 * 128)
-            {
-                _tim.ResizeImage(3 * 128, _tim.Height);
-            }
-            _tim.SetPalette(2, _tim.GetPalette(0));
-
-            for (int x = 0; x < 128; x++)
-            {
-                for (int y = 0; y < _tim.Height; y++)
-                {
-                    var p = _tim.GetPixel(x, y, 0);
-                    _tim.SetPixel(256 + x, y, 2, p);
-                }
-            }
-            SetTimFile(_tim);
-        }
-
         private void timImage_TimUpdated(object sender, EventArgs e)
         {
             SetTimFile(timImage.Tim);
             RefreshModelView();
         }
 
-        public void LoadIsolatedModel(Md1 md1, TimFile texture, int partIndex)
+        public void LoadMesh(IModelMesh mesh, TimFile texture = null)
         {
-            _modelFile = null;
-            _md1 = md1;
-            _tim = texture;
-            _edd = null;
-            _emr = null;
-            _isolatedPartIndex = partIndex;
-            RefreshModelView();
-            RefreshTimImage();
-        }
-
-        public void LoadIsolatedModel(Md2 md2, TimFile texture, int partIndex)
-        {
-            _modelFile = null;
-            _md2 = md2;
-            _tim = texture;
-            _edd = null;
-            _emr = null;
-            _isolatedPartIndex = partIndex;
-            RefreshModelView();
-            RefreshTimImage();
-        }
-
-        public void LoadModel(ModelFile model, TimFile texture)
-        {
-            _modelFile = model;
-            if (_project.Version == BioVersion.Biohazard2)
-                _md1 = model.Md1;
-            else
-                _md2 = model.Md2;
-            _tim = texture;
-            _edd = _modelFile.GetEdd(0);
-            _baseEmr = _modelFile.GetEmr(0);
+            _mesh = mesh;
+            _tim = texture ?? _project.MainTexture;
+            _baseEmr = _project.MainModel.GetEmr(0);
             _emr = _baseEmr;
+            _edd = null;
             _isolatedPartIndex = -1;
             _animationIndex = -1;
             _selectedPartIndex = -1;
+            RefreshModelView();
+            RefreshTimImage();
+        }
+
+        public void LoadMeshWithoutArmature(IModelMesh mesh, TimFile texture = null)
+        {
+            _mesh = mesh;
+            _tim = texture ?? _project.MainTexture;
+            _baseEmr = null;
+            _emr = null;
+            _edd = null;
+            _isolatedPartIndex = -1;
+            _animationIndex = -1;
+            _selectedPartIndex = -1;
+            RefreshModelView();
+            RefreshTimImage();
+        }
+
+        public void LoadMeshPart(IModelMesh mesh, int partIndex, TimFile texture = null)
+        {
+            _mesh = mesh;
+            _tim = texture ?? _project.MainTexture;
+            _edd = null;
+            _emr = null;
+            _isolatedPartIndex = partIndex;
+            RefreshModelView();
+            RefreshTimImage();
+        }
+
+        public void LoadTexture(TimFile texture)
+        {
+            _tim = texture;
             RefreshModelView();
             RefreshTimImage();
         }
@@ -444,10 +424,17 @@ namespace emdui
             _animationIndex = -1;
             _selectedPartIndex = -1;
 
-            var targetBuilder = _md1.ToBuilder();
-            var sourceBuilder = plw.Md1.ToBuilder();
-            targetBuilder.Parts[11] = sourceBuilder.Parts[0];
-            _md1 = targetBuilder.ToMd1();
+            if (_mesh is Md1 md1)
+            {
+                var targetBuilder = md1.ToBuilder();
+                var sourceBuilder = plw.Md1.ToBuilder();
+                targetBuilder.Parts[11] = sourceBuilder.Parts[0];
+                _mesh = targetBuilder.ToMd1();
+            }
+            else if (_mesh is Md2 md2)
+            {
+                // TODO
+            }
 
             _tim = _tim.WithWeaponTexture(plw.Tim);
             RefreshModelView();
@@ -501,7 +488,7 @@ namespace emdui
 
             CommonFileDialog
                 .Save()
-                .AddExtension(_modelFile is PldFile ? "*.pld" : "*.emd")
+                .AddExtension(_project.MainModel is PldFile ? "*.pld" : "*.emd")
                 .WithDefaultFileName(_project.MainPath)
                 .Show(SaveModel);
         }

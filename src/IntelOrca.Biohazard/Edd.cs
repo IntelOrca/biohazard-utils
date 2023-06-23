@@ -6,37 +6,33 @@ namespace IntelOrca.Biohazard
 {
     public class Edd
     {
-        private byte[] _data;
+        public ReadOnlyMemory<byte> Data { get; }
 
-        public Edd(byte[] data)
+        public Edd(ReadOnlyMemory<byte> data)
         {
-            _data = data;
+            Data = data;
         }
 
-        public byte[] GetBytes() => _data;
-
         public int AnimationCount => Animations.Length;
-
-        public Span<Animation> Animations
+        public ReadOnlySpan<Animation> Animations
         {
             get
             {
-                var firstOffset = BitConverter.ToUInt16(_data, 2);
+                var firstOffset = GetSpan<ushort>(2, 1)[0];
                 var count = firstOffset / 4;
                 return GetSpan<Animation>(0, count);
             }
         }
-
-        public Span<Frame> GetFrames(int animationIndex)
+        public ReadOnlySpan<Frame> GetFrames(int animationIndex)
         {
             var animation = Animations[animationIndex];
             var offset = animation.Offset;
             return GetSpan<Frame>(offset, animation.Count);
         }
 
-        private Span<T> GetSpan<T>(int offset, int count) where T : struct
+        private ReadOnlySpan<T> GetSpan<T>(int offset, int count) where T : struct
         {
-            var data = new Span<byte>(_data, offset, _data.Length - offset);
+            var data = Data.Span.Slice(offset);
             return MemoryMarshal.Cast<byte, T>(data).Slice(0, count);
         }
 

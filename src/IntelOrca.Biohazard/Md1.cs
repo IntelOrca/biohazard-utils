@@ -193,12 +193,12 @@ namespace IntelOrca.Biohazard
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
         public struct Triangle
         {
-            public short n0;
-            public short v0;
-            public short n1;
-            public short v1;
-            public short n2;
-            public short v2;
+            public ushort n0;
+            public ushort v0;
+            public ushort n1;
+            public ushort v1;
+            public ushort n2;
+            public ushort v2;
         }
 
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -206,26 +206,26 @@ namespace IntelOrca.Biohazard
         {
             public byte u0;
             public byte v0;
-            public short clutId;
+            public ushort clutId;
             public byte u1;
             public byte v1;
-            public short page;
+            public ushort page;
             public byte u2;
             public byte v2;
-            public short zero;
+            public ushort zero;
         }
 
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
         public struct Quad
         {
-            public short n0;
-            public short v0;
-            public short n1;
-            public short v1;
-            public short n2;
-            public short v2;
-            public short n3;
-            public short v3;
+            public ushort n0;
+            public ushort v0;
+            public ushort n1;
+            public ushort v1;
+            public ushort n2;
+            public ushort v2;
+            public ushort n3;
+            public ushort v3;
         }
 
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -233,16 +233,16 @@ namespace IntelOrca.Biohazard
         {
             public byte u0;
             public byte v0;
-            public short clutId;
+            public ushort clutId;
             public byte u1;
             public byte v1;
-            public short page;
+            public ushort page;
             public byte u2;
             public byte v2;
-            public short zero1;
+            public ushort zero1;
             public byte u3;
             public byte v3;
-            public short zero2;
+            public ushort zero2;
         }
     }
 }

@@ -18,8 +18,7 @@ namespace emdui
         private GeometryModel3D[] _model3d;
         private GeometryModel3D _highlightedModel;
 
-        private Md1 _md1;
-        private Md2 _md2;
+        private IModelMesh _mesh;
         private Emr _emr;
         private int _numParts;
 
@@ -65,25 +64,12 @@ namespace emdui
             _highlightedModel = model3d;
         }
 
-        public void GenerateFrom(Md1 md1, Emr emr, TimFile timFile)
+        public void GenerateFrom(IModelMesh mesh, Emr emr, TimFile timFile)
         {
             _emr = emr;
             _texture = timFile.ToBitmap();
-            _md1 = md1;
-            _md2 = null;
-            _numParts = _md1.NumObjects / 2;
-            _model3d = new GeometryModel3D[_numParts];
-            _armature = new Model3DGroup[_numParts];
-            _root = CreateModel();
-        }
-
-        public void GenerateFrom(Md2 md2, Emr emr, TimFile timFile)
-        {
-            _emr = emr;
-            _texture = timFile.ToBitmap();
-            _md1 = null;
-            _md2 = md2;
-            _numParts = _md2.NumObjects;
+            _mesh = mesh;
+            _numParts = _mesh.NumParts;
             _model3d = new GeometryModel3D[_numParts];
             _armature = new Model3DGroup[_numParts];
             _root = CreateModel();
@@ -102,8 +88,11 @@ namespace emdui
             if (_emr != null && _emr.NumParts != 0)
             {
                 var main = CreateModelFromArmature(0);
-                rootGroup.Children.Add(main);
-                armatureParts = GetAllArmatureParts(0);
+                if (main != null)
+                {
+                    rootGroup.Children.Add(main);
+                    armatureParts = GetAllArmatureParts(0);
+                }
             }
             for (var i = 0; i < _numParts; i++)
             {
@@ -215,6 +204,9 @@ namespace emdui
 
         private Model3DGroup CreateModelFromArmature(int partIndex)
         {
+            if (_armature.Length <= partIndex)
+                return null;
+
             var armature = new Model3DGroup();
             var armatureMesh = CreateModelFromPart(partIndex);
             if (armatureMesh != null)
@@ -225,7 +217,10 @@ namespace emdui
             foreach (var subPart in subParts)
             {
                 var subPartMesh = CreateModelFromArmature(subPart);
-                armature.Children.Add(subPartMesh);
+                if (subPartMesh != null)
+                {
+                    armature.Children.Add(subPartMesh);
+                }
             }
 
             armature.Transform = GetTransformation(partIndex, -1);
@@ -247,15 +242,10 @@ namespace emdui
                     relativePosition = keyFrame.Offset;
                 }
 
-                var angles = new List<Emr.Vector>();
-                for (int i = 0; i < 68 / 3; i++)
-                {
-                    angles.Add(keyFrame.GetAngle(i));
-                }
-                var angleIndex = partIndex;
-                var rx = (angles[angleIndex].x / 4096.0) * 360;
-                var ry = (angles[angleIndex].y / 4096.0) * 360;
-                var rz = (angles[angleIndex].z / 4096.0) * 360;
+                var angle = keyFrame.GetAngle(partIndex);
+                var rx = (angle.x / 4096.0) * 360;
+                var ry = (angle.y / 4096.0) * 360;
+                var rz = (angle.z / 4096.0) * 360;
 
                 transformGroup.Children.Add(new RotateTransform3D(
                     new AxisAngleRotation3D(new Vector3D(0, 0, 1), rz)));
@@ -273,18 +263,10 @@ namespace emdui
         {
             var textureSize = new Size(_texture.PixelWidth, _texture.PixelHeight);
             var model = new GeometryModel3D();
-            if (_md1 != null)
-            {
-                if (_md1.NumParts <= partIndex)
-                    return null;
-                model.Geometry = CreateMesh(_md1, partIndex, textureSize);
-            }
-            else
-            {
-                if (_md2.NumParts <= partIndex)
-                    return null;
-                model.Geometry = CreateMesh(_md2, partIndex, textureSize);
-            }
+            if (_mesh.NumParts <= partIndex)
+                return null;
+
+            model.Geometry = CreateMesh(_mesh, partIndex, textureSize);
             model.Material = CreateMaterial(false);
             model.BackMaterial = model.Material;
 
@@ -303,6 +285,13 @@ namespace emdui
             if (highlighted)
                 material.AmbientColor = Colors.Blue;
             return material;
+        }
+
+        private static MeshGeometry3D CreateMesh(IModelMesh mesh, int partIndex, Size textureSize)
+        {
+            var visitor = new MeshGeometry3DMeshVisitor(partIndex, textureSize);
+            visitor.Accept(mesh);
+            return visitor.Mesh;
         }
 
         private static MeshGeometry3D CreateMesh(Md1 md1, int partIndex, Size textureSize)
@@ -441,6 +430,55 @@ namespace emdui
             }
 
             return mesh;
+        }
+
+        private class MeshGeometry3DMeshVisitor : MeshVisitor
+        {
+            private readonly int _partIndex;
+            private readonly Size _textureSize;
+            private readonly List<Vector> _positions = new List<Vector>();
+            private readonly List<Vector> _normals = new List<Vector>();
+            private byte _page;
+
+            public MeshGeometry3D Mesh { get; } = new MeshGeometry3D();
+
+            public MeshGeometry3DMeshVisitor(int partIndex, Size textureSize)
+            {
+                _partIndex = partIndex;
+                _textureSize = textureSize;
+                Trianglulate = true;
+            }
+
+            public override bool VisitPart(int index)
+            {
+                _positions.Clear();
+                _normals.Clear();
+                return index == _partIndex;
+            }
+
+            public override void VisitPrimitive(int numPoints, byte page)
+            {
+                _page = page;
+            }
+
+            public override void VisitPosition(Vector value)
+            {
+                _positions.Add(value);
+            }
+
+            public override void VisitNormal(Vector value)
+            {
+                _normals.Add(value);
+            }
+
+            public override void VisitPrimitivePoint(ushort v, ushort n, byte tu, byte tv)
+            {
+                Mesh.Positions.Add(_positions[v].ToPoint3D());
+                Mesh.Normals.Add(_normals[n].ToVector3D());
+
+                var offsetTu = _page * 128;
+                Mesh.TextureCoordinates.Add(new Point((offsetTu + tu) / _textureSize.Width, tv / _textureSize.Height));
+            }
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 
 namespace IntelOrca.Biohazard
 {
@@ -23,6 +24,11 @@ namespace IntelOrca.Biohazard
 
         public PldFile(BioVersion version, string path)
             : base(version, path)
+        {
+        }
+
+        public PldFile(BioVersion version, Stream stream)
+            : base(version, stream)
         {
         }
 

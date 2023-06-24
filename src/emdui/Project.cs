@@ -104,7 +104,10 @@ namespace emdui
                 else if (MainModel is PlwFile plwFile)
                     return plwFile.Tim;
                 else if (MainModel is EmdFile emdFile)
-                    return _projectFiles.FirstOrDefault(x => x.Kind == ProjectFileKind.Tim).Content as TimFile;
+                    if (emdFile.Version == BioVersion.Biohazard1)
+                        return emdFile.GetTim(0);
+                    else
+                        return _projectFiles.FirstOrDefault(x => x.Kind == ProjectFileKind.Tim).Content as TimFile;
                 else
                     return null;
             }

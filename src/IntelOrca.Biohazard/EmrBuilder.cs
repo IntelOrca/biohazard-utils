@@ -6,10 +6,16 @@ namespace IntelOrca.Biohazard
 {
     public class EmrBuilder
     {
+        public BioVersion Version { get; }
         public List<Emr.Vector> RelativePositions { get; } = new List<Emr.Vector>();
         public List<byte[]> Armatures { get; } = new List<byte[]>();
         public byte[] KeyFrameData { get; set; } = new byte[0];
         public ushort KeyFrameSize { get; set; }
+
+        public EmrBuilder(BioVersion version)
+        {
+            Version = version;
+        }
 
         public Emr ToEmr()
         {
@@ -63,7 +69,7 @@ namespace IntelOrca.Biohazard
             ms.Position = 2;
             bw.Write((ushort)keyFrameStartOffset);
 
-            return new Emr(ms.ToArray());
+            return new Emr(Version, ms.ToArray());
         }
     }
 }

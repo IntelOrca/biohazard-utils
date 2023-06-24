@@ -7,10 +7,12 @@ namespace IntelOrca.Biohazard
 {
     public class Emr
     {
+        public BioVersion Version { get; }
         public ReadOnlyMemory<byte> Data { get; }
 
-        public Emr(ReadOnlyMemory<byte> data)
+        public Emr(BioVersion version, ReadOnlyMemory<byte> data)
         {
+            Version = version;
             Data = data;
         }
 
@@ -118,7 +120,7 @@ namespace IntelOrca.Biohazard
 
         public EmrBuilder ToBuilder()
         {
-            var builder = new EmrBuilder();
+            var builder = new EmrBuilder(Version);
             var numParts = NumParts;
             for (var i = 0; i < numParts; i++)
             {
@@ -159,6 +161,13 @@ namespace IntelOrca.Biohazard
         public struct Vector
         {
             public short x, y, z;
+
+            public Vector(short x, short y, short z)
+            {
+                this.x = x;
+                this.y = y;
+                this.z = z;
+            }
         }
 
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -177,14 +186,36 @@ namespace IntelOrca.Biohazard
             private readonly int _length;
 
             public Vector Offset => GetSpan<Vector>(0, 1)[0];
-            public Vector Speed => GetSpan<Vector>(6, 1)[0];
+            public Vector Speed
+            {
+                get
+                {
+                    if (_emr.Version == BioVersion.Biohazard3)
+                    {
+                        var y = GetSpan<short>(6, 1)[0];
+                        return new Vector(0, y, 0);
+                    }
+                    else
+                    {
+                        return GetSpan<Vector>(6, 1)[0];
+                    }
+                }
+            }
 
             public ReadOnlySpan<byte> AngleData
             {
                 get
                 {
-                    var count = _length - 12;
-                    return GetSpan<byte>(12, count);
+                    if (_emr.Version == BioVersion.Biohazard3)
+                    {
+                        var count = _length - 8;
+                        return GetSpan<byte>(8, count);
+                    }
+                    else
+                    {
+                        var count = _length - 12;
+                        return GetSpan<byte>(12, count);
+                    }
                 }
             }
 
@@ -211,23 +242,35 @@ namespace IntelOrca.Biohazard
 
             public Vector GetAngle(int i)
             {
-                fixed (byte* ptr = AngleData)
+                if (_emr.Version == BioVersion.Biohazard1)
                 {
-                    var nibble = i * 9;
-                    var byteIndex = nibble / 2;
-                    var src = ptr + byteIndex;
-
-                    // Read 3 nibbles
-                    var x = ReadAngle(ref src, ref nibble);
-                    var y = ReadAngle(ref src, ref nibble);
-                    var z = ReadAngle(ref src, ref nibble);
-
-                    return new Vector()
+                    var angles = MemoryMarshal.Cast<byte, short>(AngleData);
+                    var offset = i * 3;
+                    var x = angles[offset + 0];
+                    var y = angles[offset + 1];
+                    var z = angles[offset + 2];
+                    return new Vector(x, y, z);
+                }
+                else if (_emr.Version == BioVersion.Biohazard2 ||
+                         _emr.Version == BioVersion.Biohazard3)
+                {
+                    fixed (byte* ptr = AngleData)
                     {
-                        x = x,
-                        y = y,
-                        z = z
-                    };
+                        var nibble = i * 9;
+                        var byteIndex = nibble / 2;
+                        var src = ptr + byteIndex;
+
+                        // Read 3 nibbles
+                        var x = ReadAngle(ref src, ref nibble);
+                        var y = ReadAngle(ref src, ref nibble);
+                        var z = ReadAngle(ref src, ref nibble);
+
+                        return new Vector(x, y, z);
+                    }
+                }
+                else
+                {
+                    throw new NotSupportedException();
                 }
             }
 

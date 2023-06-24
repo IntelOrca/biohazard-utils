@@ -1,76 +1,40 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 
 namespace IntelOrca.Biohazard
 {
     public abstract class ModelFile
     {
-        private readonly byte[][] _chunks;
+        private readonly OffsetDirectory _directory;
 
         public BioVersion Version { get; }
-        public int NumChunks => _chunks.Length;
+        public int NumChunks => _directory.NumChunks;
+
+        public ModelFile(BioVersion version, Stream stream)
+        {
+            Version = version;
+            _directory = version == BioVersion.Biohazard1 ?
+                (OffsetDirectory)new OffsetDirectoryV1(4) :
+                (OffsetDirectory)new OffsetDirectoryV2();
+            _directory.Read(stream);
+        }
 
         public ModelFile(BioVersion version, string path)
         {
             Version = version;
-            using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read))
-            {
-                var br = new BinaryReader(fs);
+            _directory = version == BioVersion.Biohazard1 ?
+                (OffsetDirectory)new OffsetDirectoryV1(4) :
+                (OffsetDirectory)new OffsetDirectoryV2();
 
-                // Read header
-                var directoryOffset = br.ReadInt32();
-                var numOffsets = br.ReadInt32();
-
-                // Read directory
-                fs.Position = directoryOffset;
-                var offsets = new int[numOffsets + 1];
-                for (int i = 0; i < numOffsets; i++)
-                {
-                    offsets[i] = br.ReadInt32();
-                }
-                offsets[numOffsets] = directoryOffset;
-
-                // Check all offsets are in order
-                var lastOffset = 0;
-                foreach (var offset in offsets)
-                {
-                    if (offset < lastOffset)
-                        throw new NotSupportedException("Offsets not in order");
-                    lastOffset = offset;
-                }
-
-                // Read chunks
-                _chunks = new byte[numOffsets][];
-                for (int i = 0; i < numOffsets; i++)
-                {
-                    var len = offsets[i + 1] - offsets[i];
-                    fs.Position = offsets[i];
-                    _chunks[i] = br.ReadBytes(len);
-                }
-            }
+            using var fs = new FileStream(path, FileMode.Open, FileAccess.Read);
+            _directory.Read(fs);
         }
 
         public void Save(string path)
         {
-            var chunkSum = _chunks.Sum(x => x.Length);
-            using (var fs = new FileStream(path, FileMode.Create))
-            {
-                var bw = new BinaryWriter(fs);
-                bw.Write(8 + chunkSum);
-                bw.Write(_chunks.Length);
-                for (int i = 0; i < _chunks.Length; i++)
-                {
-                    bw.Write(_chunks[i]);
-                }
-
-                var offset = 8;
-                for (int i = 0; i < _chunks.Length; i++)
-                {
-                    bw.Write(offset);
-                    offset += _chunks[i].Length;
-                }
-            }
+            using var fs = new FileStream(path, FileMode.Create);
+            _directory.Write(fs);
         }
 
         protected virtual ReadOnlySpan<ChunkKind> ChunkKinds => new ReadOnlySpan<ChunkKind>();
@@ -86,6 +50,12 @@ namespace IntelOrca.Biohazard
 #pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
 #pragma warning disable CS8602 // Dereference of a possibly null reference.
 #pragma warning disable CS8603 // Possible null reference return.
+        public T GetChunk<T>(ChunkKind kind, int number)
+        {
+            var chunkIndex = GetChunkIndex(kind, number);
+            return GetChunk<T>(chunkIndex);
+        }
+
         public T GetChunk<T>(int index)
         {
             var kind = GetChunkKind(index);
@@ -94,9 +64,11 @@ namespace IntelOrca.Biohazard
                 case ChunkKind.Animation:
                     return (T)(object)new Edd(GetChunkData(index));
                 case ChunkKind.Armature:
-                    return (T)(object)new Emr(GetChunkData(index));
+                    return (T)(object)new Emr(Version, GetChunkData(index));
                 case ChunkKind.Mesh:
-                    if (Version == BioVersion.Biohazard2)
+                    if (Version == BioVersion.Biohazard1)
+                        return (T)(object)new Tmd(GetChunkData(index));
+                    else if (Version == BioVersion.Biohazard2)
                         return (T)(object)new Md1(GetChunkData(index));
                     else
                         return (T)(object)new Md2(GetChunkData(index));
@@ -132,14 +104,14 @@ namespace IntelOrca.Biohazard
 #pragma warning restore CS8602 // Dereference of a possibly null reference.
 #pragma warning restore CS8600 // Converting null literal or possible null value to non-nullable type.
 
-        protected virtual ReadOnlyMemory<byte> GetChunkData(int index) => _chunks[index];
-        protected void SetChunkData(int index, ReadOnlySpan<byte> data) => _chunks[index] = data.ToArray();
+        protected virtual ReadOnlyMemory<byte> GetChunkData(int index) => _directory.GetChunk(index);
+        protected void SetChunkData(int index, ReadOnlySpan<byte> data) => _directory.SetChunk(index, data.ToArray());
         protected void SetChunkData(int index, ReadOnlyMemory<byte> data) => SetChunkData(index, data.Span);
         protected void SetChunkData(int index, byte[] data) => SetChunkData(index, new ReadOnlySpan<byte>(data));
 
         private int GetChunkIndex(ChunkKind kind, int number)
         {
-            for (var i = 0; i < _chunks.Length; i++)
+            for (var i = 0; i < _directory.NumChunks; i++)
             {
                 var chunkKind = GetChunkKind(i);
                 if (chunkKind == kind)
@@ -169,13 +141,10 @@ namespace IntelOrca.Biohazard
         public Edd GetEdd(int number) => new Edd(GetChunk(ChunkKind.Animation, number));
         public void SetEdd(int number, Edd value) => SetChunk(ChunkKind.Animation, number, value.Data);
 
-        public Emr GetEmr(int number) => new Emr(GetChunk(ChunkKind.Armature, number));
+        public Emr GetEmr(int number) => new Emr(Version, GetChunk(ChunkKind.Armature, number));
         public void SetEmr(int number, Emr value) => SetChunk(ChunkKind.Armature, number, value.Data);
 
-        public IModelMesh GetMesh(int number) =>
-            Version == BioVersion.Biohazard2 ?
-                (IModelMesh)new Md1(GetChunk(ChunkKind.Mesh, number)) :
-                (IModelMesh)new Md2(GetChunk(ChunkKind.Mesh, number));
+        public IModelMesh GetMesh(int number) => GetChunk<IModelMesh>(ChunkKind.Mesh, number);
         public void SetMesh(int number, IModelMesh value) => SetChunk(ChunkKind.Mesh, number, value.Data);
 
         public TimFile GetTim(int number) => new TimFile(GetChunk(ChunkKind.Texture, number));
@@ -218,9 +187,17 @@ namespace IntelOrca.Biohazard
             using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read))
             {
                 var br = new BinaryReader(fs);
+                var fileLength = fs.Length;
                 var directoryOffset = br.ReadInt32();
                 var numOffsets = br.ReadInt32();
                 fs.Close();
+
+                // RE 1 won't have a directory offset header
+                if (directoryOffset + (numOffsets * 4) != fileLength)
+                {
+                    return new EmdFile(BioVersion.Biohazard1, path);
+                }
+
                 switch (numOffsets)
                 {
                     case 4:
@@ -249,6 +226,140 @@ namespace IntelOrca.Biohazard
             Dat,
             Mesh,
             Texture,
+        }
+
+        private class OffsetDirectory
+        {
+            private readonly List<byte[]> _chunks = new List<byte[]>();
+
+            public virtual void Read(Stream stream)
+            {
+            }
+
+            public virtual void Write(Stream stream)
+            {
+            }
+
+            protected void ReadDirectory(Stream stream, int directoryOffset, int numOffsets)
+            {
+                var br = new BinaryReader(stream);
+
+                // Read directory
+                stream.Position = directoryOffset;
+                var offsets = new int[numOffsets + 1];
+                for (int i = 0; i < numOffsets; i++)
+                {
+                    offsets[i] = br.ReadInt32();
+                }
+                offsets[numOffsets] = directoryOffset;
+
+                // Check all offsets are in order
+                var lastOffset = 0;
+                foreach (var offset in offsets)
+                {
+                    if (offset < lastOffset)
+                        throw new NotSupportedException("Offsets not in order");
+                    lastOffset = offset;
+                }
+
+                // Read chunks
+                for (int i = 0; i < numOffsets; i++)
+                {
+                    var len = offsets[i + 1] - offsets[i];
+                    stream.Position = offsets[i];
+                    AddChunk(br.ReadBytes(len));
+                }
+            }
+
+            protected void AddChunk(byte[] data)
+            {
+                _chunks.Add(data);
+            }
+
+            public int NumChunks => _chunks.Count;
+            public byte[] GetChunk(int index) => _chunks[index];
+            public void SetChunk(int index, byte[] value) => _chunks[index] = value;
+        }
+
+        private class OffsetDirectoryV1 : OffsetDirectory
+        {
+            public int _numOffsets;
+
+            public OffsetDirectoryV1(int numOffsets)
+            {
+                _numOffsets = numOffsets;
+            }
+
+            public override void Read(Stream stream)
+            {
+                // Directory is always at end
+                var numOffsets = _numOffsets;
+                var directoryOffset = (int)(stream.Length - (numOffsets * 4));
+                ReadDirectory(stream, directoryOffset, numOffsets);
+            }
+
+            public override void Write(Stream stream)
+            {
+                var bw = new BinaryWriter(stream);
+
+                // Chunks
+                var offsets = new List<int>();
+                for (var i = 0; i < NumChunks; i++)
+                {
+                    offsets.Add((int)stream.Position);
+                    var chunk = GetChunk(i);
+                    bw.Write(chunk);
+                }
+
+                // Directory
+                foreach (int offset in offsets)
+                {
+                    bw.Write(offset);
+                }
+            }
+        }
+
+        private class OffsetDirectoryV2 : OffsetDirectory
+        {
+            public override void Read(Stream stream)
+            {
+                // Read header to find directory
+                var br = new BinaryReader(stream);
+                var directoryOffset = br.ReadInt32();
+                var numOffsets = br.ReadInt32();
+
+                ReadDirectory(stream, directoryOffset, numOffsets);
+            }
+
+            public override void Write(Stream stream)
+            {
+                var bw = new BinaryWriter(stream);
+
+                // Header placeholder
+                bw.Write(0);
+                bw.Write(0);
+
+                // Chunks
+                var offsets = new List<int>();
+                for (var i = 0; i < NumChunks; i++)
+                {
+                    offsets.Add((int)stream.Position);
+                    var chunk = GetChunk(i);
+                    bw.Write(chunk);
+                }
+
+                // Directory
+                var directoryOffset = (int)stream.Position;
+                foreach (int offset in offsets)
+                {
+                    bw.Write(offset);
+                }
+
+                // Header
+                stream.Position = 0;
+                bw.Write(directoryOffset);
+                bw.Write(offsets.Count);
+            }
         }
     }
 }

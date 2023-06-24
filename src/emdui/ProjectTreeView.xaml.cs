@@ -41,6 +41,28 @@ namespace emdui
                 items.Add(tvi);
             }
             treeView.ItemsSource = items;
+            var treeViewItem = Find<TreeViewItem>(treeView);
+            if (treeViewItem != null)
+            {
+                treeViewItem.IsExpanded = true;
+            }
+        }
+
+        private static T Find<T>(DependencyObject parent)
+        {
+            if (parent is T value)
+                return value;
+
+            var count = VisualTreeHelper.GetChildrenCount(parent);
+            for (var i = 0; i < count; i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+                var result = Find<T>(child);
+                if (result != null)
+                    return result;
+            }
+
+            return default(T);
         }
 
         private static ProjectTreeViewItem Create(ProjectFile projectFile)
@@ -351,7 +373,8 @@ namespace emdui
 
             var mainWindow = MainWindow.Instance;
             var project = mainWindow.Project;
-            var emr = Model.GetEmr(ChunkIndex);
+            var emrChunkIndex = GetEmrChunkIndex();
+            var emr = Model.GetChunk<Emr>(emrChunkIndex);
             if (ProjectFile.Content is PldFile pldFile)
             {
                 mainWindow.LoadMesh(pldFile.GetMesh(0));
@@ -384,6 +407,14 @@ namespace emdui
                 mainWindow.LoadMesh(emdFile.GetMesh(0));
                 mainWindow.LoadAnimation(emr, Edd, Index);
             }
+        }
+
+        private int GetEmrChunkIndex()
+        {
+            if (Model.Version == BioVersion.Biohazard1)
+                return ChunkIndex - 1;
+            else
+                return ChunkIndex + 1;
         }
     }
 
@@ -426,7 +457,7 @@ namespace emdui
                 .AddExtension("*.emr")
                 .Show(path =>
                 {
-                    Model.SetEmr(0, new Emr(File.ReadAllBytes(path)));
+                    Model.SetEmr(0, new Emr(Model.Version, File.ReadAllBytes(path)));
                 });
         }
 
@@ -482,19 +513,34 @@ namespace emdui
             get
             {
                 var partIndex = PartIndex;
-                if (Model.Version == BioVersion.Biohazard2)
+                string[] partNameArray = null;
+                if (Model.Version == BioVersion.Biohazard1)
                 {
-                    if (g_partNamesRe2.Length > partIndex)
-                        return g_partNamesRe2[partIndex];
+                    partNameArray = g_partNamesRe1;
                 }
-                else
+                else if (Model.Version == BioVersion.Biohazard2)
                 {
-                    if (g_partNamesRe3.Length > partIndex)
-                        return g_partNamesRe3[partIndex];
+                    partNameArray = g_partNamesRe2;
                 }
+                else if (Model.Version == BioVersion.Biohazard3)
+                {
+                    partNameArray = g_partNamesRe3;
+                }
+                if (partNameArray != null && partNameArray.Length > partIndex)
+                    return partNameArray[partIndex];
                 return $"Part {partIndex}";
             }
         }
+
+        private string[] g_partNamesRe1 = new string[]
+        {
+            "chest", "head",
+            "waist",
+            "thigh (left)", "calf (left)", "foot (left)",
+            "thigh (right)", "calf (right)", "foot (right)",
+            "upper arm (left)", "forearm (left)", "hand (left)",
+            "upper arm (right)", "forearm (right)", "hand (right)"
+        };
 
         private string[] g_partNamesRe2 = new string[]
         {
@@ -522,7 +568,23 @@ namespace emdui
     public class MeshTreeViewItem : ChunkTreeViewItem
     {
         public override ImageSource Image => (ImageSource)Application.Current.Resources["IconMD1"];
-        public override string Header => Mesh.Version == BioVersion.Biohazard2 ? "MD1" : "MD2";
+        public override string Header
+        {
+            get
+            {
+                switch (Mesh.Version)
+                {
+                    case BioVersion.Biohazard1:
+                        return "TMD";
+                    case BioVersion.Biohazard2:
+                        return "MD1";
+                    case BioVersion.Biohazard3:
+                        return "MD2";
+                    default:
+                        throw new NotSupportedException();
+                };
+            }
+        }
 
         public IModelMesh Mesh
         {
@@ -545,9 +607,6 @@ namespace emdui
                 AddMenuItem("Copy hand to gun hand", AutoHandWithGun);
             }
         }
-
-        private string DefaultExtension => Mesh.Version == BioVersion.Biohazard2 ? ".MD1" : ".MD2";
-        private string ExtensionPattern => Mesh.Version == BioVersion.Biohazard2 ? "*.md1" : "*.md2";
 
         private void CreateChildren()
         {
@@ -582,7 +641,7 @@ namespace emdui
         {
             CommonFileDialog
                 .Open()
-                .AddExtension(ExtensionPattern)
+                .AddExtension(Mesh.GetExtensionPattern())
                 .AddExtension("*.emd")
                 .AddExtension("*.pld")
                 .AddExtension("*.obj")
@@ -691,10 +750,10 @@ namespace emdui
             var dialog = CommonFileDialog.Save();
             if (ProjectFile != null)
             {
-                dialog.WithDefaultFileName(Path.ChangeExtension(ProjectFile.Filename, DefaultExtension));
+                dialog.WithDefaultFileName(Path.ChangeExtension(ProjectFile.Filename, Mesh.GetDefaultExtension()));
             }
             dialog
-                .AddExtension(ExtensionPattern)
+                .AddExtension(Mesh.GetExtensionPattern())
                 .AddExtension("*.obj")
                 .Show(path =>
                 {
@@ -753,24 +812,7 @@ namespace emdui
 
         private void AddPart()
         {
-            if (Mesh is Md1 md1)
-            {
-                var part = new Md1Builder.Part();
-                part.Positions.Add(new Md1.Vector());
-                part.Normals.Add(new Md1.Vector());
-                part.Triangles.Add(new Md1.Triangle());
-                part.TriangleTextures.Add(new Md1.TriangleTexture());
-
-                var md1Builder = md1.ToBuilder();
-                md1Builder.Parts.Add(part);
-                Mesh = md1Builder.ToMd1();
-            }
-            else if (Mesh is Md2 md2)
-            {
-                var md2Builder = md2.ToBuilder();
-                md2Builder.Parts.Add(new Md2Builder.Part());
-                Mesh = md2Builder.ToMd2();
-            }
+            Mesh = Mesh.AddPart(Mesh.CreateEmptyPart());
             CreateChildren();
         }
 
@@ -796,9 +838,6 @@ namespace emdui
         public override ImageSource Image => (ImageSource)Application.Current.Resources["IconPart"];
         public override string Header => $"Part {PartIndex}";
         public int PartIndex { get; }
-
-        private string DefaultExtension => Mesh.Version == BioVersion.Biohazard2 ? ".MD1" : ".MD2";
-        private string ExtensionPattern => Mesh.Version == BioVersion.Biohazard2 ? "*.md1" : "*.md2";
 
         public IModelMesh Mesh
         {
@@ -829,78 +868,21 @@ namespace emdui
             var mainWindow = MainWindow.Instance;
             var project = mainWindow.Project;
             var projectFile = ProjectFile;
-            if (projectFile.Content is PldFile pldFile)
+            TimFile texture = null;
+            if (projectFile.Content is PlwFile plwFile &&
+                project.MainModel is PldFile parentPldFile)
             {
-                if (project.Version == BioVersion.Biohazard2)
-                {
-                    var builder = pldFile.Md1.ToBuilder();
-                    var partMd1 = builder.Parts[PartIndex];
-                    builder.Parts.Clear();
-                    builder.Parts.Add(partMd1);
-                    var singleMd1 = builder.ToMd1();
-                    mainWindow.LoadMeshPart(singleMd1, PartIndex);
-                }
-                else
-                {
-                    var builder = pldFile.Md2.ToBuilder();
-                    var partMd2 = builder.Parts[PartIndex];
-                    builder.Parts.Clear();
-                    builder.Parts.Add(partMd2);
-                    var singleMd2 = builder.ToMd2();
-                    mainWindow.LoadMeshPart(singleMd2, PartIndex);
-                }
+                texture = project.MainTexture.WithWeaponTexture(plwFile.Tim);
             }
-            else if (projectFile.Content is PlwFile plwFile)
-            {
-                if (project.MainModel is PldFile parentPldFile)
-                {
-                    var tim = parentPldFile.Tim;
-                    var plwTim = plwFile.Tim;
-                    for (var y = 0; y < 32; y++)
-                    {
-                        for (var x = 0; x < 56; x++)
-                        {
-                            var p = plwTim.GetPixel(x, y);
-                            tim.SetPixel(200 + x, 224 + y, 1, p);
-                        }
-                    }
-
-                    var builder = plwFile.Md1.ToBuilder();
-                    var partMd1 = builder.Parts[PartIndex];
-                    builder.Parts.Clear();
-                    builder.Parts.Add(partMd1);
-                    var singleMd1 = builder.ToMd1();
-                    mainWindow.LoadMeshPart(singleMd1, PartIndex, project.MainTexture.WithWeaponTexture(plwFile.Tim));
-                }
-            }
-            else if (projectFile.Content is EmdFile emdFile)
-            {
-                if (project.Version == BioVersion.Biohazard2)
-                {
-                    var builder = emdFile.Md1.ToBuilder();
-                    var partMd1 = builder.Parts[PartIndex];
-                    builder.Parts.Clear();
-                    builder.Parts.Add(partMd1);
-                    var singleMd1 = builder.ToMd1();
-                    mainWindow.LoadMeshPart(singleMd1, PartIndex);
-                }
-                else
-                {
-                    var builder = emdFile.Md2.ToBuilder();
-                    var partMd2 = builder.Parts[PartIndex];
-                    builder.Parts.Clear();
-                    builder.Parts.Add(partMd2);
-                    var singleMd2 = builder.ToMd2();
-                    mainWindow.LoadMeshPart(singleMd2, PartIndex);
-                }
-            }
+            var partMesh = Mesh.ExtractPart(PartIndex);
+            mainWindow.LoadMeshPart(partMesh, PartIndex, texture);
         }
 
         private void Import()
         {
             CommonFileDialog
                 .Open()
-                .AddExtension(ExtensionPattern)
+                .AddExtension(Mesh.GetExtensionPattern())
                 .AddExtension("*.obj")
                 .Show(path =>
                 {
@@ -924,10 +906,10 @@ namespace emdui
             var dialog = CommonFileDialog.Save();
             if (ProjectFile != null)
             {
-                dialog.WithDefaultFileName(Path.ChangeExtension(ProjectFile.Filename, DefaultExtension));
+                dialog.WithDefaultFileName(Path.ChangeExtension(ProjectFile.Filename, $".{PartIndex:00}{Mesh.GetDefaultExtension()}"));
             }
             dialog
-                .AddExtension(ExtensionPattern)
+                .AddExtension(Mesh.GetExtensionPattern())
                 .AddExtension("*.obj")
                 .Show(path =>
                 {
@@ -937,34 +919,14 @@ namespace emdui
                     }
                     else
                     {
-                        File.WriteAllBytes(path, ExportMesh().Data.ToArray());
+                        File.WriteAllBytes(path, Mesh.ExtractPart(PartIndex).Data.ToArray());
                     }
                 });
         }
 
         private void ImportMesh(IModelMesh mesh)
         {
-            if (mesh is Md1 md1)
-            {
-                var srcBuilder = md1.ToBuilder();
-                if (srcBuilder.Parts.Count > 0)
-                {
-                    var builder = ((Md1)Mesh).ToBuilder();
-                    builder.Parts[PartIndex] = srcBuilder.Parts[0];
-                    Mesh = builder.ToMd1();
-                }
-            }
-            else if (mesh is Md2 md2)
-            {
-                var srcBuilder = md2.ToBuilder();
-                if (srcBuilder.Parts.Count > 0)
-                {
-                    var builder = ((Md2)Mesh).ToBuilder();
-                    builder.Parts[PartIndex] = srcBuilder.Parts[0];
-                    Mesh = builder.ToMd2();
-                }
-            }
-
+            Mesh = Mesh.ReplacePart(PartIndex, mesh);
             RefreshMesh();
         }
 
@@ -980,30 +942,6 @@ namespace emdui
             else
             {
                 mainWindow.LoadMesh(Mesh);
-            }
-        }
-
-        private IModelMesh ExportMesh()
-        {
-            if (Mesh is Md1 md1)
-            {
-                var builder = md1.ToBuilder();
-                var interestedPart = builder.Parts[PartIndex];
-                builder.Parts.Clear();
-                builder.Parts.Add(interestedPart);
-                return builder.ToMd1();
-            }
-            else if (Mesh is Md2 md2)
-            {
-                var builder = md2.ToBuilder();
-                var interestedPart = builder.Parts[PartIndex];
-                builder.Parts.Clear();
-                builder.Parts.Add(interestedPart);
-                return builder.ToMd2();
-            }
-            else
-            {
-                throw new NotSupportedException();
             }
         }
 
@@ -1024,7 +962,7 @@ namespace emdui
         {
             var project = MainWindow.Instance.Project;
             var tim = GetTimFile();
-            var mesh = ExportMesh();
+            var mesh = Mesh.ExtractPart(PartIndex);
 
             var numPages = tim.Width / 128;
             var objExporter = new ObjExporter();
@@ -1062,26 +1000,7 @@ namespace emdui
 
         private void Clear()
         {
-            IModelMesh mesh;
-            if (Model.Version == BioVersion.Biohazard2)
-            {
-                var part = new Md1Builder.Part();
-                part.Positions.Add(new Md1.Vector());
-                part.Normals.Add(new Md1.Vector());
-                part.Triangles.Add(new Md1.Triangle());
-                part.TriangleTextures.Add(new Md1.TriangleTexture());
-
-                var md1Builder = new Md1Builder();
-                md1Builder.Parts.Add(part);
-                mesh = md1Builder.ToMd1();
-            }
-            else
-            {
-                var md2Builder = new Md2Builder();
-                md2Builder.Parts.Add(new Md2Builder.Part());
-                mesh = md2Builder.ToMd2();
-            }
-            ImportMesh(mesh);
+            ImportMesh(Mesh.CreateEmptyPart());
         }
     }
 

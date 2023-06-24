@@ -122,10 +122,7 @@ namespace emdui
         private void RefreshModelView()
         {
             _scene = new ModelScene();
-            if (_mesh is Md1 md1)
-                _scene.GenerateFrom(md1, _emr, _tim);
-            else if (_mesh is Md2 md2)
-                _scene.GenerateFrom(md2, _emr, _tim);
+            _scene.GenerateFrom(_mesh, _emr, _tim);
             viewport0.Scene = _scene;
             viewport1.Scene = _scene;
 
@@ -288,7 +285,7 @@ namespace emdui
         {
 #if DEBUG
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\barry\pl00.pld");
-            LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re3\pld0\hunk\PL00.PLD");
+            // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re3\pld0\hunk\PL00.PLD");
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re3\pld0\leon\PL00.PLD");
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\chris\PL00.PLD");
             // LoadProject(@"F:\games\re3\mod_biorand\DATA\PLD\PL00.PLD");
@@ -297,6 +294,7 @@ namespace emdui
             // LoadProject(@"F:\games\re2\data\Pl0\emd0\em010.emd");
             // ExportToBioRand(@"C:\Users\Ted\Desktop\ethan");
             // LoadProject(@"M:\temp\re3extracted\ROOM\EMD\EM1A.EMD");
+            LoadProject(@"F:\games\re1\JPN\ENEMY\EM1028.EMD");
 #endif
         }
 

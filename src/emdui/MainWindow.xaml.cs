@@ -224,7 +224,8 @@ namespace emdui
             // LoadProject(@"F:\games\re2\data\Pl0\emd0\em010.emd");
             // ExportToBioRand(@"C:\Users\Ted\Desktop\ethan");
             // LoadProject(@"M:\temp\re3extracted\ROOM\EMD\EM1A.EMD");
-            LoadProject(@"F:\games\re1\JPN\ENEMY\EM1028.EMD");
+            // LoadProject(@"F:\games\re1\JPN\ENEMY\CHAR10.EMD");
+            LoadProject(@"F:\games\re1\mod_test\ENEMY\CHAR10.EMD");
 #endif
         }
 

@@ -613,8 +613,14 @@ namespace emdui
             Items.Clear();
             for (var i = 0; i < Mesh.NumParts; i++)
             {
-                Items.Add(new MeshPartTreeViewItem(ProjectFile, ChunkIndex, i));
+                Items.Add(new MeshPartTreeViewItem(this, i));
             }
+        }
+
+        public void RefreshAndCreateChildren()
+        {
+            CreateChildren();
+            MainWindow.Instance.LoadMesh(Mesh);
         }
 
         public override void OnSelect()
@@ -662,8 +668,7 @@ namespace emdui
                             (IModelMesh)new Md2(File.ReadAllBytes(path));
                         Mesh = mesh;
                     }
-                    CreateChildren();
-                    MainWindow.Instance.LoadMesh(Model.GetMesh(0));
+                    RefreshAndCreateChildren();
                 });
         }
 
@@ -799,6 +804,7 @@ namespace emdui
     {
         public override ImageSource Image => (ImageSource)Application.Current.Resources["IconPart"];
         public override string Header => $"Part {PartIndex}";
+        public MeshTreeViewItem Parent { get; }
         public int PartIndex { get; }
 
         public IModelMesh Mesh
@@ -807,9 +813,10 @@ namespace emdui
             set => Model.SetChunk<IModelMesh>(ChunkIndex, value);
         }
 
-        public MeshPartTreeViewItem(ProjectFile projectFile, int chunkIndex, int partIndex)
-            : base(projectFile, chunkIndex)
+        public MeshPartTreeViewItem(MeshTreeViewItem parent, int partIndex)
+            : base(parent.ProjectFile, parent.ChunkIndex)
         {
+            Parent = parent;
             PartIndex = partIndex;
 
             AddMenuItem("Import...", Import);
@@ -818,6 +825,10 @@ namespace emdui
             AddMenuItem("Open in Blender...", OpenInBlender);
             AddSeperator();
             AddMenuItem("Clear", Clear);
+            AddMenuItem("Delete", Delete);
+            AddSeperator();
+            AddMenuItem("Move all UV to page 0", () => MoveUVToPage(0));
+            AddMenuItem("Move all UV to page 1", () => MoveUVToPage(1));
         }
 
         public override void OnSelect()
@@ -963,6 +974,18 @@ namespace emdui
         private void Clear()
         {
             ImportMesh(Mesh.CreateEmptyPart());
+        }
+
+        private void Delete()
+        {
+            Mesh = Mesh.RemovePart(PartIndex);
+            Parent.RefreshAndCreateChildren();
+        }
+
+        private void MoveUVToPage(int page)
+        {
+            Mesh = Mesh.MoveUVToPage(PartIndex, page);
+            RefreshMesh();
         }
     }
 

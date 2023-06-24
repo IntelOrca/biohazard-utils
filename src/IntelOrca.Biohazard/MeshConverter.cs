@@ -127,7 +127,7 @@ namespace IntelOrca.Biohazard
 
             public override void LeavePart(int index)
             {
-                var targetIndex = _partRemap[index];
+                var targetIndex = index < _partRemap.Length ? _partRemap[index] : index;
                 while (_builder.Parts.Count <= targetIndex)
                 {
                     _builder.Parts.Add(new TmdBuilder.Part());

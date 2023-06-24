@@ -160,5 +160,90 @@ namespace emdui.Extensions
                     throw new NotSupportedException();
             }
         }
+
+        public static IModelMesh RemovePart(this IModelMesh mesh, int partIndex)
+        {
+            switch (mesh)
+            {
+                case Tmd tmd:
+                {
+                    var builder = tmd.ToBuilder();
+                    builder.Parts.RemoveAt(partIndex);
+                    return builder.ToTmd();
+                }
+                case Md1 md1:
+                {
+                    var builder = md1.ToBuilder();
+                    builder.Parts.RemoveAt(partIndex);
+                    return builder.ToMd1();
+                }
+                case Md2 md2:
+                {
+                    var builder = md2.ToBuilder();
+                    builder.Parts.RemoveAt(partIndex);
+                    return builder.ToMd2();
+                }
+                default:
+                    throw new NotSupportedException();
+            }
+        }
+
+        public static IModelMesh MoveUVToPage(this IModelMesh mesh, int partIndex, int page)
+        {
+            switch (mesh)
+            {
+                case Tmd tmd:
+                {
+                    var builder = tmd.ToBuilder();
+                    var part = builder.Parts[partIndex];
+                    for (var i = 0; i < part.Triangles.Count; i++)
+                    {
+                        var tt = part.Triangles[i];
+                        tt.clutId = (ushort)(0x7800 | (page * 0x40));
+                        tt.page = (byte)((tt.page & 0xF0) | (page & 0x0F));
+                        part.Triangles[i] = tt;
+                    }
+                    return builder.ToTmd();
+                }
+                case Md1 md1:
+                {
+                    var builder = md1.ToBuilder();
+                    var part = builder.Parts[partIndex];
+                    for (var i = 0; i < part.TriangleTextures.Count; i++)
+                    {
+                        var tt = part.TriangleTextures[i];
+                        tt.page = (byte)((tt.page & 0xF0) | (page & 0x0F));
+                        part.TriangleTextures[i] = tt;
+                    }
+                    for (var i = 0; i < part.QuadTextures.Count; i++)
+                    {
+                        var qt = part.QuadTextures[i];
+                        qt.page = (byte)((qt.page & 0xF0) | (page & 0x0F));
+                        part.QuadTextures[i] = qt;
+                    }
+                    return builder.ToMd1();
+                }
+                case Md2 md2:
+                {
+                    var builder = md2.ToBuilder();
+                    var part = builder.Parts[partIndex];
+                    for (var i = 0; i < part.Triangles.Count; i++)
+                    {
+                        var tt = part.Triangles[i];
+                        tt.page = (byte)((tt.page & 0xF0) | (page & 0x0F));
+                        part.Triangles[i] = tt;
+                    }
+                    for (var i = 0; i < part.Quads.Count; i++)
+                    {
+                        var qt = part.Quads[i];
+                        qt.page = (byte)((qt.page & 0xF0) | (page & 0x0F));
+                        part.Quads[i] = qt;
+                    }
+                    return builder.ToMd2();
+                }
+                default:
+                    throw new NotSupportedException();
+            }
+        }
     }
 }

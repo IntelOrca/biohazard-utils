@@ -99,26 +99,25 @@ namespace emdui
         {
             get
             {
-                if (MainModel is PldFile pldFile)
-                    return pldFile.Tim;
-                else if (MainModel is PlwFile plwFile)
-                    return plwFile.Tim;
-                else if (MainModel is EmdFile emdFile)
-                    if (emdFile.Version == BioVersion.Biohazard1)
-                        return emdFile.GetTim(0);
-                    else
-                        return _projectFiles.FirstOrDefault(x => x.Kind == ProjectFileKind.Tim).Content as TimFile;
+                if (MainModel is EmdFile emdFile && emdFile.Version != BioVersion.Biohazard1)
+                {
+                    return _projectFiles.FirstOrDefault(x => x.Kind == ProjectFileKind.Tim).Content as TimFile;
+                }
                 else
-                    return null;
+                {
+                    return MainModel.GetTim(0);
+                }
             }
             set
             {
-                if (MainModel is PldFile pldFile)
-                    pldFile.Tim = value;
-                else if (MainModel is PlwFile plwFile)
-                    plwFile.Tim = value;
-                else if (MainModel is EmdFile emdFile)
+                if (MainModel is EmdFile emdFile && emdFile.Version != BioVersion.Biohazard1)
+                {
                     _projectFiles.FirstOrDefault(x => x.Kind == ProjectFileKind.Tim).Content = value;
+                }
+                else
+                {
+                    MainModel.SetTim(0, value);
+                }
             }
         }
 

@@ -684,53 +684,15 @@ namespace emdui
         {
             var project = MainWindow.Instance.Project;
             var modelFile = ModelFile.FromFile(path);
-            if (modelFile.Version == BioVersion.Biohazard2)
-            {
-                if (Model.Version == BioVersion.Biohazard2)
-                {
-                    Mesh = modelFile.GetMesh(0);
-                    Model.SetEmr(0, modelFile.GetEmr(0));
-                }
-                else
-                {
-                    Mesh = ((Md1)modelFile.GetMesh(0)).ToMd2();
 
-                    var map2to3 = new[]
-                    {
-                        0, 8, 9, 10, 11, 12, 13, 14, 1, 2, 3, 4, 5, 6, 7
-                    };
-                    var emr = modelFile.GetEmr(0);
-                    var emrBuilder = Model.GetEmr(0).ToBuilder();
-                    for (var i = 0; i < map2to3.Length; i++)
-                    {
-                        var srcPartIndex = i;
-                        var dstPartIndex = map2to3[i];
-                        var src = emr.GetRelativePosition(srcPartIndex);
-                        emrBuilder.RelativePositions[dstPartIndex] = src;
-                    }
-                    Model.SetEmr(0, emrBuilder.ToEmr());
-                }
-            }
-            else
-            {
-                if (Model.Version == BioVersion.Biohazard2)
-                {
-                    Mesh = ((Md2)modelFile.GetMesh(0)).ToMd1();
-                }
-                else
-                {
-                    Mesh = modelFile.GetMesh(0);
+            // Mesh
+            var converter = new MeshConverter();
+            Mesh = converter.ConvertMesh(modelFile.GetMesh(0), Mesh.Version);
 
-                    var emr = modelFile.GetEmr(0);
-                    var emrBuilder = Model.GetEmr(0).ToBuilder();
-                    for (var i = 0; i < 15; i++)
-                    {
-                        emrBuilder.RelativePositions[i] = emr.GetRelativePosition(i);
-                    }
-                    Model.SetEmr(0, emrBuilder.ToEmr());
-                }
-            }
+            // Bone positions
+            Model.SetEmr(0, converter.ConvertEmr(Model.GetEmr(0), modelFile.GetEmr(0)));
 
+            // Texture
             if (modelFile is PldFile pldFile)
             {
                 project.MainTexture = pldFile.Tim;

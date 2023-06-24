@@ -157,77 +157,7 @@ namespace emdui
                 return;
             }
 
-            if (_mesh is Md1 md1)
-            {
-                var objTriangle = md1.Objects[partIndex * 2];
-                var objQuad = md1.Objects[(partIndex * 2) + 1];
-                var triangleTextures = md1.GetTriangleTextures(in objTriangle);
-                var quadTextures = md1.GetQuadTextures(in objQuad);
-                var primitives = new List<TimView.UVPrimitive>();
-                foreach (var t in triangleTextures)
-                {
-                    var uv = new TimView.UVPrimitive();
-                    uv.Page = (byte)(t.page & 0xF);
-                    uv.U0 = t.u0;
-                    uv.V0 = t.v0;
-                    uv.U1 = t.u1;
-                    uv.V1 = t.v1;
-                    uv.U2 = t.u2;
-                    uv.V2 = t.v2;
-                    primitives.Add(uv);
-                }
-                foreach (var t in quadTextures)
-                {
-                    var uv = new TimView.UVPrimitive();
-                    uv.IsQuad = true;
-                    uv.Page = (byte)(t.page & 0xF);
-                    uv.U0 = t.u0;
-                    uv.V0 = t.v0;
-                    uv.U1 = t.u1;
-                    uv.V1 = t.v1;
-                    uv.U2 = t.u2;
-                    uv.V2 = t.v2;
-                    uv.U3 = t.u3;
-                    uv.V3 = t.v3;
-                    primitives.Add(uv);
-                }
-                timImage.Primitives = primitives.ToArray();
-            }
-            else if (_mesh is Md2 md2)
-            {
-                var obj = md2.Objects[partIndex];
-                var triangles = md2.GetTriangles(in obj);
-                var quads = md2.GetQuads(in obj);
-                var primitives = new List<TimView.UVPrimitive>();
-                foreach (var t in triangles)
-                {
-                    var uv = new TimView.UVPrimitive();
-                    uv.Page = (byte)(t.page & 0xF);
-                    uv.U0 = t.tu0;
-                    uv.V0 = t.tv0;
-                    uv.U1 = t.tu1;
-                    uv.V1 = t.tv1;
-                    uv.U2 = t.tu2;
-                    uv.V2 = t.tv2;
-                    primitives.Add(uv);
-                }
-                foreach (var t in quads)
-                {
-                    var uv = new TimView.UVPrimitive();
-                    uv.IsQuad = true;
-                    uv.Page = (byte)(t.page & 0xF);
-                    uv.U0 = t.tu0;
-                    uv.V0 = t.tv0;
-                    uv.U1 = t.tu1;
-                    uv.V1 = t.tv1;
-                    uv.U2 = t.tu2;
-                    uv.V2 = t.tv2;
-                    uv.U3 = t.tu3;
-                    uv.V3 = t.tv3;
-                    primitives.Add(uv);
-                }
-                timImage.Primitives = primitives.ToArray();
-            }
+            timImage.SetPrimitivesFromMesh(_mesh, partIndex);
         }
 
         private void RefreshRelativePositionTextBoxes()

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Windows;
@@ -61,6 +62,13 @@ namespace emdui
                     RefreshPrimitives();
                 }
             }
+        }
+
+        public void SetPrimitivesFromMesh(IModelMesh mesh, int partIndex = -1)
+        {
+            var visitor = new UVVisitor(partIndex);
+            visitor.Accept(mesh);
+            Primitives = visitor.Primitives;
         }
 
         public TimView()
@@ -308,6 +316,7 @@ namespace emdui
             if (numPages > 1 && _selectedPage == numPages - 1)
             {
                 _timFile.ResizeImage((numPages - 1) * 128, _timFile.Height);
+                _timFile.ResizeCluts(numPages - 1);
             }
             else
             {
@@ -454,6 +463,64 @@ namespace emdui
             public byte V2 { get; set; }
             public byte U3 { get; set; }
             public byte V3 { get; set; }
+        }
+
+        private class UVVisitor : MeshVisitor
+        {
+            private readonly List<UVPrimitive> _primitives = new List<UVPrimitive>();
+            private readonly int _partIndex;
+            private UVPrimitive _primitive;
+            private int _pointIndex;
+
+            public UVPrimitive[] Primitives => _primitives.ToArray();
+
+            public UVVisitor(int partIndex)
+            {
+                _partIndex = partIndex;
+            }
+
+            public override bool VisitPart(int index)
+            {
+                return _partIndex == index;
+            }
+
+            public override void VisitPrimitive(int numPoints, byte page)
+            {
+                _primitive = new UVPrimitive();
+                if (numPoints == 4)
+                    _primitive.IsQuad = true;
+                _primitive.Page = page;
+                _pointIndex = 0;
+            }
+
+            public override void VisitPrimitivePoint(ushort v, ushort n, byte tu, byte tv)
+            {
+                switch (_pointIndex)
+                {
+                    case 0:
+                        _primitive.U0 = tu;
+                        _primitive.V0 = tv;
+                        break;
+                    case 1:
+                        _primitive.U1 = tu;
+                        _primitive.V1 = tv;
+                        break;
+                    case 2:
+                        _primitive.U2 = tu;
+                        _primitive.V2 = tv;
+                        break;
+                    case 3:
+                        _primitive.U3 = tu;
+                        _primitive.V3 = tv;
+                        break;
+                }
+                _pointIndex++;
+            }
+
+            public override void LeavePrimitive()
+            {
+                _primitives.Add(_primitive);
+            }
         }
     }
 }

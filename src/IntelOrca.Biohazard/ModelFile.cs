@@ -83,29 +83,59 @@ namespace IntelOrca.Biohazard
             return kinds[index];
         }
 
-        public object GetChunk(int index)
+#pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+#pragma warning disable CS8603 // Possible null reference return.
+        public T GetChunk<T>(int index)
         {
             var kind = GetChunkKind(index);
             switch (kind)
             {
                 case ChunkKind.Animation:
-                    return new Edd(GetChunkData(index));
+                    return (T)(object)new Edd(GetChunkData(index));
                 case ChunkKind.Armature:
-                    return new Emr(GetChunkData(index));
+                    return (T)(object)new Emr(GetChunkData(index));
                 case ChunkKind.Mesh:
                     if (Version == BioVersion.Biohazard2)
-                        return new Md1(GetChunkData(index));
+                        return (T)(object)new Md1(GetChunkData(index));
                     else
-                        return new Md2(GetChunkData(index));
+                        return (T)(object)new Md2(GetChunkData(index));
                 case ChunkKind.Texture:
-                    return new TimFile(GetChunkData(index));
+                    return (T)(object)new TimFile(GetChunkData(index));
                 default:
-                    return null;
+                    return default(T);
             }
         }
 
+        public void SetChunk<T>(int index, T value)
+        {
+            var kind = GetChunkKind(index);
+            switch (kind)
+            {
+                case ChunkKind.Animation:
+                    SetChunkData(index, ((Edd)(object)value).Data);
+                    break;
+                case ChunkKind.Armature:
+                    SetChunkData(index, ((Emr)(object)value).Data);
+                    break;
+                case ChunkKind.Mesh:
+                    SetChunkData(index, ((IModelMesh)(object)value).Data);
+                    break;
+                case ChunkKind.Texture:
+                    SetChunkData(index, ((TimFile)(object)value).GetBytes());
+                    break;
+                default:
+                    throw new NotSupportedException();
+            }
+        }
+#pragma warning restore CS8603 // Possible null reference return.
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
+#pragma warning restore CS8600 // Converting null literal or possible null value to non-nullable type.
+
         protected virtual ReadOnlyMemory<byte> GetChunkData(int index) => _chunks[index];
         protected void SetChunkData(int index, ReadOnlySpan<byte> data) => _chunks[index] = data.ToArray();
+        protected void SetChunkData(int index, ReadOnlyMemory<byte> data) => SetChunkData(index, data.Span);
+        protected void SetChunkData(int index, byte[] data) => SetChunkData(index, new ReadOnlySpan<byte>(data));
 
         private int GetChunkIndex(ChunkKind kind, int number)
         {

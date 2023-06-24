@@ -26,7 +26,7 @@ namespace emdui
             InitializeComponent();
         }
 
-        private void Refresh()
+        public void Refresh()
         {
             treeView.ItemsSource = null;
             if (_project == null)
@@ -382,25 +382,21 @@ namespace emdui
             }
             else if (ProjectFile.Content is PlwFile plwFile)
             {
-                if (project.MainModel is PldFile parentPldFile)
+                var texture = project.MainTexture;
+                if (plwFile.Version != BioVersion.Biohazard1)
+                    texture = texture.WithWeaponTexture(plwFile.Tim);
+                else
+                    emr = project.MainModel.GetEmr(0);
+                var mesh = project.MainModel.GetMesh(0);
+                switch (Model.Version)
                 {
-                    var texture = project.MainTexture.WithWeaponTexture(plwFile.Tim);
-                    var mesh = parentPldFile.GetMesh(0);
-                    if (mesh is Md1 md1)
-                    {
-                        var targetBuilder = md1.ToBuilder();
-                        var sourceBuilder = plwFile.Md1.ToBuilder();
-                        targetBuilder.Parts[11] = sourceBuilder.Parts[0];
-                        mesh = targetBuilder.ToMd1();
-                    }
-                    else if (mesh is Md2 md2)
-                    {
-                        // TODO
-                    }
-
-                    mainWindow.LoadMesh(mesh, texture);
-                    mainWindow.LoadAnimation(emr, Edd, Index);
+                    case BioVersion.Biohazard1:
+                        mesh = mesh.ReplacePart(11, plwFile.GetMesh(0));
+                        break;
                 }
+
+                mainWindow.LoadMesh(mesh, texture);
+                mainWindow.LoadAnimation(emr, Edd, Index);
             }
             else if (ProjectFile.Content is EmdFile emdFile)
             {
@@ -632,7 +628,7 @@ namespace emdui
         {
             var mainWindow = MainWindow.Instance;
             var texture = mainWindow.Project.MainTexture;
-            if (Model is PlwFile plwFile)
+            if (Model is PlwFile plwFile && plwFile.Version != BioVersion.Biohazard1)
             {
                 texture = texture.WithWeaponTexture(plwFile.Tim);
                 mainWindow.LoadMeshWithoutArmature(Mesh, texture);

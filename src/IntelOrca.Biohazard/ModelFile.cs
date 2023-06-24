@@ -15,7 +15,7 @@ namespace IntelOrca.Biohazard
         {
             Version = version;
             _directory = version == BioVersion.Biohazard1 ?
-                (OffsetDirectory)new OffsetDirectoryV1(4) :
+                (OffsetDirectory)new OffsetDirectoryV1() :
                 (OffsetDirectory)new OffsetDirectoryV2();
             _directory.Read(stream);
         }
@@ -24,7 +24,7 @@ namespace IntelOrca.Biohazard
         {
             Version = version;
             _directory = version == BioVersion.Biohazard1 ?
-                (OffsetDirectory)new OffsetDirectoryV1(4) :
+                (OffsetDirectory)new OffsetDirectoryV1() :
                 (OffsetDirectory)new OffsetDirectoryV2();
 
             using var fs = new FileStream(path, FileMode.Open, FileAccess.Read);
@@ -195,6 +195,8 @@ namespace IntelOrca.Biohazard
                 // RE 1 won't have a directory offset header
                 if (directoryOffset + (numOffsets * 4) != fileLength)
                 {
+                    if (path.EndsWith(".emw", StringComparison.OrdinalIgnoreCase))
+                        return new PlwFile(BioVersion.Biohazard1, path);
                     return new EmdFile(BioVersion.Biohazard1, path);
                 }
 
@@ -283,17 +285,28 @@ namespace IntelOrca.Biohazard
 
         private class OffsetDirectoryV1 : OffsetDirectory
         {
-            public int _numOffsets;
-
-            public OffsetDirectoryV1(int numOffsets)
-            {
-                _numOffsets = numOffsets;
-            }
-
             public override void Read(Stream stream)
             {
+                // Detect how many offsets there are
+                var br = new BinaryReader(stream);
+                stream.Position = stream.Length - 4;
+                var lastOffset = stream.Length;
+                var numOffsetsDetected = 0;
+                for (var i = 0; i < 4; i++)
+                {
+                    var offset = br.ReadInt32();
+                    stream.Position -= 8;
+                    if (offset >= lastOffset)
+                    {
+                        break;
+                    }
+                    lastOffset = offset;
+                    numOffsetsDetected++;
+                }
+
+
                 // Directory is always at end
-                var numOffsets = _numOffsets;
+                var numOffsets = numOffsetsDetected;
                 var directoryOffset = (int)(stream.Length - (numOffsets * 4));
                 ReadDirectory(stream, directoryOffset, numOffsets);
             }

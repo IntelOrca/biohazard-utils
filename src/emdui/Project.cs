@@ -85,7 +85,7 @@ namespace emdui
             }
         }
 
-        private void LoadWeapon(string path)
+        public void LoadWeapon(string path)
         {
             var plwFile = ModelFile.FromFile(path) as PlwFile;
             if (plwFile is null)

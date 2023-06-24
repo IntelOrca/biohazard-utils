@@ -224,8 +224,19 @@ namespace emdui
             // LoadProject(@"F:\games\re2\data\Pl0\emd0\em010.emd");
             // ExportToBioRand(@"C:\Users\Ted\Desktop\ethan");
             // LoadProject(@"M:\temp\re3extracted\ROOM\EMD\EM1A.EMD");
-            // LoadProject(@"F:\games\re1\JPN\ENEMY\CHAR10.EMD");
-            LoadProject(@"F:\games\re1\mod_test\ENEMY\CHAR10.EMD");
+            LoadProject(@"F:\games\re1\JPN\ENEMY\CHAR10.EMD");
+
+            Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W01.EMW");
+            Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W02.EMW");
+            Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W03.EMW");
+            Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W04.EMW");
+            Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W05.EMW");
+            Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W06.EMW");
+            Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W07.EMW");
+            Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W08.EMW");
+            Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W0B.EMW");
+            projectTreeView.Refresh();
+            // LoadProject(@"F:\games\re1\mod_test\ENEMY\CHAR10.EMD");
 #endif
         }
 

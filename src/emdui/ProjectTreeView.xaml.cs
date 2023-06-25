@@ -676,10 +676,7 @@ namespace emdui
             var emr = Model.GetEmr(0);
             var numPages = tim.Width / 128;
             var objImporter = new ObjImporter();
-            var mesh = project.Version == BioVersion.Biohazard2 ?
-                (IModelMesh)objImporter.ImportMd1(path, numPages, emr.GetFinalPosition) :
-                (IModelMesh)objImporter.ImportMd2(path, numPages, emr.GetFinalPosition);
-            Mesh = mesh;
+            Mesh = objImporter.Import(Mesh.Version, path, numPages, emr.GetFinalPosition);
         }
 
         private void ImportFromModel(string path)
@@ -921,11 +918,7 @@ namespace emdui
             var tim = project.MainTexture;
             var numPages = tim.Width / 128;
             var objImporter = new ObjImporter();
-
-            var mesh = project.Version == BioVersion.Biohazard2 ?
-                (IModelMesh)objImporter.ImportMd1(path, numPages) :
-                (IModelMesh)objImporter.ImportMd2(path, numPages);
-            ImportMesh(mesh);
+            ImportMesh(objImporter.Import(Mesh.Version, path, numPages));
         }
 
         private void ExportToObj(string path)

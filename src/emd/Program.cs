@@ -93,10 +93,7 @@ namespace IntelOrca.Emd
                     {
                         // Import OBJ
                         var objImporter = new ObjImporter();
-                        if (version == BioVersion.Biohazard2)
-                            modelFile.Md1 = objImporter.ImportMd1(inputObjPath, 3);
-                        else
-                            modelFile.Md2 = objImporter.ImportMd2(inputObjPath, 3);
+                        objImporter.Import(modelFile.Version, inputObjPath, 3);
                     }
                     if (inputPngPath != null)
                     {

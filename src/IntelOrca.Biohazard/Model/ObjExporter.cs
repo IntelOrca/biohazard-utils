@@ -37,83 +37,9 @@ namespace IntelOrca.Biohazard.Model
 
         public void Export(IModelMesh mesh, string objPath, int numPages, Func<int, Emr.Vector>? partTranslate = null)
         {
-            if (mesh is Md1 md1)
-                Export(md1, objPath, numPages, partTranslate);
-            else if (mesh is Md2 md2)
-                Export(md2, objPath, numPages, partTranslate);
-        }
+            var meshConverter = new MeshConverter();
+            var md2 = (Md2)meshConverter.ConvertMesh(mesh, BioVersion.Biohazard3, remap: false);
 
-        private void Export(Md1 md1, string objPath, int numPages, Func<int, Emr.Vector>? partTranslate = null)
-        {
-            Begin(objPath, numPages);
-
-            var objIndex = 0;
-            var vIndex = 1;
-            var nIndex = 1;
-            var tvIndex = 1;
-            foreach (var obj in md1.Objects)
-            {
-                var translate = partTranslate == null ? new Emr.Vector() : partTranslate(objIndex / 2);
-
-                if ((objIndex & 1) == 0)
-                    AppendLine($"o part_{objIndex / 2:00}");
-                foreach (var v in md1.GetPositionData(obj))
-                {
-                    AppendDataLine("v", (translate.x + v.x) / 1000.0, (translate.y + v.y) / 1000.0, (translate.z + v.z) / 1000.0);
-                }
-                foreach (var v in md1.GetNormalData(obj))
-                {
-                    AppendDataLine("vn", v.x / 5000.0, v.y / 5000.0, v.z / 5000.0);
-                }
-                if ((objIndex & 1) == 0)
-                {
-                    foreach (var t in md1.GetTriangleTextures(obj))
-                    {
-                        var page = t.page & 0x0F;
-                        var offsetU = page * 128;
-                        AppendDataLine("vt", (offsetU + t.u2) / _textureWidth, 1 - t.v2 / _textureHeight);
-                        AppendDataLine("vt", (offsetU + t.u1) / _textureWidth, 1 - t.v1 / _textureHeight);
-                        AppendDataLine("vt", (offsetU + t.u0) / _textureWidth, 1 - t.v0 / _textureHeight);
-                    }
-                }
-                else
-                {
-                    foreach (var t in md1.GetQuadTextures(obj))
-                    {
-                        var page = t.page & 0x0F;
-                        var offsetU = page * 128;
-                        AppendDataLine("vt", (offsetU + t.u2) / _textureWidth, 1 - t.v2 / _textureHeight);
-                        AppendDataLine("vt", (offsetU + t.u3) / _textureWidth, 1 - t.v3 / _textureHeight);
-                        AppendDataLine("vt", (offsetU + t.u1) / _textureWidth, 1 - t.v1 / _textureHeight);
-                        AppendDataLine("vt", (offsetU + t.u0) / _textureWidth, 1 - t.v0 / _textureHeight);
-                    }
-                }
-                AppendLine($"s 1");
-                if ((objIndex & 1) == 0)
-                {
-                    foreach (var t in md1.GetTriangles(obj))
-                    {
-                        AppendLine($"f {t.v2 + vIndex}/{tvIndex + 0}/{t.n2 + nIndex} {t.v1 + vIndex}/{tvIndex + 1}/{t.n1 + nIndex} {t.v0 + vIndex}/{tvIndex + 2}/{t.n0 + nIndex}");
-                        tvIndex += 3;
-                    }
-                }
-                else
-                {
-                    foreach (var t in md1.GetQuads(obj))
-                    {
-                        AppendLine($"f {t.v2 + vIndex}/{tvIndex + 0}/{t.n2 + nIndex} {t.v3 + vIndex}/{tvIndex + 1}/{t.n3 + nIndex} {t.v1 + vIndex}/{tvIndex + 2}/{t.n1 + nIndex} {t.v0 + vIndex}/{tvIndex + 3}/{t.n0 + nIndex}");
-                        tvIndex += 4;
-                    }
-                }
-                objIndex++;
-                vIndex += obj.vtx_count;
-                nIndex += obj.nor_count;
-            }
-            End();
-        }
-
-        private void Export(Md2 md2, string objPath, int numPages, Func<int, Emr.Vector>? partTranslate = null)
-        {
             Begin(objPath, numPages);
 
             var objIndex = 0;

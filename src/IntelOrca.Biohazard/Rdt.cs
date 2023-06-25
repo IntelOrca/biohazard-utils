@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using IntelOrca.Biohazard.Model;
 using IntelOrca.Biohazard.Script;
 using IntelOrca.Biohazard.Script.Opcodes;
 

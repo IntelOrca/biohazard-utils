@@ -6,6 +6,7 @@ using System.Windows.Media.Media3D;
 using System.Windows.Threading;
 using emdui.Extensions;
 using IntelOrca.Biohazard;
+using IntelOrca.Biohazard.Model;
 using Microsoft.Win32;
 
 namespace emdui
@@ -369,7 +370,7 @@ namespace emdui
                 var targetBuilder = md1.ToBuilder();
                 var sourceBuilder = plw.Md1.ToBuilder();
                 targetBuilder.Parts[11] = sourceBuilder.Parts[0];
-                _mesh = targetBuilder.ToMd1();
+                _mesh = targetBuilder.ToMesh();
             }
             else if (_mesh is Md2 md2)
             {

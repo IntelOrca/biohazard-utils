@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace IntelOrca.Biohazard
+namespace IntelOrca.Biohazard.Model
 {
     public class MeshConverter
     {
@@ -55,13 +55,13 @@ namespace IntelOrca.Biohazard
 
         private class TmdConverter : MeshVisitor
         {
-            private TmdBuilder _builder = new TmdBuilder();
-            private TmdBuilder.Part? _part;
+            private Tmd.Builder _builder = new Tmd.Builder();
+            private Tmd.Builder.Part? _part;
             private Tmd.Triangle _triangle;
             private int _pointIndex;
             private int[] _partRemap;
 
-            public Tmd ToTmd() => _builder.ToTmd();
+            public Tmd ToTmd() => _builder.ToMesh();
 
             public TmdConverter(int[] partRemap)
             {
@@ -71,7 +71,7 @@ namespace IntelOrca.Biohazard
 
             public override bool VisitPart(int index)
             {
-                _part = new TmdBuilder.Part();
+                _part = new Tmd.Builder.Part();
                 return true;
             }
 
@@ -89,8 +89,8 @@ namespace IntelOrca.Biohazard
             {
                 _triangle = new Tmd.Triangle();
                 _triangle.unknown = 0x34000609;
-                _triangle.clutId = (ushort)(0x7800 | (page * 0x40));
-                _triangle.page = (byte)(0x80 | (page & 0x0F));
+                _triangle.clutId = (ushort)(0x7800 | page * 0x40);
+                _triangle.page = (byte)(0x80 | page & 0x0F);
                 _pointIndex = 0;
             }
 
@@ -130,7 +130,7 @@ namespace IntelOrca.Biohazard
                 var targetIndex = index < _partRemap.Length ? _partRemap[index] : index;
                 while (_builder.Parts.Count <= targetIndex)
                 {
-                    _builder.Parts.Add(new TmdBuilder.Part());
+                    _builder.Parts.Add(new Tmd.Builder.Part());
                 }
                 _builder.Parts[targetIndex] = _part!;
             }

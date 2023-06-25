@@ -9,6 +9,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using emdui.Extensions;
 using IntelOrca.Biohazard;
+using IntelOrca.Biohazard.Model;
 
 namespace emdui
 {
@@ -784,14 +785,14 @@ namespace emdui
             var builder = Model.Md2.ToBuilder();
             if (builder.Parts.Count < 16)
             {
-                var part = new Md2Builder.Part();
+                var part = new Md2.Builder.Part();
                 part.Positions.Add(new Md2.Vector());
                 part.Normals.Add(new Md2.Vector());
                 part.Triangles.Add(new Md2.Triangle());
                 builder.Parts.Add(part);
             }
             builder.Parts[15] = builder.Parts[4];
-            Mesh = builder.ToMd2();
+            Mesh = builder.ToMesh();
             CreateChildren();
         }
     }

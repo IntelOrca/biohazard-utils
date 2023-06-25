@@ -2,9 +2,9 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace IntelOrca.Biohazard
+namespace IntelOrca.Biohazard.Model
 {
-    public sealed class Md2 : IModelMesh
+    public sealed partial class Md2 : IModelMesh
     {
         public ReadOnlyMemory<byte> Data { get; }
 
@@ -15,7 +15,6 @@ namespace IntelOrca.Biohazard
 
         public BioVersion Version => BioVersion.Biohazard3;
         public int NumParts => NumObjects;
-        public byte[] GetBytes() => Data.ToArray();
 
         public int Length => GetSpan<int>(0, 1)[0];
         public int NumObjects => GetSpan<int>(4, 1)[0];
@@ -31,12 +30,14 @@ namespace IntelOrca.Biohazard
             return MemoryMarshal.Cast<byte, T>(data).Slice(0, count);
         }
 
-        public Md2Builder ToBuilder()
+        IModelMeshBuilder IModelMesh.ToBuilder() => ToBuilder();
+
+        public Builder ToBuilder()
         {
-            var builder = new Md2Builder();
+            var builder = new Builder();
             foreach (var obj in Objects)
             {
-                var part = new Md2Builder.Part();
+                var part = new Builder.Part();
                 part.Positions.AddRange(GetPositionData(obj).ToArray());
                 part.Normals.AddRange(GetNormalData(obj).ToArray());
                 part.Triangles.AddRange(GetTriangles(obj).ToArray());
@@ -44,11 +45,6 @@ namespace IntelOrca.Biohazard
                 builder.Parts.Add(part);
             }
             return builder;
-        }
-
-        public Md1 ToMd1()
-        {
-            throw new NotImplementedException();
         }
 
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -86,7 +82,7 @@ namespace IntelOrca.Biohazard
             }
 
             public Md1.Vector ToMd1() => new Md1.Vector(x, y, z);
-            public Md2.Vector ToMd2() => new Md2.Vector(x, y, z);
+            public Vector ToMd2() => new Vector(x, y, z);
         }
 
         [StructLayout(LayoutKind.Sequential, Pack = 1)]

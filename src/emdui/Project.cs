@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using IntelOrca.Biohazard;
+using IntelOrca.Biohazard.Model;
 
 namespace emdui
 {

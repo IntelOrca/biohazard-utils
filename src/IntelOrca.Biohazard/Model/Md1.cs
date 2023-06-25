@@ -2,9 +2,9 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace IntelOrca.Biohazard
+namespace IntelOrca.Biohazard.Model
 {
-    public sealed class Md1 : IModelMesh
+    public sealed partial class Md1 : IModelMesh
     {
         public ReadOnlyMemory<byte> Data { get; }
 
@@ -15,7 +15,6 @@ namespace IntelOrca.Biohazard
 
         public BioVersion Version => BioVersion.Biohazard2;
         public int NumParts => NumObjects / 2;
-        public byte[] GetBytes() => Data.ToArray();
         public int Length => GetSpan<int>(0, 1)[0];
         public int NumObjects => GetSpan<int>(8, 1)[0];
         public ReadOnlySpan<ObjectDescriptor> Objects => GetSpan<ObjectDescriptor>(12, NumObjects);
@@ -32,9 +31,11 @@ namespace IntelOrca.Biohazard
             return MemoryMarshal.Cast<byte, T>(data).Slice(0, count);
         }
 
-        public Md1Builder ToBuilder()
+        IModelMeshBuilder IModelMesh.ToBuilder() => ToBuilder();
+
+        public Builder ToBuilder()
         {
-            var builder = new Md1Builder();
+            var builder = new Md1.Builder();
             for (var i = 0; i < NumObjects; i += 2)
             {
                 var objTriangles = Objects[i];
@@ -45,7 +46,7 @@ namespace IntelOrca.Biohazard
                 Debug.Assert(objTriangles.nor_offset == objQuads.nor_offset);
                 Debug.Assert(objTriangles.nor_count == objQuads.nor_count);
 
-                var part = new Md1Builder.Part();
+                var part = new Md1.Builder.Part();
                 part.Positions.AddRange(GetPositionData(objTriangles).ToArray());
                 part.Normals.AddRange(GetNormalData(objTriangles).ToArray());
                 part.Triangles.AddRange(GetTriangles(objTriangles).ToArray());
@@ -63,11 +64,12 @@ namespace IntelOrca.Biohazard
             0, 8, 9, 10, 11, 12, 13, 14, 1, 2, 3, 4, 5, 6, 7
         };
 
+#if false
         public unsafe Md2 ToMd2()
         {
-            var builder = new Md2Builder();
+            var builder = new Builder();
             for (int i = 0; i < 15; i++)
-                builder.Parts.Add(new Md2Builder.Part());
+                builder.Parts.Add(new Builder.Part());
 
             for (int i = 0; i < 30; i += 2)
             {
@@ -112,7 +114,7 @@ namespace IntelOrca.Biohazard
                         tv1 = triangleTexture.v1,
                         tv2 = triangleTexture.v2,
                         dummy0 = (byte)(triangleTexture.page * 64),
-                        page = (byte)(0x80 | (triangleTexture.page & 0x0F)),
+                        page = (byte)(0x80 | triangleTexture.page & 0x0F),
                         visible = 120
                     });
                 }
@@ -143,7 +145,7 @@ namespace IntelOrca.Biohazard
                         tv2 = quadTexture.v2,
                         tv3 = quadTexture.v3,
                         dummy2 = (byte)(quadTexture.page * 64),
-                        page = (byte)(0x80 | (quadTexture.page & 0x0F)),
+                        page = (byte)(0x80 | quadTexture.page & 0x0F),
                         visible = 120
                     });
                 }
@@ -157,6 +159,7 @@ namespace IntelOrca.Biohazard
 
             return builder.ToMd2();
         }
+#endif
 
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
         public struct ObjectDescriptor

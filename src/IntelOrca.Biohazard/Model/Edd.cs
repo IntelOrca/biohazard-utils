@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace IntelOrca.Biohazard
+namespace IntelOrca.Biohazard.Model
 {
     public class Edd
     {
@@ -53,13 +53,13 @@ namespace IntelOrca.Biohazard
             public ushort Index
             {
                 get => (ushort)(_value & 0xFFF);
-                set => _value = (uint)((_value & ~0xFFF) | ((uint)value & 0xFFF));
+                set => _value = (uint)(_value & ~0xFFF | (uint)value & 0xFFF);
             }
 
             public byte Flags
             {
                 get => (byte)(_value >> 12);
-                set => _value = ((uint)value << 12) | (_value & 0xFFF);
+                set => _value = (uint)value << 12 | _value & 0xFFF;
             }
         }
     }

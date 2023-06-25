@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace IntelOrca.Biohazard
+namespace IntelOrca.Biohazard.Model
 {
     public abstract class MeshVisitor
     {
@@ -49,7 +49,7 @@ namespace IntelOrca.Biohazard
                     if (VisitPart(i))
                     {
                         var objTriangles = md1.Objects[i * 2];
-                        var objQuads = md1.Objects[(i * 2) + 1];
+                        var objQuads = md1.Objects[i * 2 + 1];
                         var positions = md1.GetPositionData(in objTriangles);
                         var normals = md1.GetNormalData(in objTriangles);
                         var triangles = md1.GetTriangles(in objTriangles);

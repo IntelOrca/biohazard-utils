@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using IntelOrca.Biohazard.Model;
 using Xunit;
 
 namespace IntelOrca.Biohazard.Tests
@@ -15,7 +16,7 @@ namespace IntelOrca.Biohazard.Tests
             var emdFile = new EmdFile(BioVersion.Biohazard1, emdPath);
             var mesh = (Tmd)emdFile.GetMesh(0);
             var builder = mesh.ToBuilder();
-            var newMesh = builder.ToTmd();
+            var newMesh = builder.ToMesh();
 
             var expectedData = mesh.Data.ToArray();
             var actualData = newMesh.Data.ToArray();
@@ -30,7 +31,7 @@ namespace IntelOrca.Biohazard.Tests
             var pldFile = new PldFile(BioVersion.Biohazard2, pldPath);
             var mesh = (Md1)pldFile.GetMesh(0);
             var builder = mesh.ToBuilder();
-            var newMesh = builder.ToMd1();
+            var newMesh = builder.ToMesh();
 
             var expectedData = mesh.Data.ToArray();
             var actualData = newMesh.Data.ToArray();
@@ -52,7 +53,7 @@ namespace IntelOrca.Biohazard.Tests
             var pldFile = new PldFile(BioVersion.Biohazard3, pldStream);
             var mesh = (Md2)pldFile.GetMesh(0);
             var builder = mesh.ToBuilder();
-            var newMesh = builder.ToMd2();
+            var newMesh = builder.ToMesh();
 
             var expectedData = mesh.Data.ToArray();
             var actualData = newMesh.Data.ToArray();

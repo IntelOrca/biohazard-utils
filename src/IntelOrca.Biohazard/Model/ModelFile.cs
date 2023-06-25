@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 
-namespace IntelOrca.Biohazard
+namespace IntelOrca.Biohazard.Model
 {
     public abstract class ModelFile
     {
@@ -15,7 +15,7 @@ namespace IntelOrca.Biohazard
         {
             Version = version;
             _directory = version == BioVersion.Biohazard1 ?
-                (OffsetDirectory)new OffsetDirectoryV1() :
+                new OffsetDirectoryV1() :
                 (OffsetDirectory)new OffsetDirectoryV2();
             _directory.Read(stream);
         }
@@ -24,7 +24,7 @@ namespace IntelOrca.Biohazard
         {
             Version = version;
             _directory = version == BioVersion.Biohazard1 ?
-                (OffsetDirectory)new OffsetDirectoryV1() :
+                new OffsetDirectoryV1() :
                 (OffsetDirectory)new OffsetDirectoryV2();
 
             using var fs = new FileStream(path, FileMode.Open, FileAccess.Read);
@@ -75,7 +75,7 @@ namespace IntelOrca.Biohazard
                 case ChunkKind.Texture:
                     return (T)(object)new TimFile(GetChunkData(index));
                 default:
-                    return default(T);
+                    return default;
             }
         }
 
@@ -193,7 +193,7 @@ namespace IntelOrca.Biohazard
                 fs.Close();
 
                 // RE 1 won't have a directory offset header
-                if (directoryOffset + (numOffsets * 4) != fileLength)
+                if (directoryOffset + numOffsets * 4 != fileLength)
                 {
                     if (path.EndsWith(".emw", StringComparison.OrdinalIgnoreCase))
                         return new PlwFile(BioVersion.Biohazard1, path);
@@ -307,7 +307,7 @@ namespace IntelOrca.Biohazard
 
                 // Directory is always at end
                 var numOffsets = numOffsetsDetected;
-                var directoryOffset = (int)(stream.Length - (numOffsets * 4));
+                var directoryOffset = (int)(stream.Length - numOffsets * 4);
                 ReadDirectory(stream, directoryOffset, numOffsets);
             }
 

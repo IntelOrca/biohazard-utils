@@ -1,5 +1,5 @@
 ﻿using System.Windows.Media.Media3D;
-using IntelOrca.Biohazard;
+using IntelOrca.Biohazard.Model;
 
 namespace emdui.Extensions
 {

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace IntelOrca.Biohazard
+namespace IntelOrca.Biohazard.Model
 {
     public class EmdFile : ModelFile
     {

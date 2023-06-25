@@ -2,7 +2,7 @@
 using System.IO;
 using System.Text;
 
-namespace IntelOrca.Biohazard
+namespace IntelOrca.Biohazard.Model
 {
     public class ObjExporter
     {
@@ -71,9 +71,9 @@ namespace IntelOrca.Biohazard
                     {
                         var page = t.page & 0x0F;
                         var offsetU = page * 128;
-                        AppendDataLine("vt", (offsetU + t.u2) / _textureWidth, 1 - (t.v2 / _textureHeight));
-                        AppendDataLine("vt", (offsetU + t.u1) / _textureWidth, 1 - (t.v1 / _textureHeight));
-                        AppendDataLine("vt", (offsetU + t.u0) / _textureWidth, 1 - (t.v0 / _textureHeight));
+                        AppendDataLine("vt", (offsetU + t.u2) / _textureWidth, 1 - t.v2 / _textureHeight);
+                        AppendDataLine("vt", (offsetU + t.u1) / _textureWidth, 1 - t.v1 / _textureHeight);
+                        AppendDataLine("vt", (offsetU + t.u0) / _textureWidth, 1 - t.v0 / _textureHeight);
                     }
                 }
                 else
@@ -82,10 +82,10 @@ namespace IntelOrca.Biohazard
                     {
                         var page = t.page & 0x0F;
                         var offsetU = page * 128;
-                        AppendDataLine("vt", (offsetU + t.u2) / _textureWidth, 1 - (t.v2 / _textureHeight));
-                        AppendDataLine("vt", (offsetU + t.u3) / _textureWidth, 1 - (t.v3 / _textureHeight));
-                        AppendDataLine("vt", (offsetU + t.u1) / _textureWidth, 1 - (t.v1 / _textureHeight));
-                        AppendDataLine("vt", (offsetU + t.u0) / _textureWidth, 1 - (t.v0 / _textureHeight));
+                        AppendDataLine("vt", (offsetU + t.u2) / _textureWidth, 1 - t.v2 / _textureHeight);
+                        AppendDataLine("vt", (offsetU + t.u3) / _textureWidth, 1 - t.v3 / _textureHeight);
+                        AppendDataLine("vt", (offsetU + t.u1) / _textureWidth, 1 - t.v1 / _textureHeight);
+                        AppendDataLine("vt", (offsetU + t.u0) / _textureWidth, 1 - t.v0 / _textureHeight);
                     }
                 }
                 AppendLine($"s 1");
@@ -136,18 +136,18 @@ namespace IntelOrca.Biohazard
                 {
                     var page = t.page & 0x0F;
                     var offsetU = page * 128;
-                    AppendDataLine("vt", (offsetU + t.tu2) / _textureWidth, 1 - (t.tv2 / _textureHeight));
-                    AppendDataLine("vt", (offsetU + t.tu1) / _textureWidth, 1 - (t.tv1 / _textureHeight));
-                    AppendDataLine("vt", (offsetU + t.tu0) / _textureWidth, 1 - (t.tv0 / _textureHeight));
+                    AppendDataLine("vt", (offsetU + t.tu2) / _textureWidth, 1 - t.tv2 / _textureHeight);
+                    AppendDataLine("vt", (offsetU + t.tu1) / _textureWidth, 1 - t.tv1 / _textureHeight);
+                    AppendDataLine("vt", (offsetU + t.tu0) / _textureWidth, 1 - t.tv0 / _textureHeight);
                 }
                 foreach (var t in md2.GetQuads(obj))
                 {
                     var page = t.page & 0x0F;
                     var offsetU = page * 128;
-                    AppendDataLine("vt", (offsetU + t.tu2) / _textureWidth, 1 - (t.tv2 / _textureHeight));
-                    AppendDataLine("vt", (offsetU + t.tu3) / _textureWidth, 1 - (t.tv3 / _textureHeight));
-                    AppendDataLine("vt", (offsetU + t.tu1) / _textureWidth, 1 - (t.tv1 / _textureHeight));
-                    AppendDataLine("vt", (offsetU + t.tu0) / _textureWidth, 1 - (t.tv0 / _textureHeight));
+                    AppendDataLine("vt", (offsetU + t.tu2) / _textureWidth, 1 - t.tv2 / _textureHeight);
+                    AppendDataLine("vt", (offsetU + t.tu3) / _textureWidth, 1 - t.tv3 / _textureHeight);
+                    AppendDataLine("vt", (offsetU + t.tu1) / _textureWidth, 1 - t.tv1 / _textureHeight);
+                    AppendDataLine("vt", (offsetU + t.tu0) / _textureWidth, 1 - t.tv0 / _textureHeight);
                 }
                 AppendLine($"s 1");
                 foreach (var t in md2.GetTriangles(obj))

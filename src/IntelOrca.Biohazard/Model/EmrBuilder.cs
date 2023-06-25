@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 
-namespace IntelOrca.Biohazard
+namespace IntelOrca.Biohazard.Model
 {
     public class EmrBuilder
     {
@@ -29,7 +29,7 @@ namespace IntelOrca.Biohazard
             bw.Write((ushort)0);
             bw.Write((ushort)0);
             bw.Write((ushort)RelativePositions.Count);
-            bw.Write((ushort)KeyFrameSize);
+            bw.Write(KeyFrameSize);
 
             // Positions
             foreach (var pos in RelativePositions)

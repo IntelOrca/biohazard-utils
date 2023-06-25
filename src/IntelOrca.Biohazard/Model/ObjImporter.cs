@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using static IntelOrca.Biohazard.Md2;
+using static IntelOrca.Biohazard.Model.Md2;
 
-namespace IntelOrca.Biohazard
+namespace IntelOrca.Biohazard.Model
 {
     public class ObjImporter
     {
@@ -31,10 +31,10 @@ namespace IntelOrca.Biohazard
             _textureWidth = numPages * 128;
             _textureHeight = 256;
 
-            var md1Builder = new Md1Builder();
+            var md1Builder = new Md1.Builder();
             foreach (var objGroup in _objFile.Objects)
             {
-                var part = new Md1Builder.Part();
+                var part = new Md1.Builder.Part();
 
                 BeginObject();
 
@@ -120,7 +120,7 @@ namespace IntelOrca.Biohazard
 
                 md1Builder.Parts.Add(part);
             }
-            return md1Builder.ToMd1();
+            return md1Builder.ToMesh();
         }
 
         public Md2 ImportMd2(string objPath, int numPages, Func<int, Emr.Vector>? translate = null)
@@ -245,7 +245,7 @@ namespace IntelOrca.Biohazard
             var bw = new BinaryWriter(ms);
 
             bw.Write((int)(8 + objectDescriptorLength + _dataStream.Length));
-            bw.Write((int)_objects.Count);
+            bw.Write(_objects.Count);
 
             for (int i = 0; i < _objects.Count; i++)
             {

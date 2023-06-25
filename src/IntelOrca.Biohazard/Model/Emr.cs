@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace IntelOrca.Biohazard
+namespace IntelOrca.Biohazard.Model
 {
     public class Emr
     {
@@ -26,7 +26,7 @@ namespace IntelOrca.Biohazard
             if (partIndex < 0 || partIndex >= NumParts)
                 throw new ArgumentOutOfRangeException(nameof(partIndex));
 
-            var offset = 8 + (partIndex * 6);
+            var offset = 8 + partIndex * 6;
             var values = GetSpan<short>(offset, 3);
             return new Vector()
             {
@@ -71,7 +71,7 @@ namespace IntelOrca.Biohazard
             if (partIndex < 0 || partIndex >= NumParts)
                 throw new ArgumentOutOfRangeException(nameof(partIndex));
 
-            var offset = ArmatureOffset + (partIndex * 4);
+            var offset = ArmatureOffset + partIndex * 4;
             var values = GetSpan<short>(offset, 2);
             return new Armature()
             {
@@ -106,7 +106,7 @@ namespace IntelOrca.Biohazard
                 var result = new KeyFrame[count];
                 for (var i = 0; i < count; i++)
                 {
-                    result[i] = new KeyFrame(this, offset + (i * KeyFrameSize), KeyFrameSize);
+                    result[i] = new KeyFrame(this, offset + i * KeyFrameSize, KeyFrameSize);
                 }
                 return result;
             }
@@ -223,7 +223,7 @@ namespace IntelOrca.Biohazard
             {
                 get
                 {
-                    var numAngles = (AngleData.Length * 2) / 3;
+                    var numAngles = AngleData.Length * 2 / 3;
                     var result = new Vector[numAngles];
                     for (var i = 0; i < numAngles; i++)
                     {
@@ -279,7 +279,7 @@ namespace IntelOrca.Biohazard
                 var a = ReadNibble(ref src, ref nibble);
                 var b = ReadNibble(ref src, ref nibble);
                 var c = ReadNibble(ref src, ref nibble);
-                return (short)((c << 8) | (b << 4) | a);
+                return (short)(c << 8 | b << 4 | a);
             }
 
             private static byte ReadNibble(ref byte* src, ref int nibble)

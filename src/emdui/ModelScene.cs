@@ -7,6 +7,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Media.Media3D;
 using emdui.Extensions;
 using IntelOrca.Biohazard;
+using IntelOrca.Biohazard.Model;
 
 namespace emdui
 {

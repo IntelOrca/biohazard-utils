@@ -1,7 +1,7 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Reflection;
 using IntelOrca.Biohazard;
+using IntelOrca.Biohazard.Model;
 
 namespace emdui
 {
@@ -96,12 +96,12 @@ namespace emdui
 
         private void ExportToPld3()
         {
-            var baseEmr = ConvertEmr(_project.MainModel.GetEmr(0), BioVersion.Biohazard2, BioVersion.Biohazard3);
-            var baseMd2 = ConvertToMd2(_project.MainModel.Md1);
-            var baseTim = _project.MainTexture;
             var pld = new PldFile(BioVersion.Biohazard3, _re3pldPath);
-            pld.SetEmr(0, pld.GetEmr(0).WithSkeleton(baseEmr));
-            pld.Md2 = OverlayMd2(pld.Md2, baseMd2);
+            var baseEmr = ConvertEmr(pld.GetEmr(0), _project.MainModel.GetEmr(0));
+            var baseMd2 = ConvertMesh(_project.MainModel.Md1, BioVersion.Biohazard3);
+            var baseTim = _project.MainTexture;
+            pld.SetEmr(0, baseEmr);
+            pld.Md2 = OverlayMd2(pld.Md2, (Md2)baseMd2);
 
             var targetTim = pld.Tim;
             CopyPage(targetTim, baseTim, 0);
@@ -114,12 +114,12 @@ namespace emdui
 
         private void ExportToEmd3()
         {
-            var baseEmr = ConvertEmr(_project.MainModel.GetEmr(0), BioVersion.Biohazard2, BioVersion.Biohazard3);
-            var baseMd2 = ConvertToMd2(_project.MainModel.Md1);
-            var baseTim = _project.MainTexture;
             var emd = new EmdFile(BioVersion.Biohazard3, _re3emdPath);
-            emd.SetEmr(0, emd.GetEmr(0).WithSkeleton(baseEmr));
-            emd.Md2 = OverlayMd2(emd.Md2, baseMd2);
+            var baseEmr = ConvertEmr(emd.GetEmr(0), _project.MainModel.GetEmr(0));
+            var baseMd2 = ConvertMesh(_project.MainModel.Md1, BioVersion.Biohazard3);
+            var baseTim = _project.MainTexture;
+            emd.SetEmr(0, baseEmr);
+            emd.Md2 = OverlayMd2(emd.Md2, (Md2)baseMd2);
             emd.Save(_re3emdPath);
             baseTim.Save(Path.ChangeExtension(_re3emdPath, ".TIM"));
         }
@@ -135,7 +135,7 @@ namespace emdui
                     dstBuilder.Parts[i] = srcBuilder.Parts[i];
                 }
             }
-            return dstBuilder.ToMd1();
+            return dstBuilder.ToMesh();
         }
 
         private Md2 OverlayMd2(Md2 dst, Md2 src)
@@ -149,39 +149,19 @@ namespace emdui
                     dstBuilder.Parts[i] = srcBuilder.Parts[i];
                 }
             }
-            return dstBuilder.ToMd2();
+            return dstBuilder.ToMesh();
         }
 
-        private Md2 ConvertToMd2(Md1 md1)
+        private IModelMesh ConvertMesh(IModelMesh mesh, BioVersion version)
         {
-            return md1.ToMd2();
+            var meshConverter = new MeshConverter();
+            return meshConverter.ConvertMesh(mesh, version);
         }
 
-        private Emr ConvertEmr(Emr emr, BioVersion sourceVersion, BioVersion targetVersion)
+        private Emr ConvertEmr(Emr targetEmr, Emr sourceEmr)
         {
-            if (sourceVersion == targetVersion)
-                return emr;
-
-            if (sourceVersion == BioVersion.Biohazard2 && targetVersion == BioVersion.Biohazard3)
-            {
-                var map2to3 = new[]
-                {
-                    0, 8, 9, 10, 11, 12, 13, 14, 1, 2, 3, 4, 5, 6, 7
-                };
-                var emrBuilder = emr.ToBuilder();
-                for (var i = 0; i < map2to3.Length; i++)
-                {
-                    var srcPartIndex = i;
-                    var dstPartIndex = map2to3[i];
-                    var src = emr.GetRelativePosition(srcPartIndex);
-                    emrBuilder.RelativePositions[dstPartIndex] = src;
-                }
-                return emrBuilder.ToEmr();
-            }
-            else
-            {
-                throw new NotImplementedException();
-            }
+            var meshConverter = new MeshConverter();
+            return meshConverter.ConvertEmr(targetEmr, sourceEmr);
         }
 
         private static void CopyPage(TimFile dst, TimFile src, int page)

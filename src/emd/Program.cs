@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using IntelOrca.Biohazard;
 using IntelOrca.Biohazard.BioRand;
+using IntelOrca.Biohazard.Model;
 
 namespace IntelOrca.Emd
 {
@@ -121,13 +122,16 @@ namespace IntelOrca.Emd
                     var objExporter = new ObjExporter();
                     if (version == BioVersion.Biohazard2)
                     {
-                        File.WriteAllBytes(outputMd1Path, modelFile.Md1.GetBytes());
-                        File.WriteAllBytes(outputMd2Path, modelFile.Md1.ToMd2().GetBytes());
+                        var meshConverter = new MeshConverter();
+                        var md2 = meshConverter.ConvertMesh(modelFile.Md1, BioVersion.Biohazard3);
+
+                        File.WriteAllBytes(outputMd1Path, modelFile.Md1.Data.ToArray());
+                        File.WriteAllBytes(outputMd2Path, md2.Data.ToArray());
                         objExporter.Export(modelFile.Md1, outputObjPath, 3);
                     }
                     else
                     {
-                        File.WriteAllBytes(outputMd2Path, modelFile.Md2.GetBytes());
+                        File.WriteAllBytes(outputMd2Path, modelFile.Md2.Data.ToArray());
                         objExporter.Export(modelFile.Md2, outputObjPath, 3);
                     }
                     timFile?.ToBitmap((x, y) => x / 128).Save(outputPngPath);

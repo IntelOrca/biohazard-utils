@@ -2,9 +2,9 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace IntelOrca.Biohazard
+namespace IntelOrca.Biohazard.Model
 {
-    public sealed class Tmd : IModelMesh
+    public sealed partial class Tmd : IModelMesh
     {
         public ReadOnlyMemory<byte> Data { get; }
 
@@ -15,7 +15,6 @@ namespace IntelOrca.Biohazard
 
         public BioVersion Version => BioVersion.Biohazard1;
         public int NumParts => NumObjects;
-        public byte[] GetBytes() => Data.ToArray();
         public int Length => GetSpan<int>(0, 1)[0];
         public int NumObjects => GetSpan<int>(8, 1)[0];
         public ReadOnlySpan<ObjectDescriptor> Objects => GetSpan<ObjectDescriptor>(12, NumObjects);
@@ -50,13 +49,15 @@ namespace IntelOrca.Biohazard
             return MemoryMarshal.Cast<byte, T>(span).Slice(0, count);
         }
 
-        public TmdBuilder ToBuilder()
+        IModelMeshBuilder IModelMesh.ToBuilder() => ToBuilder();
+
+        public Builder ToBuilder()
         {
-            var builder = new TmdBuilder();
+            var builder = new Builder();
             for (var i = 0; i < NumParts; i++)
             {
                 var obj = Objects[i];
-                var part = new TmdBuilder.Part();
+                var part = new Builder.Part();
                 part.Positions.AddRange(GetPositionData(obj).ToArray());
                 part.Normals.AddRange(GetNormalData(obj).ToArray());
                 part.Triangles.AddRange(GetTriangles(obj).ToArray());

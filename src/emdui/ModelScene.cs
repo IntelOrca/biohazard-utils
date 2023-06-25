@@ -121,7 +121,7 @@ namespace emdui
             return floor;
         }
 
-        private static MeshGeometry3D CreateCubeMesh(int width, int height, int depth)
+        internal static MeshGeometry3D CreateCubeMesh(int width, int height, int depth)
         {
 
             // Vertex positions

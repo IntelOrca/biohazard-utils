@@ -26,6 +26,8 @@ namespace emdui
         private double _startCameraAngleH;
         private double _startCameraAngleV;
 
+        private GeometryModel3D _originObject;
+
         public ModelScene Scene
         {
             get => _scene;
@@ -74,7 +76,8 @@ namespace emdui
         {
             viewport.Children.Clear();
             viewport.Children.Add(_scene.CreateVisual3d());
-            viewport.Children.Add(new ModelVisual3D() {
+            viewport.Children.Add(new ModelVisual3D()
+            {
                 Content = new AmbientLight(Colors.White)
             });
 
@@ -85,27 +88,36 @@ namespace emdui
         {
             if (viewport.Camera is PerspectiveCamera camera)
             {
-                // var rx = _cameraZoom * (Math.Cos(_cameraAngleH) - Math.Sin(_cameraAngleV));
-                // var ry = _cameraZoom * Math.Sin(_cameraAngleV);
-                // var rz = _cameraZoom * Math.Sin(_cameraAngleH);
+                var transformGroup = new Transform3DGroup();
+                transformGroup.Children.Add(new TranslateTransform3D(_cameraZoom, 0, 0));
+                transformGroup.Children.Add(new RotateTransform3D(
+                    new AxisAngleRotation3D(new Vector3D(0, 0, -1), _cameraAngleV / Math.PI * 180)));
+                transformGroup.Children.Add(new RotateTransform3D(
+                    new AxisAngleRotation3D(new Vector3D(0, 1, 0), _cameraAngleH / Math.PI * 180)));
+                transformGroup.Children.Add(new TranslateTransform3D((Vector3D)_cameraLookAt));
 
-                var hoizontalVector = new Vector3D(
-                    Math.Cos(_cameraAngleH),
-                    0,
-                    Math.Sin(_cameraAngleH));
-                var verticalVector = new Vector3D(
-                    Math.Cos(_cameraAngleV),
-                    -Math.Sin(_cameraAngleV),
-                    0);
+                camera.Position = new Point3D();
+                camera.LookDirection = new Vector3D(-1, 0, 0);
+                camera.UpDirection = new Vector3D(0, -1, 0);
+                camera.Transform = transformGroup;
 
-                var merged = hoizontalVector + verticalVector;
-                merged.Normalize();
-                var position = merged * _cameraZoom;
-                camera.Position = new Point3D(position.X, position.Y, position.Z);
-
-                var look = _cameraLookAt - camera.Position;
-                look.Normalize();
-                camera.LookDirection = look;
+#if SHOW_ORIGIN
+                if (_originObject == null)
+                {
+                    var mesh = ModelScene.CreateCubeMesh(100, 100, 100);
+                    var material = new DiffuseMaterial(Brushes.Blue);
+                    _originObject = new GeometryModel3D()
+                    {
+                        Geometry = mesh,
+                        Material = material
+                    };
+                    viewport.Children.Add(new ModelVisual3D()
+                    {
+                        Content = _originObject
+                    });
+                }
+                _originObject.Transform = new TranslateTransform3D(((Vector3D)_cameraLookAt));
+#endif
             }
         }
 
@@ -142,8 +154,8 @@ namespace emdui
                 if (e.MouseDevice.MiddleButton == MouseButtonState.Pressed)
                 {
                     var newCameraPosition = _cameraStartPosition;
-                    newCameraPosition.Z += diff.X * 6;
-                    newCameraPosition.Y -= diff.Y * 6;
+                    newCameraPosition.X -= diff.X * 16;
+                    newCameraPosition.Y -= diff.Y * 16;
                     camera.Position = newCameraPosition;
                 }
             }

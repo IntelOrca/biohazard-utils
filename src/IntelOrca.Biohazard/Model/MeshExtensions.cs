@@ -35,7 +35,8 @@ namespace IntelOrca.Biohazard.Model
 
         public static IModelMesh CreateEmptyPart(this IModelMesh mesh)
         {
-            var builder = new Tmd.Builder();
+            var builder = mesh.ToBuilder();
+            builder.Clear();
             builder.Add();
             return builder.ToMesh();
         }

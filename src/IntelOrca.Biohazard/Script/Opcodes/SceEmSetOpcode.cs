@@ -101,9 +101,9 @@ namespace IntelOrca.Biohazard.Script.Opcodes
                     Type = br.ReadByte(),
                     State = br.ReadByte(),
                     Ai = br.ReadByte(),
-                    Floor = br.ReadByte(),
                     Unk09 = br.ReadByte(),
                     Unk0A = br.ReadByte(),
+                    Floor = br.ReadByte(),
                     SoundBank = br.ReadByte(),
                     Texture = br.ReadByte(),
                     KillId = br.ReadByte(),
@@ -167,9 +167,9 @@ namespace IntelOrca.Biohazard.Script.Opcodes
                 bw.Write(Type);
                 bw.Write(State);
                 bw.Write(Ai);
-                bw.Write(Floor);
                 bw.Write(Unk09);
                 bw.Write(Unk0A);
+                bw.Write(Floor);
                 bw.Write(SoundBank);
                 bw.Write(Texture);
                 bw.Write(KillId);

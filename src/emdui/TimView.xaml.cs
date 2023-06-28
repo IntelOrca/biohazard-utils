@@ -523,5 +523,16 @@ namespace emdui
                 _primitives.Add(_primitive);
             }
         }
+
+        private void Reorganise_Click(object sender, RoutedEventArgs e)
+        {
+            var mainWindow = MainWindow.Instance;
+            var project = mainWindow.Project;
+            var textureReorganiser = new TextureReorganiser(project.MainModel.GetMesh(0), project.MainTexture);
+            textureReorganiser.Reorganise();
+            project.MainModel.SetMesh(0, textureReorganiser.Mesh);
+            project.MainModel.SetTim(0, textureReorganiser.TimFile);
+            mainWindow.LoadMesh(project.MainModel.GetMesh(0));
+        }
     }
 }

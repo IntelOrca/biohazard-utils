@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Media3D;
@@ -236,21 +237,53 @@ namespace emdui
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\chris\pl00.pld");
             // LoadProject(@"F:\games\re2\data\Pl0\emd0\em010.emd");
             // ExportToBioRand(@"C:\Users\Ted\Desktop\ethan");
-            LoadProject(@"M:\temp\re3extracted\ROOM\EMD\EM54.EMD");
+            LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld1\rebecca\PL01.PLD");
             // LoadProject(@"F:\games\re1\JPN\ENEMY\CHAR10.EMD");
 
-            Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W01.EMW");
-            Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W02.EMW");
-            Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W03.EMW");
-            Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W04.EMW");
-            Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W05.EMW");
-            Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W06.EMW");
-            Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W07.EMW");
-            Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W08.EMW");
-            Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W0B.EMW");
-            projectTreeView.Refresh();
+            // Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W01.EMW");
+            // Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W02.EMW");
+            // Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W03.EMW");
+            // Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W04.EMW");
+            // Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W05.EMW");
+            // Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W06.EMW");
+            // Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W07.EMW");
+            // Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W08.EMW");
+            // Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W0B.EMW");
+            // projectTreeView.Refresh();
             // LoadProject(@"F:\games\re1\mod_test\ENEMY\CHAR10.EMD");
+
+#if true
+            var textureReorganiser = new TextureReorganiser(_project.MainModel.GetMesh(0), _project.MainTexture);
+            textureReorganiser.Detect();
+            // textureReorganiser.Reorganise();
+            // _project.MainModel.SetMesh(0, textureReorganiser.Mesh);
+            // SetTimFile(textureReorganiser.TimFile);
+            timImage.Primitives = textureReorganiser.Rects
+                .Select(x => new TimView.UVPrimitive()
+                {
+                    IsQuad = true,
+                    Page = (byte)x.Page,
+                    U0 = ClampPage(x.Page, x.Left),
+                    V0 = ClampByte(x.Top),
+                    U1 = ClampPage(x.Page, x.Right),
+                    V1 = ClampByte(x.Top),
+                    U3 = ClampPage(x.Page, x.Right),
+                    V3 = ClampByte(x.Bottom),
+                    U2 = ClampPage(x.Page, x.Left),
+                    V2 = ClampByte(x.Bottom)
+                })
+                .ToArray();
+            // LoadMesh(_project.MainModel.GetMesh(0));
 #endif
+#endif
+        }
+
+        private static byte ClampByte(int x) => (byte)Math.Max(0, Math.Min(255, x));
+        private static byte ClampPage(int page, int x)
+        {
+            var pageLeft = page * 128;
+            var pageRight = ((page + 1) * 128) - 1;
+            return (byte)(Math.Max(pageLeft, Math.Min(pageRight, x)) % 128);
         }
 
         private void treeParts_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)

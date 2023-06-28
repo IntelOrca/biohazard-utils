@@ -278,7 +278,7 @@ namespace IntelOrca.Biohazard
                 }
                 case PaletteFormat16bpp:
                 {
-                    var offset = (y * Width * 2) + (x * 2);
+                    var offset = ((y * Width) + x) * 2;
                     _imageData[offset + 0] = (byte)(value & 0xFF);
                     _imageData[offset + 1] = (byte)(value >> 8);
                     break;

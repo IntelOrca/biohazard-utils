@@ -44,6 +44,7 @@
                 <MenuItem Header="Paste Page" Click="PastePage_Click" />
                 <Separator />
                 <MenuItem Header="Fix Palette for RE 3" Click="FixColours_Click" />
+                <MenuItem Header="Reorganise" Click="Reorganise_Click" />
             </ContextMenu>
         </Grid.ContextMenu>
         <Image x:Name="image" HorizontalAlignment="Left" />

@@ -76,6 +76,9 @@ namespace IntelOrca.Biohazard.Model
 
         public IModelMesh ConvertMesh(IModelMesh mesh, BioVersion version, bool remap = true)
         {
+            if (mesh.Version == version)
+                return mesh;
+
             var remapArray = remap ? GetPartRemap(mesh.Version, version) : new int[0];
             switch (version)
             {

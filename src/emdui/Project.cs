@@ -140,9 +140,6 @@ namespace emdui
             {
                 var projectFilePath = Path.Combine(directory, projectFile.Filename);
                 projectFile.Save(projectFilePath);
-
-                // TEMP
-                break;
             }
 
             MainPath = path;

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using IntelOrca.Biohazard.Extensions;
 
 namespace IntelOrca.Biohazard.Model
 {
@@ -22,32 +23,7 @@ namespace IntelOrca.Biohazard.Model
         public ReadOnlySpan<Vector> GetNormalData(in ObjectDescriptor obj) => GetSpan<Vector>(12 + obj.nor_offset, obj.nor_count);
         public ReadOnlySpan<Triangle> GetTriangles(in ObjectDescriptor obj) => GetSpan<Triangle>(12 + obj.pri_offset, obj.pri_count);
 
-        private unsafe ReadOnlySpan<T> GetSpan<T>(int offset, int count) where T : struct
-        {
-#pragma warning disable CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
-            var requiredLength = count * sizeof(T);
-#pragma warning restore CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
-            ReadOnlySpan<byte> span;
-            if (Data.Length <= offset)
-            {
-                span = new byte[requiredLength];
-            }
-            else if (Data.Length - offset < requiredLength)
-            {
-                var copyLength = Data.Length - offset;
-                var fix = new byte[requiredLength];
-                for (var i = 0; i < copyLength; i++)
-                {
-                    fix[i] = Data.Span[offset + i];
-                }
-                span = fix;
-            }
-            else
-            {
-                span = Data.Span.Slice(offset, requiredLength);
-            }
-            return MemoryMarshal.Cast<byte, T>(span).Slice(0, count);
-        }
+        private unsafe ReadOnlySpan<T> GetSpan<T>(int offset, int count) where T : struct => Data.GetSafeSpan<T>(offset, count);
 
         IModelMeshBuilder IModelMesh.ToBuilder() => ToBuilder();
 

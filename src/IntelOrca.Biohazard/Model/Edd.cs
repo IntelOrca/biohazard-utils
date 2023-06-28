@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using IntelOrca.Biohazard.Extensions;
 
 namespace IntelOrca.Biohazard.Model
 {
@@ -30,11 +31,7 @@ namespace IntelOrca.Biohazard.Model
             return GetSpan<Frame>(offset, animation.Count);
         }
 
-        private ReadOnlySpan<T> GetSpan<T>(int offset, int count) where T : struct
-        {
-            var data = Data.Span.Slice(offset);
-            return MemoryMarshal.Cast<byte, T>(data).Slice(0, count);
-        }
+        private ReadOnlySpan<T> GetSpan<T>(int offset, int count) where T : struct => Data.GetSafeSpan<T>(offset, count);
 
         [DebuggerDisplay("Count = {Count} Offset = {Offset}")]
         [StructLayout(LayoutKind.Sequential, Pack = 1)]

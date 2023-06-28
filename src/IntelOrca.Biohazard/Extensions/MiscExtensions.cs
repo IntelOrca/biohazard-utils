@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 
 namespace IntelOrca.Biohazard
 {
-    public static class Extensions
+    public static class MiscExtensions
     {
         public static ulong CalculateFnv1a(this byte[] data)
         {

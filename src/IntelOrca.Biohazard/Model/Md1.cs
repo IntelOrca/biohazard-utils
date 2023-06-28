@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using IntelOrca.Biohazard.Extensions;
 
 namespace IntelOrca.Biohazard.Model
 {
@@ -25,11 +26,7 @@ namespace IntelOrca.Biohazard.Model
         public ReadOnlySpan<TriangleTexture> GetTriangleTextures(in ObjectDescriptor obj) => GetSpan<TriangleTexture>(12 + obj.tex_offset, obj.pri_count);
         public ReadOnlySpan<QuadTexture> GetQuadTextures(in ObjectDescriptor obj) => GetSpan<QuadTexture>(12 + obj.tex_offset, obj.pri_count);
 
-        private ReadOnlySpan<T> GetSpan<T>(int offset, int count) where T : struct
-        {
-            var data = Data.Span.Slice(offset);
-            return MemoryMarshal.Cast<byte, T>(data).Slice(0, count);
-        }
+        private ReadOnlySpan<T> GetSpan<T>(int offset, int count) where T : struct => Data.GetSafeSpan<T>(offset, count);
 
         IModelMeshBuilder IModelMesh.ToBuilder() => ToBuilder();
 

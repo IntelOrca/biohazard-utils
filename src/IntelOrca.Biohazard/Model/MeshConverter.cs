@@ -328,10 +328,12 @@ namespace IntelOrca.Biohazard.Model
                 if (_pointCount == 3)
                 {
                     _part!.Triangles.Add(_triangle);
+                    _part!.TriangleTextures.Add(_triangleTexture);
                 }
                 else if (_pointCount == 4)
                 {
                     _part!.Quads.Add(_quad);
+                    _part!.QuadTextures.Add(_quadTexture);
                 }
                 else
                 {

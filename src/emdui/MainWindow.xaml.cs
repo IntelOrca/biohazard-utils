@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Media3D;
@@ -252,12 +251,12 @@ namespace emdui
             // projectTreeView.Refresh();
             // LoadProject(@"F:\games\re1\mod_test\ENEMY\CHAR10.EMD");
 
-#if true
+#if false
             var textureReorganiser = new TextureReorganiser(_project.MainModel.GetMesh(0), _project.MainTexture);
             textureReorganiser.Detect();
-            // textureReorganiser.Reorganise();
-            // _project.MainModel.SetMesh(0, textureReorganiser.Mesh);
-            // SetTimFile(textureReorganiser.TimFile);
+            textureReorganiser.Reorganise();
+            _project.MainModel.SetMesh(0, textureReorganiser.Mesh);
+            SetTimFile(textureReorganiser.TimFile);
             timImage.Primitives = textureReorganiser.Rects
                 .Select(x => new TimView.UVPrimitive()
                 {

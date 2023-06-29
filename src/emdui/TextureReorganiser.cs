@@ -29,10 +29,29 @@ namespace emdui
 
         public void Reorganise()
         {
-            Detect();
-            Rects = Reorg();
+            for (var i = 0; i < 3; i++)
+            {
+                if (Reorganise(i))
+                    break;
+            }
             EditTim();
             EditUV();
+        }
+
+        private bool Reorganise(int attempt)
+        {
+            Detect();
+            // Scale(0.75, pi => pi == 0 || pi == 1);
+            if (attempt == 1)
+            {
+                Scale(0.5, pi => pi == 2 || pi == 5 || pi == 9 || pi == 12);
+            }
+            else if (attempt == 2)
+            {
+                Scale(0.75, pi => true);
+            }
+            Rects = Reorg(out var numPages);
+            return numPages <= 2;
         }
 
         private bool MergeRects()
@@ -60,7 +79,20 @@ namespace emdui
             return merged;
         }
 
-        private Rect[] Reorg()
+        private void Scale(double n, Func<int, bool> predicate)
+        {
+            for (var i = 0; i < Rects.Length; i++)
+            {
+                ref var r = ref Rects[i];
+                if (r.PartIndicies.Any(pi => predicate(pi)))
+                {
+                    r.Width = (int)(r.Width * n);
+                    r.Height = (int)(r.Height * n);
+                }
+            }
+        }
+
+        private Rect[] Reorg(out int numPages)
         {
             var prioritisePart0 = true;
             var rects = Rects
@@ -69,7 +101,7 @@ namespace emdui
             if (prioritisePart0)
             {
                 rects = rects
-                    .OrderBy(r => r.PartIndex == 0 ? 0 : 1)
+                    .OrderBy(r => r.ContainsPartIndex(0) ? 0 : 1)
                     // .OrderBy(r => r.PartIndex)
                     .ToArray();
             }
@@ -102,7 +134,7 @@ namespace emdui
             if (prioritisePart0)
             {
                 bins = bins
-                    .OrderBy(b => b.Rects.Any(x => x.PartIndex == 0) ? 0 : 1)
+                    .OrderBy(b => b.Rects.Any(x => x.ContainsPartIndex(0)) ? 0 : 1)
                     .ToList();
             }
             foreach (var bin in bins)
@@ -116,6 +148,7 @@ namespace emdui
                     }
                 }
             }
+            numPages = pages.Count(x => x.Bins.Count != 0);
             return pages
                 .SelectMany(x => x.GetRects())
                 .ToArray();
@@ -127,7 +160,7 @@ namespace emdui
             for (var i = 0; i < Rects.Length; i++)
             {
                 var rect = Rects[i];
-                imageBlocks[i] = new ImageBlock(TimFile, rect.OriginalX, rect.OriginalY, rect.Width, rect.Height);
+                imageBlocks[i] = new ImageBlock(TimFile, rect.OriginalX, rect.OriginalY, rect.OriginalWidth, rect.OriginalHeight);
             }
 
             TimFile = new TimFile(TimFile.Width, TimFile.Height, 16);
@@ -135,7 +168,7 @@ namespace emdui
             {
                 var rect = Rects[i];
                 var block = imageBlocks[i];
-                TimFile.ImportPixels(rect.X, rect.Y, rect.Width, rect.Height, block.Pixels, 0);
+                TimFile.ImportPixels(rect.X, rect.Y, rect.Width, rect.Height, block.GetPixels(rect.Width, rect.Height), 0);
             }
         }
 
@@ -161,22 +194,24 @@ namespace emdui
                     rect.AddPoint(points[1]);
                     rect.AddPoint(points[2]);
 
-                    var changeX = 0;
-                    var changeY = 0;
+                    var parentRect = new Rect();
                     foreach (var r in Rects)
                     {
                         if (r.OriginallyIntersectsWith(rect))
                         {
-                            changeX = r.X - r.OriginalX;
-                            changeY = r.Y - r.OriginalY;
+                            parentRect = r;
                             break;
                         }
                     }
 
                     for (int j = 0; j < points.Length; j++)
                     {
-                        points[j].X += changeX;
-                        points[j].Y += changeY;
+                        points[j].X -= parentRect.OriginalX;
+                        points[j].Y -= parentRect.OriginalY;
+                        points[j].X = (int)(points[j].X * parentRect.Scale);
+                        points[j].Y = (int)(points[j].Y * parentRect.Scale);
+                        points[j].X += parentRect.X;
+                        points[j].Y += parentRect.Y;
                     }
 
                     tt.u0 = (byte)points[0].PageX;
@@ -333,10 +368,14 @@ namespace emdui
         [DebuggerDisplay("X = {X} Y = {Y} Width = {Width} Height = {Height}")]
         public struct Rect
         {
-            public int PartIndex { get; set; }
+            public byte[] PartIndicies { get; set; }
+            public bool ContainsPartIndex(int partIndex) => PartIndicies.Contains((byte)partIndex);
 
             public int OriginalX { get; set; }
             public int OriginalY { get; set; }
+            public int OriginalWidth { get; set; }
+            public int OriginalHeight { get; set; }
+
             public int X { get; set; }
             public int Y { get; set; }
             public int Width { get; set; }
@@ -355,6 +394,8 @@ namespace emdui
                     return avg / 128;
                 }
             }
+
+            public double Scale => (double)Width / OriginalWidth;
 
             public void AddPoint(Point p) => AddPoint(p.X, p.Y);
 
@@ -381,6 +422,8 @@ namespace emdui
                 }
                 OriginalX = X;
                 OriginalY = Y;
+                OriginalWidth = Width;
+                OriginalHeight = Height;
             }
 
             public bool UnionIfIntersects(Rect other)
@@ -398,6 +441,8 @@ namespace emdui
                     Height = maxY - minY;
                     OriginalX = X;
                     OriginalY = Y;
+                    OriginalWidth = Width;
+                    OriginalHeight = Height;
                     return true;
                 }
                 return false;
@@ -414,9 +459,9 @@ namespace emdui
             public bool OriginallyIntersectsWith(Rect other)
             {
                 return OriginalX < other.X + other.Width &&
-                       OriginalX + Width > other.X &&
+                       OriginalX + OriginalWidth > other.X &&
                        OriginalY < other.Y + other.Height &&
-                       OriginalY + Height > other.Y;
+                       OriginalY + OriginalHeight > other.Y;
             }
         }
 
@@ -441,6 +486,65 @@ namespace emdui
                     }
                 }
             }
+
+            public uint[] GetPixelsCropped(int cropWidth, int cropHeight)
+            {
+                var croppedPixels = new uint[cropWidth * cropHeight];
+                for (int yy = 0; yy < cropHeight; yy++)
+                {
+                    Array.Copy(Pixels, yy * Width, croppedPixels, yy * cropWidth, cropWidth);
+                }
+                return croppedPixels;
+            }
+
+            public uint[] GetPixels(int scaledWidth, int scaledHeight)
+            {
+                var scaledPixels = new uint[scaledWidth * scaledHeight];
+                var xScale = (double)Width / scaledWidth;
+                var yScale = (double)Height / scaledHeight;
+                for (var sy = 0; sy < scaledHeight; sy++)
+                {
+                    for (var sx = 0; sx < scaledWidth; sx++)
+                    {
+                        var srcX = (int)(sx * xScale);
+                        var srcY = (int)(sy * yScale);
+                        var xFraction = (sx * xScale) - srcX;
+                        var yFraction = (sy * yScale) - srcY;
+
+                        var srcIndex = srcY * Width + srcX;
+                        var srcRightIndex = srcIndex + 1;
+                        var srcBottomIndex = srcIndex + Width;
+                        var srcBottomRightIndex = srcBottomIndex + 1;
+
+                        var pixelTopLeft = Pixels[srcIndex];
+                        var pixelTopRight = (srcRightIndex < Pixels.Length) ? Pixels[srcRightIndex] : pixelTopLeft;
+                        var pixelBottomLeft = (srcBottomIndex < Pixels.Length) ? Pixels[srcBottomIndex] : pixelTopLeft;
+                        var pixelBottomRight = (srcBottomRightIndex < Pixels.Length) ? Pixels[srcBottomRightIndex] : pixelBottomLeft;
+
+                        var interpolatedPixel = InterpolatePixels(pixelTopLeft, pixelTopRight, pixelBottomLeft, pixelBottomRight, xFraction, yFraction);
+                        scaledPixels[sy * scaledWidth + sx] = interpolatedPixel;
+                    }
+                }
+                return scaledPixels;
+            }
+
+            private static uint InterpolatePixels(uint topLeft, uint topRight, uint bottomLeft, uint bottomRight, double xFraction, double yFraction)
+            {
+                var alpha = InterpolateChannel((int)((topLeft >> 24) & 0xFF), (int)((topRight >> 24) & 0xFF), (int)((bottomLeft >> 24) & 0xFF), (int)((bottomRight >> 24) & 0xFF), xFraction, yFraction);
+                var red = InterpolateChannel((int)((topLeft >> 16) & 0xFF), (int)((topRight >> 16) & 0xFF), (int)((bottomLeft >> 16) & 0xFF), (int)((bottomRight >> 16) & 0xFF), xFraction, yFraction);
+                var green = InterpolateChannel((int)((topLeft >> 8) & 0xFF), (int)((topRight >> 8) & 0xFF), (int)((bottomLeft >> 8) & 0xFF), (int)((bottomRight >> 8) & 0xFF), xFraction, yFraction);
+                var blue = InterpolateChannel((int)(topLeft & 0xFF), (int)(topRight & 0xFF), (int)(bottomLeft & 0xFF), (int)(bottomRight & 0xFF), xFraction, yFraction);
+                var interpolatedPixel = ((uint)alpha << 24) | ((uint)red << 16) | ((uint)green << 8) | (uint)blue;
+                return interpolatedPixel;
+            }
+
+            private static double InterpolateChannel(int c00, int c10, int c01, int c11, double xFraction, double yFraction)
+            {
+                var c0 = c00 + (c10 - c00) * xFraction;
+                var c1 = c01 + (c11 - c01) * xFraction;
+                var c = c0 + (c1 - c0) * yFraction;
+                return c;
+            }
         }
 
         private class UVMeshVisitor : MeshVisitor
@@ -461,7 +565,7 @@ namespace emdui
             public override void VisitPrimitive(int numPoints, byte page)
             {
                 _primitive = new Rect();
-                _primitive.PartIndex = _partIndex;
+                _primitive.PartIndicies = new[] { (byte)_partIndex };
                 _page = page;
             }
 

@@ -913,13 +913,17 @@ namespace emdui
                     {
                         ImportFromObj(path);
                     }
-                    else
+                    else if (path.EndsWith(".tmd", StringComparison.OrdinalIgnoreCase))
                     {
-                        var data = File.ReadAllBytes(path);
-                        var mesh = Model.Version == BioVersion.Biohazard2 ?
-                            (IModelMesh)new Md1(data) :
-                            (IModelMesh)new Md2(data);
-                        ImportMesh(mesh);
+                        ImportMesh(new Tmd(File.ReadAllBytes(path)));
+                    }
+                    else if (path.EndsWith(".md1", StringComparison.OrdinalIgnoreCase))
+                    {
+                        ImportMesh(new Tmd(File.ReadAllBytes(path)));
+                    }
+                    else if (path.EndsWith(".md2", StringComparison.OrdinalIgnoreCase))
+                    {
+                        ImportMesh(new Tmd(File.ReadAllBytes(path)));
                     }
                 });
         }
@@ -1002,7 +1006,7 @@ namespace emdui
         {
             var project = MainWindow.Instance.Project;
             var mainTexture = project.MainTexture;
-            if (Model is PlwFile plw)
+            if (Model is PlwFile plw && plw.Version != BioVersion.Biohazard1)
             {
                 return mainTexture.WithWeaponTexture(plw.Tim);
             }

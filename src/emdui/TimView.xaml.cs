@@ -157,35 +157,8 @@ namespace emdui
         private void ImportPage(int page, TimFile source)
         {
             EnsureSelectedPageExists();
-            var palette = source.GetPalette(0);
-            _timFile.SetPalette(_selectedPage, palette);
-            var dstX = page * 128;
-            for (var y = 0; y < 256; y++)
-            {
-                for (var x = 0; x < 128; x++)
-                {
-                    var p = source.GetRawPixel(x, y);
-                    _timFile.SetRawPixel(dstX + x, y, p);
-                }
-            }
+            _timFile.ImportPage(page, source);
             RefreshAndRaiseTimEvent();
-        }
-
-        private TimFile ExtractPage(int page)
-        {
-            var palette = _timFile.GetPalette(page);
-            var timFile = new TimFile(128, 256, 8);
-            timFile.SetPalette(0, palette);
-            var srcX = page * 128;
-            for (var y = 0; y < 256; y++)
-            {
-                for (var x = 0; x < 128; x++)
-                {
-                    var p = _timFile.GetRawPixel(srcX + x, y);
-                    timFile.SetRawPixel(x, y, p);
-                }
-            }
-            return timFile;
         }
 
         private BitmapSource ImportBitmap(string path)
@@ -294,7 +267,7 @@ namespace emdui
                 if (saveFileDialog.ShowDialog() == true)
                 {
                     var path = saveFileDialog.FileName;
-                    var timFile = ExtractPage(_selectedPage);
+                    var timFile = _timFile.ExportPage(_selectedPage);
                     if (path.EndsWith(".tim", StringComparison.OrdinalIgnoreCase))
                     {
                         timFile.Save(path);
@@ -314,6 +287,10 @@ namespace emdui
         private void DeletePage_Click(object sender, RoutedEventArgs e)
         {
             var numPages = (_timFile.Width + 127) / 128;
+            if (_selectedPage >= numPages)
+            {
+                return;
+            }
             if (numPages > 1 && _selectedPage == numPages - 1)
             {
                 _timFile.ResizeImage((numPages - 1) * 128, _timFile.Height);
@@ -408,7 +385,7 @@ namespace emdui
                     if (i >= 240)
                     {
                         var oldValue = TimFile.Convert16to32(palette[i]);
-                        targetPalette[i] = _timFile.ImportPixel(pageToPaletteTrim, 0, 240, oldValue);
+                        targetPalette[i] = _timFile.FindBestPaletteEntry(pageToPaletteTrim, 0, 240, oldValue);
                     }
                     else
                     {
@@ -526,13 +503,73 @@ namespace emdui
 
         private void Reorganise_Click(object sender, RoutedEventArgs e)
         {
+            Reorganise(false);
+        }
+
+        private void ReorganisePreview_Click(object sender, RoutedEventArgs e)
+        {
+            Reorganise(true);
+        }
+
+        private void Reorganise(bool preview)
+        {
             var mainWindow = MainWindow.Instance;
             var project = mainWindow.Project;
-            var textureReorganiser = new TextureReorganiser(project.MainModel.GetMesh(0), project.MainTexture);
-            textureReorganiser.Reorganise();
-            project.MainModel.SetMesh(0, textureReorganiser.Mesh);
-            project.MainModel.SetTim(0, textureReorganiser.TimFile);
-            mainWindow.LoadMesh(project.MainModel.GetMesh(0));
+
+            var extraModels = project.Files
+                .Where(x => x.Kind == ProjectFileKind.Plw)
+                .Select(x => x.Content as PlwFile)
+                .ToArray();
+
+            var mainTexture = project.MainTexture;
+            var mainMesh = project.MainModel.GetMesh(0);
+            var extraMeshes = extraModels.Select(x => x.GetMesh(0)).ToArray();
+
+            var textureReorganiser = new TextureReorganiser(
+                mainMesh,
+                extraMeshes,
+                mainTexture);
+
+            if (preview)
+            {
+                textureReorganiser.Detect();
+                Primitives = textureReorganiser.Rects
+                    .Select(x => new UVPrimitive()
+                    {
+                        IsQuad = true,
+                        Page = (byte)x.Page,
+                        U0 = ClampPage(x.Page, x.Left),
+                        V0 = ClampByte(x.Top),
+                        U1 = ClampPage(x.Page, x.Right),
+                        V1 = ClampByte(x.Top),
+                        U3 = ClampPage(x.Page, x.Right),
+                        V3 = ClampByte(x.Bottom),
+                        U2 = ClampPage(x.Page, x.Left),
+                        V2 = ClampByte(x.Bottom)
+                    })
+                    .ToArray();
+            }
+            else
+            {
+                textureReorganiser.Reorganise();
+                project.MainModel.SetMesh(0, textureReorganiser.Mesh);
+                project.MainModel.SetTim(0, textureReorganiser.TimFile);
+
+                for (var i = 0; i < extraModels.Length; i++)
+                {
+                    extraModels[i].SetMesh(0, textureReorganiser.ExtraMeshes[i]);
+                }
+
+                mainWindow.LoadMesh(project.MainModel.GetMesh(0));
+            }
+        }
+
+        private static byte ClampByte(int x) => (byte)Math.Max(0, Math.Min(255, x));
+        private static byte ClampPage(int page, int x)
+        {
+            var pageLeft = page * 128;
+            var pageRight = ((page + 1) * 128) - 1;
+            return (byte)(Math.Max(pageLeft, Math.Min(pageRight, x)) % 128);
         }
     }
 }

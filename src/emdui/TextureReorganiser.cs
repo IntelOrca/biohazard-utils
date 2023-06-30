@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using emdui.Extensions;
 using IntelOrca.Biohazard;
 using IntelOrca.Biohazard.Model;
 
@@ -10,26 +11,37 @@ namespace emdui
     internal class TextureReorganiser
     {
         public IModelMesh Mesh { get; private set; }
+        public IModelMesh[] ExtraMeshes { get; private set; }
         public TimFile TimFile { get; private set; }
         public Rect[] Rects { get; private set; } = new Rect[0];
 
-        public TextureReorganiser(IModelMesh mesh, TimFile tim)
+        public TextureReorganiser(IModelMesh mesh, IModelMesh[] extra, TimFile tim)
         {
             Mesh = mesh;
+            ExtraMeshes = extra;
             TimFile = tim;
         }
 
         public void Detect()
         {
-            var visitor = new UVMeshVisitor();
-            visitor.Accept(Mesh);
-            Rects = visitor.Primitives;
+            Rects = Detect(Mesh)
+                .Concat(ExtraMeshes.SelectMany(x => Detect(x)))
+                .ToArray();
             while (MergeRects()) { }
+            // InflateRects(1);
+            // while (MergeRects()) { }
+        }
+
+        private Rect[] Detect(IModelMesh mesh)
+        {
+            var visitor = new UVMeshVisitor();
+            visitor.Accept(mesh);
+            return visitor.Primitives;
         }
 
         public void Reorganise()
         {
-            for (var i = 0; i < 3; i++)
+            for (var i = 0; i < 4; i++)
             {
                 if (Reorganise(i))
                     break;
@@ -41,14 +53,21 @@ namespace emdui
         private bool Reorganise(int attempt)
         {
             Detect();
-            // Scale(0.75, pi => pi == 0 || pi == 1);
-            if (attempt == 1)
+            if (attempt == 0)
             {
                 Scale(0.5, pi => pi == 2 || pi == 5 || pi == 9 || pi == 12);
+            }
+            else if (attempt == 1)
+            {
+                Scale(0.75, pi => pi == 0 || pi == 1);
             }
             else if (attempt == 2)
             {
                 Scale(0.75, pi => true);
+            }
+            else if (attempt == 3)
+            {
+                Scale(0.5, pi => true);
             }
             Rects = Reorg(out var numPages);
             return numPages <= 2;
@@ -77,6 +96,15 @@ namespace emdui
             }
             Rects = newRects.ToArray();
             return merged;
+        }
+
+        private void InflateRects(int amount)
+        {
+            for (var i = 0; i < Rects.Length; i++)
+            {
+                ref var r = ref Rects[i];
+                r.Inflate(amount);
+            }
         }
 
         private void Scale(double n, Func<int, bool> predicate)
@@ -170,110 +198,56 @@ namespace emdui
                 var block = imageBlocks[i];
                 TimFile.ImportPixels(rect.X, rect.Y, rect.Width, rect.Height, block.GetPixels(rect.Width, rect.Height), 0);
             }
+            TimFile = TimFile.To8bpp((x, y) => x / 128);
+            TimFile.ResizeImage(256, 256);
+            TimFile.ResizeCluts(2);
         }
 
         private void EditUV()
         {
-            var converter = new MeshConverter();
-            var md1 = (Md1)converter.ConvertMesh(Mesh, BioVersion.Biohazard2);
-            var builder = md1.ToBuilder();
-            foreach (var part in builder.Parts)
+            Mesh = EditUV(Mesh);
+            ExtraMeshes = ExtraMeshes
+                .Select(x => EditUV(x))
+                .ToArray();
+        }
+
+        private IModelMesh EditUV(IModelMesh mesh)
+        {
+            return mesh.EditMeshTextures(pt =>
             {
-                for (var i = 0; i < part.TriangleTextures.Count; i++)
+                var rect = new Rect();
+                for (var i = 0; i < pt.NumPoints; i++)
                 {
-                    var tt = part.TriangleTextures[i];
-                    var points = new[]
-                    {
-                        new Point(tt.page & 0x0F, tt.u0, tt.v0),
-                        new Point(tt.page & 0x0F, tt.u1, tt.v1),
-                        new Point(tt.page & 0x0F, tt.u2, tt.v2),
-                    };
-
-                    var rect = new Rect();
-                    rect.AddPoint(points[0]);
-                    rect.AddPoint(points[1]);
-                    rect.AddPoint(points[2]);
-
-                    var parentRect = new Rect();
-                    foreach (var r in Rects)
-                    {
-                        if (r.OriginallyIntersectsWith(rect))
-                        {
-                            parentRect = r;
-                            break;
-                        }
-                    }
-
-                    for (int j = 0; j < points.Length; j++)
-                    {
-                        points[j].X -= parentRect.OriginalX;
-                        points[j].Y -= parentRect.OriginalY;
-                        points[j].X = (int)(points[j].X * parentRect.Scale);
-                        points[j].Y = (int)(points[j].Y * parentRect.Scale);
-                        points[j].X += parentRect.X;
-                        points[j].Y += parentRect.Y;
-                    }
-
-                    tt.u0 = (byte)points[0].PageX;
-                    tt.v0 = (byte)points[0].Y;
-                    tt.u1 = (byte)points[1].PageX;
-                    tt.v1 = (byte)points[1].Y;
-                    tt.u2 = (byte)points[2].PageX;
-                    tt.v2 = (byte)points[2].Y;
-                    tt.page = (byte)(0x80 | points[0].Page);
-
-                    part.TriangleTextures[i] = tt;
+                    rect.AddPoint(pt.Page, pt.Points[i].U, pt.Points[i].V);
                 }
-                for (var i = 0; i < part.QuadTextures.Count; i++)
+
+                var parentRect = new Rect();
+                foreach (var r in Rects)
                 {
-                    var qt = part.QuadTextures[i];
-
-                    var points = new[]
+                    if (r.OriginallyIntersectsWith(rect))
                     {
-                        new Point(qt.page & 0x0F, qt.u0, qt.v0),
-                        new Point(qt.page & 0x0F, qt.u1, qt.v1),
-                        new Point(qt.page & 0x0F, qt.u2, qt.v2),
-                        new Point(qt.page & 0x0F, qt.u3, qt.v3),
-                    };
-
-                    var rect = new Rect();
-                    rect.AddPoint(points[0]);
-                    rect.AddPoint(points[1]);
-                    rect.AddPoint(points[2]);
-                    rect.AddPoint(points[3]);
-
-                    var changeX = 0;
-                    var changeY = 0;
-                    foreach (var r in Rects)
-                    {
-                        if (r.OriginallyIntersectsWith(rect))
-                        {
-                            changeX = r.X - r.OriginalX;
-                            changeY = r.Y - r.OriginalY;
-                            break;
-                        }
+                        parentRect = r;
+                        break;
                     }
-
-                    for (int j = 0; j < points.Length; j++)
-                    {
-                        points[j].X += changeX;
-                        points[j].Y += changeY;
-                    }
-
-                    qt.u0 = (byte)points[0].PageX;
-                    qt.v0 = (byte)points[0].Y;
-                    qt.u1 = (byte)points[1].PageX;
-                    qt.v1 = (byte)points[1].Y;
-                    qt.u2 = (byte)points[2].PageX;
-                    qt.v2 = (byte)points[2].Y;
-                    qt.u3 = (byte)points[3].PageX;
-                    qt.v3 = (byte)points[3].Y;
-                    qt.page = (byte)(0x80 | points[0].Page);
-
-                    part.QuadTextures[i] = qt;
                 }
-            }
-            Mesh = converter.ConvertMesh(builder.ToMesh(), Mesh.Version);
+
+                pt.Page = parentRect.Page;
+                for (int j = 0; j < pt.NumPoints; j++)
+                {
+                    var x = pt.Points[j].X;
+                    var y = pt.Points[j].Y;
+
+                    x -= parentRect.OriginalX;
+                    y -= parentRect.OriginalY;
+                    x = (int)(x * parentRect.Scale);
+                    y = (int)(y * parentRect.Scale);
+                    x += parentRect.X;
+                    y += parentRect.Y;
+
+                    pt.Points[j].X = x;
+                    pt.Points[j].Y = y;
+                }
+            });
         }
 
         [DebuggerDisplay("Width = {Width} Height = {Height}")]
@@ -399,6 +373,8 @@ namespace emdui
 
             public void AddPoint(Point p) => AddPoint(p.X, p.Y);
 
+            public void AddPoint(int page, byte x, byte y) => AddPoint(new Point(page, x, y));
+
             public void AddPoint(int x, int y)
             {
                 if (Width == 0 && Height == 0)
@@ -462,6 +438,37 @@ namespace emdui
                        OriginalX + OriginalWidth > other.X &&
                        OriginalY < other.Y + other.Height &&
                        OriginalY + OriginalHeight > other.Y;
+            }
+
+            public void Inflate(int amount)
+            {
+                X -= amount;
+                Y -= amount;
+                Width += amount * 2;
+                Height += amount * 2;
+                ConstrainToPage();
+            }
+
+            public void ConstrainToPage()
+            {
+                var page = Page;
+                var minX = page * 128;
+                var maxX = (page + 1) * 128;
+                var minY = 0;
+                var maxY = 256;
+
+                var left = Math.Max(minX, X);
+                var top = Math.Max(minY, Y);
+                var right = Math.Min(maxX, X + Width);
+                var bottom = Math.Min(maxY, Y + Height);
+                X = left;
+                Y = top;
+                Width = right - left;
+                Height = bottom - top;
+                OriginalX = X;
+                OriginalY = Y;
+                OriginalWidth = Width;
+                OriginalHeight = Height;
             }
         }
 

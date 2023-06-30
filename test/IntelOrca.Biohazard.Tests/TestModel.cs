@@ -9,6 +9,47 @@ namespace IntelOrca.Biohazard.Tests
     public class TestModel
     {
         [Fact]
+        public void ReSaveEmd()
+        {
+            var installPath = TestInfo.GetInstallPath(0);
+            var playersPath = Path.Combine(installPath, "JPN", "ENEMY");
+            var emdFiles = Directory.GetFiles(playersPath, "*.EMD");
+            foreach (var emdFilePath in emdFiles)
+            {
+                if (emdFilePath.EndsWith("EM1032.EMD", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var emdFile = new EmdFile(BioVersion.Biohazard1, emdFilePath);
+
+                var ms = new MemoryStream();
+                emdFile.Save(ms);
+
+                var actual = ms.ToArray();
+                var expected = File.ReadAllBytes(emdFilePath);
+                AssertByteArraysEqual(expected, actual);
+            }
+        }
+
+        [Fact]
+        public void ReSaveEmw()
+        {
+            var installPath = TestInfo.GetInstallPath(0);
+            var playersPath = Path.Combine(installPath, "JPN", "PLAYERS");
+            var emwFiles = Directory.GetFiles(playersPath, "*.EMW");
+            foreach (var emwFilePath in emwFiles)
+            {
+                var emwFile = new PlwFile(BioVersion.Biohazard1, emwFilePath);
+
+                var ms = new MemoryStream();
+                emwFile.Save(ms);
+
+                var actual = ms.ToArray();
+                var expected = File.ReadAllBytes(emwFilePath);
+                AssertByteArraysEqual(expected, actual);
+            }
+        }
+
+        [Fact]
         public void RebuildTMD()
         {
             var installPath = TestInfo.GetInstallPath(0);

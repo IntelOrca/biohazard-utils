@@ -15,7 +15,7 @@ namespace IntelOrca.Biohazard.Model
         {
             Version = version;
             _directory = version == BioVersion.Biohazard1 ?
-                new OffsetDirectoryV1() :
+                new OffsetDirectoryV1(this is PlwFile ? 2 : 5) :
                 (OffsetDirectory)new OffsetDirectoryV2();
             _directory.Read(stream);
         }
@@ -24,7 +24,7 @@ namespace IntelOrca.Biohazard.Model
         {
             Version = version;
             _directory = version == BioVersion.Biohazard1 ?
-                new OffsetDirectoryV1() :
+                new OffsetDirectoryV1(this is PlwFile ? 2 : 5) :
                 (OffsetDirectory)new OffsetDirectoryV2();
 
             using var fs = new FileStream(path, FileMode.Open, FileAccess.Read);
@@ -35,6 +35,11 @@ namespace IntelOrca.Biohazard.Model
         {
             using var fs = new FileStream(path, FileMode.Create);
             _directory.Write(fs);
+        }
+
+        public void Save(Stream stream)
+        {
+            _directory.Write(stream);
         }
 
         protected virtual ReadOnlySpan<ChunkKind> ChunkKinds => new ReadOnlySpan<ChunkKind>();
@@ -285,30 +290,43 @@ namespace IntelOrca.Biohazard.Model
 
         private class OffsetDirectoryV1 : OffsetDirectory
         {
+            public int NumOffsets { get; }
+
+            public OffsetDirectoryV1(int numOffsets)
+            {
+                NumOffsets = numOffsets;
+            }
+
             public override void Read(Stream stream)
             {
                 // Detect how many offsets there are
                 var br = new BinaryReader(stream);
-                stream.Position = stream.Length - 4;
-                var lastOffset = stream.Length;
-                var numOffsetsDetected = 0;
-                for (var i = 0; i < 4; i++)
+                var directoryPosition = (int)(stream.Length - (NumOffsets * 4));
+                stream.Position = directoryPosition;
+
+                var offsets = new List<int>();
+                for (var i = 0; i < NumOffsets; i++)
                 {
                     var offset = br.ReadInt32();
-                    stream.Position -= 8;
-                    if (offset >= lastOffset)
-                    {
-                        break;
-                    }
-                    lastOffset = offset;
-                    numOffsetsDetected++;
+                    offsets.Add(offset);
+                }
+                offsets.Add(directoryPosition);
+
+                if (offsets[0] != 0)
+                {
+                    offsets.Insert(0, 0);
                 }
 
-
-                // Directory is always at end
-                var numOffsets = numOffsetsDetected;
-                var directoryOffset = (int)(stream.Length - numOffsets * 4);
-                ReadDirectory(stream, directoryOffset, numOffsets);
+                // Read chunks
+                for (int i = 0; i < offsets.Count - 1; i++)
+                {
+                    var len = offsets[i + 1] - offsets[i];
+                    if (len != 0)
+                    {
+                        stream.Position = offsets[i];
+                        AddChunk(br.ReadBytes(len));
+                    }
+                }
             }
 
             public override void Write(Stream stream)
@@ -325,9 +343,13 @@ namespace IntelOrca.Biohazard.Model
                 }
 
                 // Directory
-                foreach (int offset in offsets)
+                for (var i = 0; i < NumOffsets; i++)
                 {
-                    bw.Write(offset);
+                    var offsetIndex = offsets.Count - NumOffsets + i;
+                    if (offsetIndex < 0)
+                        bw.Write(0);
+                    else
+                        bw.Write(offsets[offsetIndex]);
                 }
             }
         }

@@ -39,7 +39,7 @@ namespace emdui
                 var fileName = Path.GetFileName(path);
                 _projectFiles.Add(new ProjectFile(ProjectFileKind.Pld, fileName, pldFile));
 
-                LoadWeapons(path);
+                LoadWeapons23(path);
             }
             else if (path.EndsWith(".emd", System.StringComparison.OrdinalIgnoreCase))
             {
@@ -52,6 +52,11 @@ namespace emdui
                 _projectFiles.Add(new ProjectFile(ProjectFileKind.Emd, fileName, emdFile));
 
                 LoadTexture(path);
+
+                if (fileName.StartsWith("char", StringComparison.OrdinalIgnoreCase))
+                {
+                    LoadWeapons1(path);
+                }
             }
         }
 
@@ -65,7 +70,21 @@ namespace emdui
             }
         }
 
-        private void LoadWeapons(string pldPath)
+        private void LoadWeapons1(string emdPath)
+        {
+            var directory = Path.GetDirectoryName(emdPath);
+            var files = Directory.GetFiles(directory);
+            foreach (var file in files)
+            {
+                var fileName = Path.GetFileName(file);
+                if (fileName.EndsWith(".emw", StringComparison.OrdinalIgnoreCase))
+                {
+                    LoadWeapon(file);
+                }
+            }
+        }
+
+        private void LoadWeapons23(string pldPath)
         {
             var pldFileName = Path.GetFileName(pldPath);
             if (!Regex.IsMatch(pldFileName, "PL[0-9A-F][0-9A-F].PLD", RegexOptions.IgnoreCase))

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace IntelOrca.Biohazard
 {
@@ -293,10 +294,10 @@ namespace IntelOrca.Biohazard
             switch (_pixelFormat)
             {
                 case PaletteFormat4bpp:
-                    SetRawPixel(x, y, ImportPixel(clutIndex, p));
+                    SetRawPixel(x, y, FindBestPaletteEntry(clutIndex, p));
                     break;
                 case PaletteFormat8bpp:
-                    SetRawPixel(x, y, ImportPixel(clutIndex, p));
+                    SetRawPixel(x, y, FindBestPaletteEntry(clutIndex, p));
                     break;
                 case PaletteFormat16bpp:
                     SetRawPixel(x, y, Convert32to16(p));
@@ -324,9 +325,9 @@ namespace IntelOrca.Biohazard
             return result;
         }
 
-        public byte ImportPixel(int clutIndex, uint p) => ImportPixel(clutIndex, 0, _coloursPerClut, p);
+        public byte FindBestPaletteEntry(int clutIndex, uint p) => FindBestPaletteEntry(clutIndex, 0, _coloursPerClut, p);
 
-        public byte ImportPixel(int clutIndex, int min, int max, uint p)
+        public byte FindBestPaletteEntry(int clutIndex, int min, int max, uint p)
         {
             min = Math.Max(min, 0);
             max = Math.Min(max, _coloursPerClut);
@@ -467,6 +468,46 @@ namespace IntelOrca.Biohazard
             }
         }
 
+        public TimFile To8bpp(Func<int, int, int> getClutIndex)
+        {
+            var palettes = new List<PaletteBuilder>();
+            for (var y = 0; y < Height; y++)
+            {
+                for (var x = 0; x < Width; x++)
+                {
+                    var paletteIndex = getClutIndex(x, y);
+                    while (paletteIndex >= palettes.Count)
+                    {
+                        palettes.Add(new PaletteBuilder());
+                    }
+
+                    var p32 = GetPixel(x, y);
+                    var p16 = Convert32to16(p32);
+                    palettes[paletteIndex].GetOrAdd(p16);
+                }
+            }
+
+
+            var result = new TimFile(Width, Height, 8);
+            for (var i = 0; i < palettes.Count; i++)
+            {
+                result.SetPalette(i, palettes[i].ToPalette());
+            }
+            for (var y = 0; y < Height; y++)
+            {
+                for (var x = 0; x < Width; x++)
+                {
+                    var paletteIndex = getClutIndex(x, y);
+                    var p32 = GetPixel(x, y);
+                    var p8 = result.FindBestPaletteEntry(paletteIndex, p32);
+                    result.SetRawPixel(x, y, p8);
+                }
+            }
+            return result;
+        }
+
+
+
         public static uint Convert16to32(ushort c16)
         {
             // Transparent
@@ -488,6 +529,37 @@ namespace IntelOrca.Biohazard
 
             // 0BBB_BBGG_GGGR_RRRR
             return (ushort)((b << 10) | (g << 5) | r);
+        }
+
+        private class PaletteBuilder
+        {
+            private ushort[] _palette = new ushort[256];
+            private int _length = 1;
+
+            public byte GetOrAdd(ushort colour)
+            {
+                if (colour == 0)
+                    return 0;
+
+                for (var i = 0; i < _length; i++)
+                {
+                    if (_palette[i] == colour)
+                    {
+                        return (byte)i;
+                    }
+                }
+
+                if (_length < 256)
+                {
+                    _palette[_length] = colour;
+                    _length++;
+                    return (byte)(_length - 1);
+                }
+
+                return 0;
+            }
+
+            public ushort[] ToPalette() => _palette.ToArray();
         }
     }
 }

@@ -594,6 +594,7 @@ namespace emdui
         {
             CreateChildren();
             AddMenuItem("Import...", Import);
+            AddMenuItem("Import to page 3/4...", Import34);
             AddMenuItem("Export...", Export);
             AddSeperator();
             AddMenuItem("Open in Blender...", OpenInBlender);
@@ -669,6 +670,23 @@ namespace emdui
                 });
         }
 
+        private void Import34()
+        {
+            CommonFileDialog
+                .Open()
+                .AddExtension(Mesh.GetExtensionPattern())
+                .AddExtension("*.emd")
+                .AddExtension("*.pld")
+                .Show(path =>
+                {
+                    if (path.EndsWith(".emd", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".pld", StringComparison.OrdinalIgnoreCase))
+                    {
+                        ImportFromModel34(path);
+                    }
+                    RefreshAndCreateChildren();
+                });
+        }
+
         private void ImportFromObj(string path)
         {
             var project = MainWindow.Instance.Project;
@@ -704,6 +722,44 @@ namespace emdui
                     project.MainTexture = new TimFile(timPath);
                 }
             }
+        }
+
+        private void ImportFromModel34(string path)
+        {
+            var project = MainWindow.Instance.Project;
+            var modelFile = ModelFile.FromFile(path);
+
+            // Mesh
+            var converter = new MeshConverter();
+            Mesh = converter
+                .ConvertMesh(modelFile.GetMesh(0), Mesh.Version)
+                .EditMeshTextures(pt =>
+                {
+                    pt.Page += 2;
+                });
+
+            // Bone positions
+            Model.SetEmr(0, converter.ConvertEmr(Model.GetEmr(0), modelFile.GetEmr(0)));
+
+            // Texture
+            TimFile srcTexture = null;
+            if (modelFile is PldFile pldFile)
+            {
+                srcTexture = pldFile.Tim;
+            }
+            else
+            {
+                var timPath = Path.ChangeExtension(path, ".tim");
+                if (File.Exists(timPath))
+                {
+                    srcTexture = new TimFile(timPath);
+                }
+            }
+
+            var texture = project.MainTexture;
+            texture.ImportPage(2, srcTexture.ExportPage(0));
+            texture.ImportPage(3, srcTexture.ExportPage(1));
+            project.MainTexture = texture;
         }
 
         private void Export()
@@ -903,8 +959,15 @@ namespace emdui
             var texture = mainWindow.Project.MainTexture;
             if (Model is PlwFile plwFile)
             {
-                texture = texture.WithWeaponTexture(plwFile.Tim);
-                mainWindow.LoadMeshWithoutArmature(Mesh, texture);
+                if (plwFile.Version == BioVersion.Biohazard1)
+                {
+                    mainWindow.LoadMeshWithoutArmature(Mesh);
+                }
+                else
+                {
+                    texture = texture.WithWeaponTexture(plwFile.Tim);
+                    mainWindow.LoadMeshWithoutArmature(Mesh, texture);
+                }
             }
             else
             {

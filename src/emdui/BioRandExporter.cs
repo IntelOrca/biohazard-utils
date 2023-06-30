@@ -188,7 +188,7 @@ namespace emdui
                 if (i >= 240)
                 {
                     var oldValue = TimFile.Convert16to32(palette[i]);
-                    targetPalette[i] = tim.ImportPixel(pageToPaletteTrim, 0, 240, oldValue);
+                    targetPalette[i] = tim.FindBestPaletteEntry(pageToPaletteTrim, 0, 240, oldValue);
                 }
                 else
                 {

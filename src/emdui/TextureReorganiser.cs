@@ -28,7 +28,7 @@ namespace emdui
                 .Concat(ExtraMeshes.SelectMany(x => Detect(x)))
                 .ToArray();
             while (MergeRects()) { }
-            // InflateRects(1);
+            // InflateRects(32);
             // while (MergeRects()) { }
         }
 
@@ -53,23 +53,37 @@ namespace emdui
         private bool Reorganise(int attempt)
         {
             Detect();
-            if (attempt == 0)
-            {
-                Scale(0.5, pi => pi == 2 || pi == 5 || pi == 9 || pi == 12);
-            }
-            else if (attempt == 1)
-            {
-                Scale(0.75, pi => pi == 0 || pi == 1);
-            }
-            else if (attempt == 2)
-            {
-                Scale(0.75, pi => true);
-            }
-            else if (attempt == 3)
-            {
-                Scale(0.5, pi => true);
-            }
             Rects = Reorg(out var numPages);
+            Rects = Reorg(out numPages);
+
+            while (numPages > 2)
+            {
+                var fine = Rects.Where(x => x.Page < 2).ToArray();
+                var notFine = Rects.Where(x => x.Page >= 2).ToArray();
+                for (var i = 0; i < notFine.Length; i++)
+                {
+                    notFine[i].Scale = 0.5;
+                }
+                Rects = fine.Concat(notFine).ToArray();
+                Rects = Reorg(out numPages);
+                return true;
+            }
+            // if (attempt == 0)
+            // {
+            //     Scale(0.5, pi => pi == 2 || pi == 5 || pi == 9 || pi == 12);
+            // }
+            // else if (attempt == 1)
+            // {
+            //     Scale(0.75, pi => pi == 0 || pi == 1);
+            // }
+            // else if (attempt == 2)
+            // {
+            //     Scale(0.75, pi => true);
+            // }
+            // else if (attempt == 3)
+            // {
+            //     Scale(0.5, pi => true);
+            // }
             return numPages <= 2;
         }
 
@@ -198,9 +212,13 @@ namespace emdui
                 var block = imageBlocks[i];
                 TimFile.ImportPixels(rect.X, rect.Y, rect.Width, rect.Height, block.GetPixels(rect.Width, rect.Height), 0);
             }
+
             TimFile = TimFile.To8bpp((x, y) => x / 128);
-            TimFile.ResizeImage(256, 256);
-            TimFile.ResizeCluts(2);
+            TimFile.DetectSize(out var width, out _);
+
+            var newNumPages = (width + 127) / 128;
+            TimFile.ResizeImage(newNumPages * 128, 256);
+            TimFile.ResizeCluts(newNumPages);
         }
 
         private void EditUV()
@@ -224,28 +242,43 @@ namespace emdui
                 var parentRect = new Rect();
                 foreach (var r in Rects)
                 {
-                    if (r.OriginallyIntersectsWith(rect))
+                    if (r.OriginallyContains(rect))
                     {
                         parentRect = r;
                         break;
                     }
                 }
 
+                if (parentRect.Width == 0 && parentRect.Height == 0)
+                {
+                    // WARNING no parent found
+                }
+
                 pt.Page = parentRect.Page;
                 for (int j = 0; j < pt.NumPoints; j++)
                 {
-                    var x = pt.Points[j].X;
-                    var y = pt.Points[j].Y;
+                    var x = (double)pt.Points[j].X;
+                    var y = (double)pt.Points[j].Y;
+
+                    // if (x == rect.Left)
+                    //     x += 1;
+                    // if (x == rect.Right - 1)
+                    //     x -= 1;
+                    // if (y == rect.Top)
+                    //     y += 1;
+                    // if (y == rect.Bottom - 1)
+                    //     y -= 1;
 
                     x -= parentRect.OriginalX;
                     y -= parentRect.OriginalY;
-                    x = (int)(x * parentRect.Scale);
-                    y = (int)(y * parentRect.Scale);
+                    x *= parentRect.Scale;
+                    y *= parentRect.Scale;
                     x += parentRect.X;
                     y += parentRect.Y;
+                    x = Math.Round(x);
+                    y = Math.Round(y);
 
-                    pt.Points[j].X = x;
-                    pt.Points[j].Y = y;
+                    pt.Points[j] = new Md1Extensions.PrimitiveTexture.UV(parentRect.Page, (int)x, (int)y);
                 }
             });
         }
@@ -369,7 +402,15 @@ namespace emdui
                 }
             }
 
-            public double Scale => (double)Width / OriginalWidth;
+            public double Scale
+            {
+                get => (double)Width / OriginalWidth;
+                set
+                {
+                    Width = (int)(OriginalWidth * value);
+                    Height = (int)(OriginalHeight * value);
+                }
+            }
 
             public void AddPoint(Point p) => AddPoint(p.X, p.Y);
 
@@ -438,6 +479,14 @@ namespace emdui
                        OriginalX + OriginalWidth > other.X &&
                        OriginalY < other.Y + other.Height &&
                        OriginalY + OriginalHeight > other.Y;
+            }
+
+            public bool OriginallyContains(Rect other)
+            {
+                return OriginalX <= other.X &&
+                       OriginalX + OriginalWidth >= other.X + other.Width &&
+                       OriginalY <= other.Y &&
+                       OriginalY + OriginalHeight >= other.Y + other.Height;
             }
 
             public void Inflate(int amount)

@@ -238,8 +238,8 @@ namespace emdui
             // ExportToBioRand(@"C:\Users\Ted\Desktop\ethan");
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld1\rebecca\PL01.PLD");
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld1\ashley\PL01.PLD");
-            LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re1\pld0\chris\CHAR10.EMD");
-            // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re1\pld0\leon\CHAR10.EMD");
+            // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re1\pld0\chris\CHAR10.EMD");
+            LoadProject(@"M:\temp\biorand\reorg\CHAR10.EMD");
 
             // Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W01.EMW");
             // Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W02.EMW");

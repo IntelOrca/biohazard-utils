@@ -49,6 +49,15 @@ namespace emdui.Extensions
                     U = u;
                     V = v;
                 }
+
+                public UV(int page, int u, int v)
+                {
+                    Page = (byte)(page & 0x0F);
+                    var minX = Page * 128;
+                    var maxX = minX + 127;
+                    U = (byte)(Math.Max(minX, Math.Min(u, maxX)) % 128);
+                    V = (byte)Math.Max(0, Math.Min(v, 255));
+                }
             }
         }
 

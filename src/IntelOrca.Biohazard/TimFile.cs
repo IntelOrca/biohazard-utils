@@ -506,7 +506,25 @@ namespace IntelOrca.Biohazard
             return result;
         }
 
-
+        public void DetectSize(out int width, out int height)
+        {
+            var maxX = 0;
+            var maxY = 0;
+            for (var y = 0; y < Height; y++)
+            {
+                for (var x = 0; x < Width; x++)
+                {
+                    var p = GetRawPixel(x, y);
+                    if (p != 0)
+                    {
+                        maxX = Math.Max(maxX, x);
+                        maxY = Math.Max(maxY, y);
+                    }
+                }
+            }
+            width = maxX + 1;
+            height = maxY + 1;
+        }
 
         public static uint Convert16to32(ushort c16)
         {

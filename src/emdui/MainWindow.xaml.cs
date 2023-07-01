@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Media.Media3D;
 using System.Windows.Threading;
 using emdui.Extensions;
@@ -140,7 +138,6 @@ namespace emdui
             viewport1.Scene = _scene;
 
             RefreshHighlightedPart();
-            RefreshRelativePositionTextBoxes();
         }
 
         private void RefreshHighlightedPart()
@@ -150,6 +147,7 @@ namespace emdui
 
             _scene.HighlightPart(_isolatedPartIndex == -1 ? _selectedPartIndex : -1);
             RefreshTimPrimitives();
+            RefreshRelativePositionTextBoxes();
         }
 
         private void RefreshTimPrimitives()
@@ -180,18 +178,12 @@ namespace emdui
             if (partIndex != -1 && emr != null && partIndex < emr.NumParts)
             {
                 var pos = emr.GetRelativePosition(partIndex);
-                partXTextBox.Text = pos.x.ToString();
-                partYTextBox.Text = pos.y.ToString();
-                partZTextBox.Text = pos.z.ToString();
-                partXTextBox.Visibility = Visibility.Visible;
-                partYTextBox.Visibility = Visibility.Visible;
-                partZTextBox.Visibility = Visibility.Visible;
+                partPositionControl.Value = pos;
+                partGroupBox.Visibility = Visibility.Visible;
             }
             else
             {
-                partXTextBox.Visibility = Visibility.Hidden;
-                partYTextBox.Visibility = Visibility.Hidden;
-                partZTextBox.Visibility = Visibility.Hidden;
+                partGroupBox.Visibility = Visibility.Collapsed;
             }
         }
 
@@ -203,27 +195,6 @@ namespace emdui
             // numPartsLabel.Content = $"{GetNumParts()} parts";
         }
 
-        private void RefreshPrimitives()
-        {
-            var md1 = _mesh as Md1;
-            var selectedIndex = _selectedPartIndex * 2;
-            if (selectedIndex >= 0 && selectedIndex < md1.NumObjects)
-            {
-                var objTri = md1.Objects[selectedIndex + 0];
-                var objQuad = md1.Objects[selectedIndex + 1];
-                var triangles = md1.GetTriangles(objTri);
-                var quads = md1.GetQuads(objQuad);
-
-                var items = new List<string>();
-                for (int i = 0; i < triangles.Length; i++)
-                    items.Add($"Triangle {i}");
-                for (int i = 0; i < quads.Length; i++)
-                    items.Add($"Quad {i}");
-
-                listPrimitives.ItemsSource = items;
-            }
-        }
-
         private void mainWindow_Loaded(object sender, RoutedEventArgs e)
         {
 #if DEBUG
@@ -233,13 +204,13 @@ namespace emdui
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\chris\PL00.PLD");
             // LoadProject(@"F:\games\re3\mod_biorand\DATA\PLD\PL00.PLD");
             // LoadProject(@"F:\games\re2\data\Pl0\emd0\em041.emd");
-            // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\chris\pl00.pld");
+            LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\chris\pl00.pld");
             // LoadProject(@"F:\games\re2\data\Pl0\emd0\em010.emd");
             // ExportToBioRand(@"C:\Users\Ted\Desktop\ethan");
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld1\rebecca\PL01.PLD");
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld1\ashley\PL01.PLD");
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re1\pld0\chris\CHAR10.EMD");
-            LoadProject(@"M:\temp\biorand\reorg\CHAR10.EMD");
+            // LoadProject(@"M:\temp\biorand\reorg\CHAR10.EMD");
 
             // Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W01.EMW");
             // Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W02.EMW");
@@ -294,63 +265,6 @@ namespace emdui
         {
             RefreshHighlightedPart();
             RefreshRelativePositionTextBoxes();
-        }
-
-        private void listPrimitives_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            var md1 = _mesh as Md1;
-            var objIndex = _selectedPartIndex * 2;
-            if (objIndex >= 0 && objIndex < md1.NumObjects)
-            {
-                var objTri = md1.Objects[objIndex + 0];
-                var objQuad = md1.Objects[objIndex + 1];
-                var triangles = md1.GetTriangles(objTri);
-                var triangleTextures = md1.GetTriangleTextures(objTri);
-                var quads = md1.GetQuads(objQuad);
-                var quadTextures = md1.GetQuadTextures(objQuad);
-
-                var priIndex = listPrimitives.SelectedIndex;
-                if (priIndex >= 0 && priIndex < triangles.Length)
-                {
-                    var tri = triangles[priIndex];
-                    var triTex = triangleTextures[priIndex];
-                    var positionData = md1.GetPositionData(objTri);
-                    var v0 = positionData[tri.v0];
-                    var v1 = positionData[tri.v1];
-                    var v2 = positionData[tri.v2];
-                    // textPrimitive.Text = string.Join("\n", new[] {
-                    //     $"v0 = ({v0.x}, {v0.y}, {v0.z})",
-                    //     $"v1 = ({v1.x}, {v1.y}, {v1.z})",
-                    //     $"v2 = ({v2.x}, {v2.y}, {v2.z})"
-                    // });
-                    // textPrimitive.Text = string.Join("\n", new[] {
-                    //     "u0 = " + triTex.u0,
-                    //     "v0 = " + triTex.v0,
-                    //     "clutId = " + triTex.clutId,
-                    //     "u1 = " + triTex.u1,
-                    //     "v1 = " + triTex.v1,
-                    //     "page = " + triTex.page,
-                    //     "u2 = " + triTex.u2,
-                    //     "v2 = " + triTex.v2,
-                    //     "zero = " + triTex.zero
-                    // });
-                }
-                else if (priIndex >= triangles.Length && priIndex < triangles.Length + quads.Length)
-                {
-                    priIndex -= triangles.Length;
-                    var quad = quads[priIndex];
-                    // textPrimitive.Text = string.Join("\n", new[] {
-                    //     quad.n0,
-                    //     quad.v0,
-                    //     quad.n1,
-                    //     quad.v1,
-                    //     quad.n2,
-                    //     quad.v2,
-                    //     quad.n3,
-                    //     quad.v3
-                    // });
-                }
-            }
         }
 
         private void timImage_TimUpdated(object sender, EventArgs e)
@@ -519,5 +433,29 @@ namespace emdui
         }
 
         public void RefreshTreeView() => projectTreeView.Refresh();
+
+        private void partPositionControl_ValueChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                var partIndex = _selectedPartIndex;
+                if (partIndex != -1)
+                {
+                    var mainModel = _project.MainModel;
+                    var oldEmr = mainModel.GetEmr(0);
+                    var builder = oldEmr.ToBuilder();
+                    builder.RelativePositions[_selectedPartIndex] = partPositionControl.Value;
+                    var newEmr = builder.ToEmr();
+                    mainModel.SetEmr(0, newEmr);
+                    _baseEmr = newEmr;
+                    _emr = _baseEmr;
+                    RefreshModelView();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
     }
 }

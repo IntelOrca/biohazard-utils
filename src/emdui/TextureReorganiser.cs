@@ -41,40 +41,59 @@ namespace emdui
 
         public void Reorganise()
         {
-            Reorganise(100);
+            var results = new[]
+            {
+                Reorganise(0.75),
+                Reorganise(0.50),
+                Reorganise(0.25),
+            };
+            var bestResult = results.OrderBy(x => x.Score).First();
+            Rects = bestResult.Rects;
+
             EditTim();
             EditUV();
         }
 
-        private bool Reorganise(int maxAttempts)
+        private ReorganiseResult Reorganise(double scale)
         {
             Detect();
             var originalRects = Rects;
 
-            var attempts = 0;
             var numPages = 4;
             var numToScale = 0;
             while (numPages > 2)
             {
-                if (attempts > maxAttempts)
-                    return false;
+                if (numToScale >= originalRects.Length)
+                    break;
 
                 var rects = originalRects.ToArray();
                 var average = rects.Average(x => x.Width * x.Height);
                 rects = rects.OrderBy(x => Math.Abs((x.Width * x.Height) - average)).ToArray();
-                numToScale = Math.Min(numToScale, rects.Length);
                 for (var i = 0; i < numToScale; i++)
                 {
-                    rects[i].Scale = 0.5;
+                    rects[i].Scale = scale;
                 }
 
                 Rects = rects;
                 Rects = Reorg(out numPages);
 
-                attempts++;
                 numToScale++;
             }
-            return true;
+            var result = new ReorganiseResult(numToScale, Rects);
+            Rects = originalRects;
+            return result;
+        }
+
+        private struct ReorganiseResult
+        {
+            public int Score { get; }
+            public Rect[] Rects { get; }
+
+            public ReorganiseResult(int score, Rect[] rects)
+            {
+                Score = score;
+                Rects = rects;
+            }
         }
 
         private bool MergeRects()

@@ -735,7 +735,7 @@ namespace emdui
                 .ConvertMesh(modelFile.GetMesh(0), Mesh.Version)
                 .EditMeshTextures(pt =>
                 {
-                    pt.Page += 2;
+                    pt.Page = (pt.Page + 2) % 4;
                 });
 
             // Bone positions

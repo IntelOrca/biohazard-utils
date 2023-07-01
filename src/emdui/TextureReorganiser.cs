@@ -41,6 +41,12 @@ namespace emdui
 
         public void Reorganise()
         {
+            for (var i = 0; i < Rects.Length; i++)
+            {
+                ref var rect = ref Rects[i];
+                rect.ConstrainToPage();
+            }
+
             var results = new[]
             {
                 Reorganise(0.75),

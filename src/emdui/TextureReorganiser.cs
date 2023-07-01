@@ -41,50 +41,40 @@ namespace emdui
 
         public void Reorganise()
         {
-            for (var i = 0; i < 4; i++)
-            {
-                if (Reorganise(i))
-                    break;
-            }
+            Reorganise(100);
             EditTim();
             EditUV();
         }
 
-        private bool Reorganise(int attempt)
+        private bool Reorganise(int maxAttempts)
         {
             Detect();
-            Rects = Reorg(out var numPages);
-            Rects = Reorg(out numPages);
+            var originalRects = Rects;
 
+            var attempts = 0;
+            var numPages = 4;
+            var numToScale = 0;
             while (numPages > 2)
             {
-                var fine = Rects.Where(x => x.Page < 2).ToArray();
-                var notFine = Rects.Where(x => x.Page >= 2).ToArray();
-                for (var i = 0; i < notFine.Length; i++)
+                if (attempts > maxAttempts)
+                    return false;
+
+                var rects = originalRects.ToArray();
+                var average = rects.Average(x => x.Width * x.Height);
+                rects = rects.OrderBy(x => Math.Abs((x.Width * x.Height) - average)).ToArray();
+                numToScale = Math.Min(numToScale, rects.Length);
+                for (var i = 0; i < numToScale; i++)
                 {
-                    notFine[i].Scale = 0.5;
+                    rects[i].Scale = 0.5;
                 }
-                Rects = fine.Concat(notFine).ToArray();
+
+                Rects = rects;
                 Rects = Reorg(out numPages);
-                return true;
+
+                attempts++;
+                numToScale++;
             }
-            // if (attempt == 0)
-            // {
-            //     Scale(0.5, pi => pi == 2 || pi == 5 || pi == 9 || pi == 12);
-            // }
-            // else if (attempt == 1)
-            // {
-            //     Scale(0.75, pi => pi == 0 || pi == 1);
-            // }
-            // else if (attempt == 2)
-            // {
-            //     Scale(0.75, pi => true);
-            // }
-            // else if (attempt == 3)
-            // {
-            //     Scale(0.5, pi => true);
-            // }
-            return numPages <= 2;
+            return true;
         }
 
         private bool MergeRects()
@@ -136,14 +126,15 @@ namespace emdui
 
         private Rect[] Reorg(out int numPages)
         {
-            var prioritisePart0 = true;
+            var prioritisePart0 = false;
             var rects = Rects
-                .OrderByDescending(r => r.Width)
+                .OrderByDescending(r => r.Height)
                 .ToArray();
             if (prioritisePart0)
             {
                 rects = rects
                     .OrderBy(r => r.ContainsPartIndex(0) ? 0 : 1)
+                    .ThenByDescending(r => r.Height)
                     // .OrderBy(r => r.PartIndex)
                     .ToArray();
             }
@@ -153,18 +144,15 @@ namespace emdui
                 var binFound = false;
                 foreach (var bin in bins)
                 {
-                    if (bin.CanFitRect(rect))
+                    if (bin.AddRect(rect))
                     {
-                        bin.AddRect(rect);
                         binFound = true;
                         break;
                     }
                 }
                 if (!binFound)
                 {
-                    var bin = new Bin();
-                    bin.AddRect(rect);
-                    bins.Add(bin);
+                    bins.Add(new Bin(128, rect.Height, rect));
                 }
             }
 
@@ -177,6 +165,7 @@ namespace emdui
             {
                 bins = bins
                     .OrderBy(b => b.Rects.Any(x => x.ContainsPartIndex(0)) ? 0 : 1)
+                    .ThenByDescending(b => b.Height)
                     .ToList();
             }
             foreach (var bin in bins)
@@ -286,35 +275,87 @@ namespace emdui
         [DebuggerDisplay("Width = {Width} Height = {Height}")]
         private class Bin
         {
-            public int MaxWidth { get; } = 128;
-            public int Width { get; private set; }
-            public int Height { get; private set; }
-            public List<Rect> Rects { get; } = new List<Rect>();
+            private Rect _rect;
 
-            public bool CanFitRect(Rect rect)
+            public int Width { get; }
+            public int Height { get; }
+
+
+            public Bin Top { get; private set; }
+            public Bin Bottom { get; private set; }
+
+            public Bin(int width, int height, Rect rect)
             {
-                var remainingWidth = MaxWidth - Width;
-                return rect.Width <= remainingWidth;
+                Width = width;
+                Height = height;
+                _rect = rect;
+
+                if (rect.Width > Width || rect.Height > Height)
+                    throw new ArgumentException("rect does not fit in bin", nameof(rect));
             }
 
-            public void AddRect(Rect rect)
+            public bool AddRect(Rect rect)
             {
-                Rects.Add(rect);
-                Width += rect.Width;
-                Height = Math.Max(Height, rect.Height);
-            }
+                if (rect.Height > Height)
+                    return false;
 
-            public Rect[] GetRects(int x, int y)
-            {
-                var rects = Rects.OrderByDescending(r => r.Height).ToArray();
-                for (int i = 0; i < rects.Length; i++)
+                var remainingWidth = Width - _rect.Width;
+                if (rect.Width > remainingWidth)
+                    return false;
+
+                if (Top == null)
                 {
-                    ref var rect = ref rects[i];
-                    rect.X = x;
-                    rect.Y = y;
-                    x += rect.Width;
+                    Top = new Bin(remainingWidth, rect.Height, rect);
+                    return true;
                 }
-                return rects;
+                else if (Top.AddRect(rect))
+                {
+                    return true;
+                }
+                else if (Bottom == null)
+                {
+                    var bottomHeight = Height - Top.Height;
+                    if (rect.Height > bottomHeight)
+                        return false;
+
+                    Bottom = new Bin(remainingWidth, bottomHeight, rect);
+                    return true;
+                }
+                else
+                {
+                    return Bottom.AddRect(rect);
+                }
+            }
+
+            public void GetRects(List<Rect> rects, int x, int y)
+            {
+                _rect.X = x;
+                _rect.Y = y;
+                rects.Add(_rect);
+                Top?.GetRects(rects, x + _rect.Width, y);
+                Bottom?.GetRects(rects, x + _rect.Width, y + Top.Height);
+            }
+
+            public IEnumerable<Rect> Rects
+            {
+                get
+                {
+                    yield return _rect;
+                    if (Top != null)
+                    {
+                        foreach (var rect in Top.Rects)
+                        {
+                            yield return rect;
+                        }
+                    }
+                    if (Bottom != null)
+                    {
+                        foreach (var rect in Bottom.Rects)
+                        {
+                            yield return rect;
+                        }
+                    }
+                }
             }
         }
 
@@ -338,7 +379,15 @@ namespace emdui
 
             public void AddBin(Bin bin)
             {
-                Bins.Add(bin);
+                int i;
+                for (i = 0; i < Bins.Count; i++)
+                {
+                    if (Bins[i].Height < bin.Height)
+                    {
+                        break;
+                    }
+                }
+                Bins.Insert(i, bin);
                 Height += bin.Height;
             }
 
@@ -350,7 +399,7 @@ namespace emdui
                 foreach (var bin in bins)
                 {
                     var x = Index * 128;
-                    rects.AddRange(bin.GetRects(x, y));
+                    bin.GetRects(rects, x, y);
                     y += bin.Height;
                 }
                 return rects.ToArray();

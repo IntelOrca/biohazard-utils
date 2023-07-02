@@ -554,7 +554,7 @@ namespace emdui
             {
                 textureReorganiser.Reorganise();
                 project.MainModel.SetMesh(0, textureReorganiser.Mesh);
-                project.MainModel.SetTim(0, textureReorganiser.TimFile);
+                project.MainTexture = textureReorganiser.TimFile;
 
                 for (var i = 0; i < extraModels.Length; i++)
                 {

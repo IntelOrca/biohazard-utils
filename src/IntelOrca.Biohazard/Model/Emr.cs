@@ -21,6 +21,17 @@ namespace IntelOrca.Biohazard.Model
         public ushort KeyFrameOffset => GetSpan<ushort>(2, 1)[0];
         public ushort NumParts => Data.Length >= 6 ? GetSpan<ushort>(4, 1)[0] : (ushort)0;
         public ushort KeyFrameSize => GetSpan<ushort>(6, 1)[0];
+        public ushort NumArmatures
+        {
+            get
+            {
+                var armatureDataLen = KeyFrameOffset - 8;
+                if (armatureDataLen == 0)
+                    return 0;
+
+                return NumParts;
+            }
+        }
 
         public Vector GetRelativePosition(int partIndex)
         {
@@ -118,12 +129,13 @@ namespace IntelOrca.Biohazard.Model
         public EmrBuilder ToBuilder()
         {
             var builder = new EmrBuilder(Version);
-            var numParts = NumParts;
-            for (var i = 0; i < numParts; i++)
+            builder.NumParts = NumParts;
+            var numArmatures = NumArmatures;
+            for (var i = 0; i < numArmatures; i++)
             {
                 builder.RelativePositions.Add(GetRelativePosition(i));
             }
-            for (var i = 0; i < numParts; i++)
+            for (var i = 0; i < numArmatures; i++)
             {
                 builder.Armatures.Add(GetArmatureParts(i).ToArray());
             }

@@ -7,6 +7,7 @@ namespace IntelOrca.Biohazard.Model
     public class EmrBuilder
     {
         public BioVersion Version { get; }
+        public ushort NumParts { get; set; }
         public List<Emr.Vector> RelativePositions { get; } = new List<Emr.Vector>();
         public List<byte[]> Armatures { get; } = new List<byte[]>();
         public byte[] KeyFrameData { get; set; } = new byte[0];
@@ -28,7 +29,7 @@ namespace IntelOrca.Biohazard.Model
             // Header
             bw.Write((ushort)0);
             bw.Write((ushort)0);
-            bw.Write((ushort)RelativePositions.Count);
+            bw.Write(NumParts);
             bw.Write(KeyFrameSize);
 
             // Positions

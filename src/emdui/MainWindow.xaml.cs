@@ -132,6 +132,34 @@ namespace emdui
 
         private void RefreshModelView()
         {
+#if false
+            var emrBuilder = _emr.ToBuilder();
+            var morph = _project.MainModel.GetChunk<MorphData>(0);
+            for (var i = 0; i < morph.NumParts; i++)
+            {
+                var partPosition = morph.GetPartPositionData(i);
+                for (var j = 0; j < partPosition.Length; j++)
+                {
+                    emrBuilder.RelativePositions[j] = partPosition[j];
+                }
+                break;
+            }
+            _emr = emrBuilder.ToEmr();
+
+            var md1Builder = ((Md1)_mesh).ToBuilder();
+            for (var n = 0; n < morph.NumParts; n++)
+            {
+                var morphData = morph.GetMorphData(n, 1);
+                var part = md1Builder.Parts[n == 0 ? 0 : 15];
+                for (var i = 0; i < morphData.Length; i++)
+                {
+                    var v = new Md1.Vector(morphData[i].x, morphData[i].y, morphData[i].z);
+                    part.Positions[i] = v;
+                }
+            }
+            _mesh = md1Builder.ToMesh();
+#endif
+
             _scene = new ModelScene();
             _scene.GenerateFrom(_mesh, _emr, _tim);
             viewport0.Scene = _scene;
@@ -204,13 +232,58 @@ namespace emdui
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\chris\PL00.PLD");
             // LoadProject(@"F:\games\re3\mod_biorand\DATA\PLD\PL00.PLD");
             // LoadProject(@"F:\games\re2\data\Pl0\emd0\em041.emd");
-            LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\chris\pl00.pld");
+            // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\chris\pl00.pld");
             // LoadProject(@"F:\games\re2\data\Pl0\emd0\em010.emd");
             // ExportToBioRand(@"C:\Users\Ted\Desktop\ethan");
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld1\rebecca\PL01.PLD");
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld1\ashley\PL01.PLD");
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re1\pld0\chris\CHAR10.EMD");
             // LoadProject(@"M:\temp\biorand\reorg\CHAR10.EMD");
+
+            LoadProject(@"F:\games\re2\data\Pl0\emd0\em040.emd");
+            var benEmd = _project.MainModel;
+            var morph = benEmd.GetChunk<MorphData>(0);
+            var morphBuilder = morph.ToBuilder();
+            var posData = morphBuilder.Groups[0].Positions;
+            posData[1] = posData[0];
+            benEmd.SetChunk(0, morphBuilder.ToMorphData());
+            benEmd.Save(@"F:\games\re2\mod_test\pl0\emd0\em040.emd");
+
+            var hunkEmd = new EmdFile(BioVersion.Biohazard2, @"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\emd\hunk\em050.emd");
+            var mesh = ((Md1)hunkEmd.GetMesh(0)).ToBuilder();
+            while (mesh.Count > 15)
+            {
+                mesh.RemoveAt(mesh.Count - 1);
+            }
+            mesh.Add();
+            hunkEmd.SetMesh(0, mesh.ToMesh());
+
+#if false
+            var hunkEmr = hunkEmd.GetEmr(0);
+            var morphData = new MorphData.Builder();
+            morphData.Unknown00 = morph.Unknown00;
+            var skel = new Emr.Vector[15];
+            for (var i = 0; i < 15; i++)
+            {
+                skel[i] = hunkEmr.GetRelativePosition(i);
+            }
+            morphData.Skeletons.Add(skel);
+            morphData.Skeletons.Add(skel);
+            var g0 = new MorphData.Builder.MorphGroup();
+            var g1 = new MorphData.Builder.MorphGroup();
+            g0.Unknown = morph.GetMorphHeader(0).Unknown;
+            g0.Positions.Add(mesh.Parts[0].Positions.Select(p => new Emr.Vector(p.x, p.y, p.z)).ToArray());
+            g0.Positions.Add(mesh.Parts[0].Positions.Select(p => new Emr.Vector(p.x, p.y, p.z)).ToArray());
+            g1.Unknown = morph.GetMorphHeader(1).Unknown;
+            g1.Positions.Add(new Emr.Vector[1]);
+            g1.Positions.Add(new Emr.Vector[1]);
+            morphData.Groups.Add(g0);
+            morphData.Groups.Add(g1);
+            hunkEmd.SetChunk(0, morphData.ToMorphData());
+            hunkEmd.Save(@"F:\games\re2\mod_test\pl0\emd0\em044.emd");
+#endif
+
+            // LoadProject(@"F:\games\re2\data\Pl0\emd0\em050.emd");
 
             // Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W01.EMW");
             // Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W02.EMW");

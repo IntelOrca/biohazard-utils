@@ -10,6 +10,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using emdui.Extensions;
 using IntelOrca.Biohazard;
+using IntelOrca.Biohazard.Extensions;
 using IntelOrca.Biohazard.Model;
 using Microsoft.Win32;
 

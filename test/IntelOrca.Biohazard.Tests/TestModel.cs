@@ -101,6 +101,21 @@ namespace IntelOrca.Biohazard.Tests
             AssertByteArraysEqual(expectedData, actualData);
         }
 
+        [Fact]
+        public void RebuildMorphData()
+        {
+            var installPath = TestInfo.GetInstallPath(1);
+            var emdPath = Path.Combine(installPath, "data", "pl0", "emd0", "em046.emd");
+            var emdFile = new EmdFile(BioVersion.Biohazard2, emdPath);
+            var morphData = emdFile.GetChunk<MorphData>(0);
+            var builder = morphData.ToBuilder();
+            var newMesh = builder.ToMorphData();
+
+            var expectedData = morphData.Data.ToArray();
+            var actualData = newMesh.Data.ToArray();
+            AssertByteArraysEqual(expectedData, actualData);
+        }
+
         private static void AssertByteArraysEqual(byte[] expected, byte[] actual)
         {
             Assert.Equal(expected.Length, actual.Length);

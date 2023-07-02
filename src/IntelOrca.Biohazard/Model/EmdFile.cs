@@ -14,7 +14,7 @@ namespace IntelOrca.Biohazard.Model
 
         private readonly static ChunkKind[] g_chunkKinds2 = new[]
         {
-            ChunkKind.Unknown,
+            ChunkKind.Morph,
             ChunkKind.Animation,
             ChunkKind.Armature,
             ChunkKind.Animation,

@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using emdui.Extensions;
 using IntelOrca.Biohazard;
+using IntelOrca.Biohazard.Extensions;
 using IntelOrca.Biohazard.Model;
 
 namespace emdui
@@ -292,7 +292,7 @@ namespace emdui
                     x = Math.Round(x);
                     y = Math.Round(y);
 
-                    pt.Points[j] = new Md1Extensions.PrimitiveTexture.UV(parentRect.Page, (int)x, (int)y);
+                    pt.Points[j] = new MeshExtensions.PrimitiveTexture.UV(parentRect.Page, (int)x, (int)y);
                 }
             });
         }

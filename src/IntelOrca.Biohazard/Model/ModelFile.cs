@@ -79,6 +79,8 @@ namespace IntelOrca.Biohazard.Model
                         return (T)(object)new Md2(GetChunkData(index));
                 case ChunkKind.Texture:
                     return (T)(object)new TimFile(GetChunkData(index));
+                case ChunkKind.Morph:
+                    return (T)(object)new MorphData(GetChunkData(index));
                 default:
                     return default;
             }
@@ -100,6 +102,9 @@ namespace IntelOrca.Biohazard.Model
                     break;
                 case ChunkKind.Texture:
                     SetChunkData(index, ((TimFile)(object)value).GetBytes());
+                    break;
+                case ChunkKind.Morph:
+                    SetChunkData(index, ((MorphData)(object)value).Data);
                     break;
                 default:
                     throw new NotSupportedException();
@@ -233,6 +238,7 @@ namespace IntelOrca.Biohazard.Model
             Dat,
             Mesh,
             Texture,
+            Morph,
         }
 
         private class OffsetDirectory

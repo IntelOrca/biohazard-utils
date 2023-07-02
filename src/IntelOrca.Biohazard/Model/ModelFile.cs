@@ -148,6 +148,9 @@ namespace IntelOrca.Biohazard.Model
             SetChunkData(chunkIndex, data);
         }
 
+        public MorphData GetMorph(int number) => new MorphData(GetChunk(ChunkKind.Morph, number));
+        public void SetMorph(int number, MorphData value) => SetChunk(ChunkKind.Morph, number, value.Data);
+
         public Edd GetEdd(int number) => new Edd(GetChunk(ChunkKind.Animation, number));
         public void SetEdd(int number, Edd value) => SetChunk(ChunkKind.Animation, number, value.Data);
 

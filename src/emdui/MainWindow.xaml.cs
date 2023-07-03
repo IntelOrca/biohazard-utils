@@ -2,8 +2,8 @@
 using System.Windows;
 using System.Windows.Media.Media3D;
 using System.Windows.Threading;
-using emdui.Extensions;
 using IntelOrca.Biohazard;
+using IntelOrca.Biohazard.Extensions;
 using IntelOrca.Biohazard.Model;
 using Microsoft.Win32;
 
@@ -234,95 +234,8 @@ namespace emdui
             // LoadProject(@"F:\games\re2\data\Pl0\emd0\em041.emd");
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\chris\pl00.pld");
             // LoadProject(@"F:\games\re2\data\Pl0\emd0\em010.emd");
-            // ExportToBioRand(@"C:\Users\Ted\Desktop\ethan");
-            // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld1\rebecca\PL01.PLD");
-            // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld1\ashley\PL01.PLD");
-            // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re1\pld0\chris\CHAR10.EMD");
-            // LoadProject(@"M:\temp\biorand\reorg\CHAR10.EMD");
-
-            LoadProject(@"F:\games\re2\data\Pl0\emd0\em040.emd");
-            var benEmd = _project.MainModel;
-            var morph = benEmd.GetChunk<MorphData>(0);
-            var morphBuilder = morph.ToBuilder();
-            var posData = morphBuilder.Groups[0].Positions;
-            posData[1] = posData[0];
-            benEmd.SetChunk(0, morphBuilder.ToMorphData());
-            benEmd.Save(@"F:\games\re2\mod_test\pl0\emd0\em040.emd");
-
-            var hunkEmd = new EmdFile(BioVersion.Biohazard2, @"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\emd\hunk\em050.emd");
-            var mesh = ((Md1)hunkEmd.GetMesh(0)).ToBuilder();
-            while (mesh.Count > 15)
-            {
-                mesh.RemoveAt(mesh.Count - 1);
-            }
-            mesh.Add();
-            hunkEmd.SetMesh(0, mesh.ToMesh());
-
-#if false
-            var hunkEmr = hunkEmd.GetEmr(0);
-            var morphData = new MorphData.Builder();
-            morphData.Unknown00 = morph.Unknown00;
-            var skel = new Emr.Vector[15];
-            for (var i = 0; i < 15; i++)
-            {
-                skel[i] = hunkEmr.GetRelativePosition(i);
-            }
-            morphData.Skeletons.Add(skel);
-            morphData.Skeletons.Add(skel);
-            var g0 = new MorphData.Builder.MorphGroup();
-            var g1 = new MorphData.Builder.MorphGroup();
-            g0.Unknown = morph.GetMorphHeader(0).Unknown;
-            g0.Positions.Add(mesh.Parts[0].Positions.Select(p => new Emr.Vector(p.x, p.y, p.z)).ToArray());
-            g0.Positions.Add(mesh.Parts[0].Positions.Select(p => new Emr.Vector(p.x, p.y, p.z)).ToArray());
-            g1.Unknown = morph.GetMorphHeader(1).Unknown;
-            g1.Positions.Add(new Emr.Vector[1]);
-            g1.Positions.Add(new Emr.Vector[1]);
-            morphData.Groups.Add(g0);
-            morphData.Groups.Add(g1);
-            hunkEmd.SetChunk(0, morphData.ToMorphData());
-            hunkEmd.Save(@"F:\games\re2\mod_test\pl0\emd0\em044.emd");
-#endif
-
-            // LoadProject(@"F:\games\re2\data\Pl0\emd0\em050.emd");
-
-            // Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W01.EMW");
-            // Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W02.EMW");
-            // Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W03.EMW");
-            // Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W04.EMW");
-            // Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W05.EMW");
-            // Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W06.EMW");
-            // Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W07.EMW");
-            // Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W08.EMW");
-            // Project.LoadWeapon(@"F:\games\re1\JPN\PLAYERS\W0B.EMW");
-
-            // LoadProject(@"F:\games\re1\mod_test\ENEMY\CHAR10.EMD");
-            // Project.LoadWeapon(@"F:\games\re1\mod_test\PLAYERS\W07.EMW");
-            projectTreeView.Refresh();
-            // LoadProject(@"F:\games\re1\mod_test\ENEMY\CHAR10.EMD");
-
-#if false
-            var textureReorganiser = new TextureReorganiser(_project.MainModel.GetMesh(0), _project.MainTexture);
-            textureReorganiser.Detect();
-            textureReorganiser.Reorganise();
-            _project.MainModel.SetMesh(0, textureReorganiser.Mesh);
-            SetTimFile(textureReorganiser.TimFile);
-            timImage.Primitives = textureReorganiser.Rects
-                .Select(x => new TimView.UVPrimitive()
-                {
-                    IsQuad = true,
-                    Page = (byte)x.Page,
-                    U0 = ClampPage(x.Page, x.Left),
-                    V0 = ClampByte(x.Top),
-                    U1 = ClampPage(x.Page, x.Right),
-                    V1 = ClampByte(x.Top),
-                    U3 = ClampPage(x.Page, x.Right),
-                    V3 = ClampByte(x.Bottom),
-                    U2 = ClampPage(x.Page, x.Left),
-                    V2 = ClampByte(x.Bottom)
-                })
-                .ToArray();
-            // LoadMesh(_project.MainModel.GetMesh(0));
-#endif
+            // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\ark\pl00.pld");
+            LoadProject(@"F:\games\re2\mod_biorand\pl0\emd0\em04a.emd");
 #endif
         }
 

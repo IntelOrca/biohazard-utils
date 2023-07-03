@@ -48,5 +48,21 @@
             ImportPage(target, pageA, pB);
             ImportPage(target, pageB, pA);
         }
+
+        public static TimFile WithWeaponTexture(this TimFile texture, TimFile weaponTexture, int page = 1)
+        {
+            var xOffset = page * 128;
+            var tim = texture.Clone();
+            for (var y = 0; y < 32; y++)
+            {
+                for (var x = 0; x < 56; x++)
+                {
+                    var p16 = weaponTexture.GetPixel(x, y);
+                    var p8 = tim.FindBestPaletteEntry(page, p16);
+                    tim.SetRawPixel(xOffset + 72 + x, 224 + y, p8);
+                }
+            }
+            return tim;
+        }
     }
 }

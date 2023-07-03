@@ -228,6 +228,9 @@ namespace emdui
                 ProjectTreeViewItem tvi;
                 switch (model.GetChunk<object>(i))
                 {
+                    case MorphData morph:
+                        tvi = new MorphTreeViewItem(projectFile, i, morph);
+                        break;
                     case Edd edd:
                         tvi = new EddTreeViewItem(projectFile, i, edd);
                         break;
@@ -1106,6 +1109,45 @@ namespace emdui
                         Tim.Save(path);
                     }
                 });
+        }
+    }
+
+    public class MorphTreeViewItem : ChunkTreeViewItem
+    {
+        public override ImageSource Image => (ImageSource)Application.Current.Resources["IconPLD"];
+        public override string Header => "DAT";
+        public MorphData MorphData { get; }
+
+        public MorphTreeViewItem(ProjectFile projectFile, int chunkIndex, MorphData morphData)
+            : base(projectFile, chunkIndex)
+        {
+            MorphData = morphData;
+            CreateChildren();
+        }
+
+        private void CreateChildren()
+        {
+            Items.Clear();
+            for (var i = 0; i < MorphData.NumParts; i++)
+            {
+                Items.Add(new MorphGroupTreeViewItem(this, i));
+            }
+        }
+    }
+
+    public class MorphGroupTreeViewItem : ChunkTreeViewItem
+    {
+        public override ImageSource Image => (ImageSource)Application.Current.Resources["IconPLD"];
+        public override string Header => $"Morph {GroupIndex}";
+        public MorphTreeViewItem Parent { get; }
+        public MorphData MorphData => Parent.MorphData;
+        public int GroupIndex { get; }
+
+        public MorphGroupTreeViewItem(MorphTreeViewItem parent, int groupIndex)
+            : base(parent.ProjectFile, parent.ChunkIndex)
+        {
+            Parent = parent;
+            GroupIndex = groupIndex;
         }
     }
 }

@@ -195,7 +195,7 @@ namespace IntelOrca.Biohazard.Model
             }
         }
 
-        public static ModelFile? FromFile(string path)
+        public static ModelFile FromFile(string path)
         {
             using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read))
             {

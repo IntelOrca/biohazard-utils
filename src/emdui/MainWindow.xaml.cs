@@ -235,7 +235,8 @@ namespace emdui
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\chris\pl00.pld");
             // LoadProject(@"F:\games\re2\data\Pl0\emd0\em010.emd");
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\ark\pl00.pld");
-            LoadProject(@"F:\games\re2\mod_biorand\pl0\emd0\em04a.emd");
+            // LoadProject(@"F:\games\re2\mod_biorand\pl0\emd0\em04a.emd");
+            LoadProject(@"F:\games\re2\data\Pl0\emd0\em041.emd");
 #endif
         }
 

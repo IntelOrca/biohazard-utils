@@ -269,6 +269,28 @@ namespace IntelOrca.Biohazard
                 return;
             }
 
+            var targetSampleRate = SampleRate != 0 ?
+                (uint)SampleRate :
+                _headerWritten ?
+                    _header.nSamplesPerSec :
+                    header.nSamplesPerSec;
+            if (header.nSamplesPerSec != targetSampleRate)
+            {
+                input.Position = initialPosition;
+                var ms = new MemoryStream();
+                if (header.nChannels != 1)
+                {
+                    ConvertChannels(ms, input, 1);
+                }
+                else
+                {
+                    ConvertSampleRate(ms, input, targetSampleRate);
+                }
+                ms.Position = 0;
+                AppendWav(ms, start, end);
+                return;
+            }
+
             if (header.nChannels != 1 && header.nChannels != 2)
                 throw new NotSupportedException("Only mono or stereo sound can be converted.");
 
@@ -292,8 +314,8 @@ namespace IntelOrca.Biohazard
                     var bw = new BinaryWriter(_stream);
                     if (header.nSamplesPerSec != _header.nSamplesPerSec)
                     {
-                        if (_header.nChannels != 1)
-                            throw new NotSupportedException("Resampling not yet supported for stero.");
+                        if (header.nChannels != 1)
+                            throw new NotSupportedException("Resampling not yet supported for stereo.");
 
                         var resampleStream = new MemoryStream();
                         bw = new BinaryWriter(resampleStream);
@@ -446,6 +468,86 @@ namespace IntelOrca.Biohazard
             {
                 bw.Write(header);
                 input.CopyAmountTo(output, header.nDataLength);
+            }
+        }
+
+        private unsafe void ConvertChannels(Stream output, Stream input, int desiredChannels)
+        {
+            var bw = new BinaryWriter(output);
+            var br = new BinaryReader(input);
+            var header = br.ReadStruct<WaveHeader>();
+            if (header.wFormatTag != 1)
+            {
+                throw new NotSupportedException("Unsupported .wav format for channel conversion.");
+            }
+            if (header.nChannels == 1 && desiredChannels == 2)
+            {
+                header.nChannels = 2;
+                header.nDataLength *= 2;
+                bw.Write(header);
+
+                var data = MemoryMarshal.Cast<byte, short>(new Span<byte>(br.ReadBytes((int)header.nDataLength)));
+                for (int i = 0; i < data.Length; i++)
+                {
+                    bw.Write(data[i]);
+                    bw.Write(data[i]);
+                }
+            }
+            else if (header.nChannels == 2 && desiredChannels == 1)
+            {
+                header.nChannels = 1;
+                header.nDataLength /= 2;
+                bw.Write(header);
+
+                var data = MemoryMarshal.Cast<byte, short>(new Span<byte>(br.ReadBytes((int)header.nDataLength)));
+                for (int i = 0; i < data.Length; i += 2)
+                {
+                    bw.Write(data[i]);
+                }
+            }
+            else if (header.nChannels == desiredChannels)
+            {
+                bw.Write(header);
+                var data = br.ReadBytes((int)header.nDataLength);
+                bw.Write(data);
+            }
+            else
+            {
+                throw new NotSupportedException($"Conversion from {header.nChannels} channels to {desiredChannels} not supported.");
+            }
+        }
+
+        private unsafe void ConvertSampleRate(Stream output, Stream input, uint targetSampleRate)
+        {
+            var bw = new BinaryWriter(output);
+            var br = new BinaryReader(input);
+            var header = br.ReadStruct<WaveHeader>();
+            if (header.wFormatTag != 1 ||
+                header.wBitsPerSample != 16 ||
+                header.nChannels != 1)
+            {
+                throw new NotSupportedException("Unsupported .wav format for resampling.");
+            }
+            if (header.nSamplesPerSec == targetSampleRate)
+            {
+                bw.Write(header);
+                var data = br.ReadBytes((int)header.nDataLength);
+                bw.Write(data);
+            }
+            else
+            {
+                var inSamples = (int)(header.nDataLength / 2);
+                var factor = (double)targetSampleRate / header.nSamplesPerSec;
+                var headerPos = output.Position;
+                bw.Write(header);
+                var dataPos = output.Position;
+                Resample(input, output, inSamples, factor);
+                var backupPos = output.Position;
+                output.Position = headerPos;
+                header.nSamplesPerSec = targetSampleRate;
+                header.nDataLength = (uint)(backupPos - dataPos);
+                bw.Write(header);
+                output.Position = backupPos;
             }
         }
 

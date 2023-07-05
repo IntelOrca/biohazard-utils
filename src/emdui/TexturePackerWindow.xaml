@@ -18,7 +18,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <ListView x:Name="constraintListView" Grid.Column="0" Grid.Row="0" Margin="8">
+        <ListView x:Name="constraintListView" Grid.Column="0" Grid.Row="0" Margin="8" MouseMove="constraintListView_MouseMove">
             <ListView.ItemsSource>
                 <x:Array Type="local:TexturePackerConstraint">
                     <local:TexturePackerConstraint PartIndex="0" Page="0" Scale="1" />
@@ -29,10 +29,13 @@
             </ListView.ItemsSource>
             <ListView.ItemTemplate>
                 <DataTemplate DataType="local:TexturePackerConstraint">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Width="50" Margin="2" Text="{Binding DisplayPartIndex}" />
-                        <TextBox Width="50" Margin="2" Text="{Binding DisplayPage, UpdateSourceTrigger=PropertyChanged}" TextChanged="Constraint_TextChanged" />
-                        <TextBox Width="50" Margin="2" Text="{Binding DisplayScale, UpdateSourceTrigger=PropertyChanged}" TextChanged="Constraint_TextChanged" />
+                    <StackPanel Orientation="Horizontal" Background="{Binding DisplayBackground}">
+                        <StackPanel Width="64" Margin="2">
+                            <TextBlock FontSize="12" Text="{Binding DisplayPartIndex}" />
+                            <TextBlock FontSize="8" Text="{Binding DisplayPartName}" />
+                        </StackPanel>
+                        <TextBox Width="50" Margin="2,4" Text="{Binding DisplayPage, UpdateSourceTrigger=PropertyChanged}" TextChanged="Constraint_TextChanged" />
+                        <TextBox Width="50" Margin="2,4" Text="{Binding DisplayScale, UpdateSourceTrigger=PropertyChanged}" TextChanged="Constraint_TextChanged" />
                     </StackPanel>
                 </DataTemplate>
             </ListView.ItemTemplate>

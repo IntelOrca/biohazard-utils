@@ -1,6 +1,11 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
 using IntelOrca.Biohazard;
 using IntelOrca.Biohazard.Model;
 using static emdui.TimView;
@@ -12,6 +17,8 @@ namespace emdui
     /// </summary>
     public partial class TexturePackerWindow : Window
     {
+        private CancellationTokenSource _cts;
+
         public IModelMesh[] Meshes { get; set; }
         public TimFile Texture { get; set; }
 
@@ -23,7 +30,9 @@ namespace emdui
             InitializeComponent();
         }
 
-        public void Refresh()
+        public async void Refresh() => await RefreshAsync();
+
+        public async Task RefreshAsync()
         {
             var numParts = Meshes[0].NumParts;
             var constraints = Enumerable
@@ -37,22 +46,48 @@ namespace emdui
             constraints.First(x => x.PartIndex == 12).Page = 0;
             constraints.First(x => x.PartIndex == 14).Page = 1;
             constraintListView.ItemsSource = constraints;
-            Update();
+            await UpdateAsync();
         }
 
-        private void Update()
+        private async Task UpdateAsync()
+        {
+            // Cancel any previous reorg
+            _cts?.Cancel();
+
+            // Start new reorg
+            var partConstraints = constraintListView.ItemsSource as TexturePackerConstraint[];
+            var constaints = partConstraints.Select(x => x.PartConstraint).ToArray();
+            _cts = new CancellationTokenSource();
+            await UpdateAsync(constaints, _cts.Token);
+        }
+
+        private async Task UpdateAsync(PartConstraint[] constraints, CancellationToken ct)
         {
             var mainMesh = Meshes[0];
             var extra = Meshes.Skip(1).ToArray();
+            var constraint = new TextureReorganiserConstraint() { Constraints = constraints };
             var reorg = new TextureReorganiser(mainMesh, extra, Texture);
-            var constraint = new TextureReorganiserConstraint()
-            {
-                Constraints = constraintListView.ItemsSource as TexturePackerConstraint[]
-            };
-            reorg.ReorganiseWithConstraints(constraint);
+            await Task.Run(() => reorg.ReorganiseWithConstraints(constraint));
+            if (ct.IsCancellationRequested)
+                return;
+
             UpdatedMeshes = new[] { reorg.Mesh }.Concat(reorg.ExtraMeshes).ToArray();
             UpdatedTexture = reorg.TimFile;
             timView.Tim = UpdatedTexture;
+
+            var partConstraints = constraintListView.ItemsSource as TexturePackerConstraint[];
+            foreach (var pc in partConstraints)
+            {
+                pc.Status = true;
+            }
+            foreach (var r in reorg.UnplacedRects)
+            {
+                foreach (var pi in r.PartIndicies)
+                {
+                    var pc = partConstraints.FirstOrDefault(x => x.PartIndex == pi);
+                    pc.Status = false;
+                }
+            }
 
             reorg.Detect(constraint);
             timView.Primitives = reorg.Rects
@@ -72,9 +107,15 @@ namespace emdui
                 .ToArray();
         }
 
-        private void Constraint_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        private async void Constraint_TextChanged(object sender, TextChangedEventArgs e)
         {
-            Update();
+            try
+            {
+                await UpdateAsync();
+            }
+            catch
+            {
+            }
         }
 
         private static byte ClampByte(int x) => (byte)Math.Max(0, Math.Min(255, x));
@@ -84,11 +125,39 @@ namespace emdui
             var pageRight = ((page + 1) * 128) - 1;
             return (byte)(Math.Max(pageLeft, Math.Min(pageRight, x)) % 128);
         }
+
+        private void constraintListView_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            var listView = (ListView)sender;
+            var hitTestResult = VisualTreeHelper.HitTest(listView, e.GetPosition(listView));
+            var listViewItem = FindAncestor<ListViewItem>(hitTestResult.VisualHit);
+            if (listViewItem != null)
+            {
+                if (listView.ItemContainerGenerator.ItemFromContainer(listViewItem) is TexturePackerConstraint c)
+                {
+                    timView.SetPrimitivesFromMesh(UpdatedMeshes[0], c.PartIndex);
+                }
+            }
+        }
+
+        // Helper method to find the ancestor of a specific type in the visual tree
+        private static T FindAncestor<T>(DependencyObject current) where T : DependencyObject
+        {
+            while (current != null)
+            {
+                if (current is T ancestor)
+                {
+                    return ancestor;
+                }
+                current = VisualTreeHelper.GetParent(current);
+            }
+            return null;
+        }
     }
 
     internal class TextureReorganiserConstraint : ITextureReorganiserConstraint
     {
-        public TexturePackerConstraint[] Constraints { get; set; }
+        public PartConstraint[] Constraints { get; set; }
 
         private int? GetPage(byte partIndex)
         {
@@ -128,21 +197,34 @@ namespace emdui
         {
             var rr = r;
             var c = Constraints.FirstOrDefault(x => Array.IndexOf(rr.PartIndicies, (byte)x.PartIndex) != -1);
-            if (c == null)
-            {
-                return 1;
-            }
             if (c.Scale == 0 || c.Scale > 1)
                 c.Scale = 1;
             return c.Scale;
         }
     }
 
-    public class TexturePackerConstraint
+    public class TexturePackerConstraint : INotifyPropertyChanged
     {
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        private bool _status;
+        private string _scale = "1.0";
+
         public int PartIndex { get; set; }
         public int Page { get; set; } = -1;
         public double Scale { get; set; } = 1;
+        public bool Status
+        {
+            get => _status;
+            set
+            {
+                if (_status != value)
+                {
+                    _status = value;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DisplayBackground)));
+                }
+            }
+        }
 
         public TexturePackerConstraint()
         {
@@ -152,6 +234,8 @@ namespace emdui
         {
             PartIndex = partIndex;
         }
+
+        public PartConstraint PartConstraint => new PartConstraint(PartIndex, Page, Scale);
 
         public string DisplayPartIndex => $"Part {PartIndex}";
 
@@ -169,14 +253,33 @@ namespace emdui
 
         public string DisplayScale
         {
-            get => Scale.ToString("0.00");
+            get => _scale;
             set
             {
+                _scale = value;
                 if (double.TryParse(value, out var result))
                     Scale = result;
                 else
                     Scale = 1;
             }
+        }
+
+        public string DisplayPartName => PartName.GetPartName(BioVersion.Biohazard2, PartIndex);
+
+        public Brush DisplayBackground => Status ? Brushes.LightGreen : Brushes.IndianRed;
+    }
+
+    public struct PartConstraint
+    {
+        public int PartIndex { get; set; }
+        public int Page { get; set; }
+        public double Scale { get; set; }
+
+        public PartConstraint(int partIndex, int page, double scale)
+        {
+            PartIndex = partIndex;
+            Page = page;
+            Scale = scale;
         }
     }
 }

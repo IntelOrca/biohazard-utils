@@ -509,61 +509,7 @@ namespace emdui
             }
         }
 
-        public override string Header
-        {
-            get
-            {
-                var partIndex = PartIndex;
-                string[] partNameArray = null;
-                if (Model.Version == BioVersion.Biohazard1)
-                {
-                    partNameArray = g_partNamesRe1;
-                }
-                else if (Model.Version == BioVersion.Biohazard2)
-                {
-                    partNameArray = g_partNamesRe2;
-                }
-                else if (Model.Version == BioVersion.Biohazard3)
-                {
-                    partNameArray = g_partNamesRe3;
-                }
-                if (partNameArray != null && partNameArray.Length > partIndex)
-                    return partNameArray[partIndex];
-                return $"Part {partIndex}";
-            }
-        }
-
-        private string[] g_partNamesRe1 = new string[]
-        {
-            "chest", "head",
-            "waist",
-            "thigh (left)", "calf (left)", "foot (left)",
-            "thigh (right)", "calf (right)", "foot (right)",
-            "upper arm (left)", "forearm (left)", "hand (left)",
-            "upper arm (right)", "forearm (right)", "hand (right)"
-        };
-
-        private string[] g_partNamesRe2 = new string[]
-        {
-            "chest", "waist",
-            "thigh (right)", "calf (right)", "foot (right)",
-            "thigh (left)", "calf (left)", "foot (left)",
-            "head",
-            "upper arm (right)", "forearm (right)", "hand (right)",
-            "upper arm (left)", "forearm (left)", "hand (left)",
-            "ponytail (A)", "ponytail (B)", "ponytail (C)", "ponytail (D)"
-        };
-
-        private string[] g_partNamesRe3 = new string[]
-        {
-            "chest", "head",
-            "upper arm (right)", "forearm (right)", "hand (right)",
-            "upper arm (left)", "forearm (left)", "hand (left)",
-            "waist",
-            "thigh (right)", "calf (right)", "foot (right)",
-            "thigh (left)", "calf (left)", "foot (left)",
-            "hand with gun"
-        };
+        public override string Header => PartName.GetPartName(Model.Version, PartIndex);
     }
 
     public class MeshTreeViewItem : ChunkTreeViewItem

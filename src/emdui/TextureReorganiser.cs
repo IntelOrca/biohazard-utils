@@ -14,6 +14,7 @@ namespace emdui
         public IModelMesh[] ExtraMeshes { get; private set; }
         public TimFile TimFile { get; private set; }
         public Rect[] Rects { get; private set; } = new Rect[0];
+        public Rect[] UnplacedRects { get; private set; } = new Rect[0];
 
         public TextureReorganiser(IModelMesh mesh, IModelMesh[] extra, TimFile tim)
         {
@@ -57,7 +58,7 @@ namespace emdui
             Rects = bestResult.Rects;
 
             EditTim();
-            EditUV();
+            EditUV(new NullTextureReorganiserConstraint());
         }
 
         private ReorganiseResult Reorganise(double scale)
@@ -100,7 +101,7 @@ namespace emdui
             }
             Rects = Reorg(constraint, out _);
             EditTim();
-            EditUV();
+            EditUV(constraint);
         }
 
         private struct ReorganiseResult
@@ -125,7 +126,7 @@ namespace emdui
                 for (var i = 0; i < newRects.Count; i++)
                 {
                     var rr = newRects[i];
-                    if (rr.UnionIfIntersects(rect) && constraint.CanMerge(in rr, in rect))
+                    if (constraint.CanMerge(in rr, in rect) && rr.UnionIfIntersects(rect))
                     {
                         newRects[i] = rr;
                         skip = true;
@@ -222,8 +223,11 @@ namespace emdui
                     return p == null ? int.MaxValue : p;
                 })
                 .ToList();
+
+            var unplaced = new List<Rect>();
             foreach (var bin in bins)
             {
+                var foundPage = false;
                 foreach (var page in pages)
                 {
                     var binPage = bin.GetPage(constraint);
@@ -234,10 +238,16 @@ namespace emdui
                     if (page.CanFitBin(bin))
                     {
                         page.AddBin(bin);
+                        foundPage = true;
                         break;
                     }
                 }
+                if (!foundPage)
+                {
+                    unplaced.AddRange(bin.Rects);
+                }
             }
+            UnplacedRects = unplaced.ToArray();
             numPages = pages.Count(x => x.Bins.Count != 0);
             return pages
                 .SelectMany(x => x.GetRects())
@@ -269,15 +279,15 @@ namespace emdui
             TimFile.ResizeCluts(newNumPages);
         }
 
-        private void EditUV()
+        private void EditUV(ITextureReorganiserConstraint constraint)
         {
-            Mesh = EditUV(Mesh);
+            Mesh = EditUV(Mesh, constraint);
             ExtraMeshes = ExtraMeshes
-                .Select(x => EditUV(x))
+                .Select(x => EditUV(x, constraint))
                 .ToArray();
         }
 
-        private IModelMesh EditUV(IModelMesh mesh)
+        private IModelMesh EditUV(IModelMesh mesh, ITextureReorganiserConstraint constraint)
         {
             return mesh.EditMeshTextures(pt =>
             {
@@ -290,7 +300,7 @@ namespace emdui
                 var parentRect = new Rect();
                 foreach (var r in Rects)
                 {
-                    if (r.OriginallyContains(rect))
+                    if (r.OriginallyContains(rect) && Array.IndexOf(r.PartIndicies, (byte)pt.PartIndex) != -1)
                     {
                         parentRect = r;
                         break;
@@ -491,7 +501,7 @@ namespace emdui
             }
         }
 
-        [DebuggerDisplay("X = {X} Y = {Y} Width = {Width} Height = {Height}")]
+        [DebuggerDisplay("Parts = [{Parts}] X = {X} Y = {Y} Width = {Width} Height = {Height}")]
         public struct Rect
         {
             public byte[] PartIndicies { get; set; }
@@ -511,6 +521,8 @@ namespace emdui
             public int Top => Y;
             public int Right => X + Width;
             public int Bottom => Y + Height;
+
+            public string Parts => string.Join(", ", PartIndicies);
 
             public int Page
             {
@@ -579,6 +591,7 @@ namespace emdui
                     OriginalY = Y;
                     OriginalWidth = Width;
                     OriginalHeight = Height;
+                    PartIndicies = PartIndicies.Concat(other.PartIndicies).Distinct().ToArray();
                     return true;
                 }
                 return false;

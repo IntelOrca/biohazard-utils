@@ -332,9 +332,14 @@ namespace IntelOrca.Biohazard
             min = Math.Max(min, 0);
             max = Math.Min(max, _coloursPerClut);
 
+            var a = (byte)((p >> 24) & 0xFF);
             var r = (byte)((p >> 16) & 0xFF);
             var g = (byte)((p >> 8) & 0xFF);
             var b = (byte)((p >> 0) & 0xFF);
+            if (a < 128)
+                return 0;
+            if (min <= 0)
+                min = 1;
 
             var bestIndex = -1;
             var bestTotal = int.MaxValue;
@@ -482,8 +487,11 @@ namespace IntelOrca.Biohazard
                     }
 
                     var p32 = GetPixel(x, y);
-                    var p16 = Convert32to16(p32);
-                    palettes[paletteIndex].GetOrAdd(p16);
+                    if ((p32 >> 24) >= 128)
+                    {
+                        var p16 = Convert32to16(p32);
+                        palettes[paletteIndex].GetOrAdd(p16);
+                    }
                 }
             }
 
@@ -541,12 +549,19 @@ namespace IntelOrca.Biohazard
 
         public static ushort Convert32to16(uint c32)
         {
+            var a = (byte)((c32 >> 24) & 0xFF);
+            if (a < 128)
+                return 0;
+
             var r = (byte)(((c32 >> 16) & 0xFF) / 8);
             var g = (byte)(((c32 >> 8) & 0xFF) / 8);
             var b = (byte)(((c32 >> 0) & 0xFF) / 8);
 
             // 0BBB_BBGG_GGGR_RRRR
-            return (ushort)((b << 10) | (g << 5) | r);
+            var result = (ushort)((b << 10) | (g << 5) | r);
+            if (result == 0)
+                return 0x8000; // Prevent colour from being transparent
+            return result;
         }
 
         private class PaletteBuilder

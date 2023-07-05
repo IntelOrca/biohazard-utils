@@ -11,19 +11,12 @@ namespace emdui.Extensions
     {
         public static TimFile ToTimFile(this BitmapSource source)
         {
-            var timFile = new TimFile(source.PixelWidth, source.PixelHeight, 8);
+            var timFile = new TimFile(source.PixelWidth, source.PixelHeight, 16);
             var pixels = new uint[timFile.Width * timFile.Height];
             var convertedFrame = new FormatConvertedBitmap(source, PixelFormats.Bgr32, null, 0);
             convertedFrame.CopyPixels(pixels, timFile.Width * 4, 0);
-
-            var numPages = timFile.Width / 128;
-            for (var page = 0; page < numPages; page++)
-            {
-                var palette = GetPalette(pixels, timFile.Width, new Int32Rect(page * 128, 0, 128, timFile.Height));
-                timFile.SetPalette(page, palette);
-            }
-
-            timFile.ImportPixels(pixels, (x, y) => x / 128);
+            timFile.ImportPixels(pixels, 0);
+            timFile = timFile.To8bpp((x, y) => x / 128);
             return timFile;
         }
 

@@ -22,12 +22,12 @@ namespace emdui
             TimFile = tim;
         }
 
-        public void Detect()
+        public void Detect(ITextureReorganiserConstraint constraint)
         {
             Rects = Detect(Mesh)
                 .Concat(ExtraMeshes.SelectMany(x => Detect(x)))
                 .ToArray();
-            while (MergeRects()) { }
+            while (MergeRects(constraint)) { }
             // InflateRects(32);
             // while (MergeRects()) { }
         }
@@ -62,7 +62,7 @@ namespace emdui
 
         private ReorganiseResult Reorganise(double scale)
         {
-            Detect();
+            Detect(new NullTextureReorganiserConstraint());
             var originalRects = Rects;
 
             var numPages = 4;
@@ -81,13 +81,26 @@ namespace emdui
                 }
 
                 Rects = rects;
-                Rects = Reorg(out numPages);
+                Rects = Reorg(new NullTextureReorganiserConstraint(), out numPages);
 
                 numToScale++;
             }
             var result = new ReorganiseResult(numToScale, Rects);
             Rects = originalRects;
             return result;
+        }
+
+        public void ReorganiseWithConstraints(ITextureReorganiserConstraint constraint)
+        {
+            Detect(constraint);
+            for (var i = 0; i < Rects.Length; i++)
+            {
+                ref var r = ref Rects[i];
+                r.Scale = constraint.GetScale(in r);
+            }
+            Rects = Reorg(constraint, out _);
+            EditTim();
+            EditUV();
         }
 
         private struct ReorganiseResult
@@ -102,7 +115,7 @@ namespace emdui
             }
         }
 
-        private bool MergeRects()
+        private bool MergeRects(ITextureReorganiserConstraint constraint)
         {
             var merged = false;
             var newRects = new List<Rect>();
@@ -112,7 +125,7 @@ namespace emdui
                 for (var i = 0; i < newRects.Count; i++)
                 {
                     var rr = newRects[i];
-                    if (rr.UnionIfIntersects(rect))
+                    if (rr.UnionIfIntersects(rect) && constraint.CanMerge(in rr, in rect))
                     {
                         newRects[i] = rr;
                         skip = true;
@@ -149,7 +162,7 @@ namespace emdui
             }
         }
 
-        private Rect[] Reorg(out int numPages)
+        private Rect[] Reorg(ITextureReorganiserConstraint constraint, out int numPages)
         {
             var prioritisePart0 = false;
             var rects = Rects
@@ -166,9 +179,18 @@ namespace emdui
             var bins = new List<Bin>();
             foreach (var rect in rects)
             {
+                var page = constraint.GetPage(in rect);
                 var binFound = false;
                 foreach (var bin in bins)
                 {
+                    if (page != null)
+                    {
+                        var binPage = bin.GetPage(constraint);
+                        if (binPage != null && binPage != page)
+                        {
+                            continue;
+                        }
+                    }
                     if (bin.AddRect(rect))
                     {
                         binFound = true;
@@ -193,10 +215,22 @@ namespace emdui
                     .ThenByDescending(b => b.Height)
                     .ToList();
             }
+            bins = bins
+                .OrderBy(x =>
+                {
+                    var p = x.GetPage(constraint);
+                    return p == null ? int.MaxValue : p;
+                })
+                .ToList();
             foreach (var bin in bins)
             {
                 foreach (var page in pages)
                 {
+                    var binPage = bin.GetPage(constraint);
+                    if (binPage != null && binPage != page.Index)
+                    {
+                        continue;
+                    }
                     if (page.CanFitBin(bin))
                     {
                         page.AddBin(bin);
@@ -219,7 +253,7 @@ namespace emdui
                 imageBlocks[i] = new ImageBlock(TimFile, rect.OriginalX, rect.OriginalY, rect.OriginalWidth, rect.OriginalHeight);
             }
 
-            TimFile = new TimFile(TimFile.Width, TimFile.Height, 16);
+            TimFile = new TimFile(128 * 4, 256, 16);
             for (var i = 0; i < Rects.Length; i++)
             {
                 var rect = Rects[i];
@@ -359,6 +393,17 @@ namespace emdui
                 rects.Add(_rect);
                 Top?.GetRects(rects, x + _rect.Width, y);
                 Bottom?.GetRects(rects, x + _rect.Width, y + Top.Height);
+            }
+
+            public int? GetPage(ITextureReorganiserConstraint constraint)
+            {
+                foreach (var rect in Rects)
+                {
+                    var page = constraint.GetPage(rect);
+                    if (page != null)
+                        return page;
+                }
+                return null;
             }
 
             public IEnumerable<Rect> Rects
@@ -710,5 +755,19 @@ namespace emdui
                 _primitives.Add(_primitive);
             }
         }
+    }
+
+    internal class NullTextureReorganiserConstraint : ITextureReorganiserConstraint
+    {
+        public bool CanMerge(in TextureReorganiser.Rect a, in TextureReorganiser.Rect b) => true;
+        public int? GetPage(in TextureReorganiser.Rect r) => null;
+        public double GetScale(in TextureReorganiser.Rect r) => 1;
+    }
+
+    internal interface ITextureReorganiserConstraint
+    {
+        bool CanMerge(in TextureReorganiser.Rect a, in TextureReorganiser.Rect b);
+        int? GetPage(in TextureReorganiser.Rect r);
+        double GetScale(in TextureReorganiser.Rect r);
     }
 }

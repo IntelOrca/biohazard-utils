@@ -26,6 +26,7 @@ namespace emdui
         private TimFile _timFile;
         private int _selectedPage;
         private UVPrimitive[] _primitives;
+        private bool _readOnly;
 
         public TimFile Tim
         {
@@ -66,6 +67,20 @@ namespace emdui
             }
         }
 
+        public bool ReadOnly
+        {
+            get => _readOnly;
+            set
+            {
+                if (_readOnly != value)
+                {
+                    _readOnly = value;
+                    _selectedPage = _readOnly ? -1 : 0;
+                    RefreshPage();
+                }
+            }
+        }
+
         public void SetPrimitivesFromMesh(IModelMesh mesh, int partIndex = -1)
         {
             var visitor = new UVVisitor(partIndex);
@@ -81,6 +96,9 @@ namespace emdui
 
         private void RefreshPage()
         {
+            if (_readOnly)
+                _selectedPage = -1;
+
             var borders = selectionContainer.Children.OfType<Border>().ToArray();
             for (var i = 0; i < borders.Length; i++)
             {
@@ -533,7 +551,7 @@ namespace emdui
 
             if (preview)
             {
-                textureReorganiser.Detect();
+                textureReorganiser.Detect(new NullTextureReorganiserConstraint());
                 Primitives = textureReorganiser.Rects
                     .Select(x => new UVPrimitive()
                     {
@@ -571,6 +589,14 @@ namespace emdui
             var pageLeft = page * 128;
             var pageRight = ((page + 1) * 128) - 1;
             return (byte)(Math.Max(pageLeft, Math.Min(pageRight, x)) % 128);
+        }
+
+        private void mainGrid_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+        {
+            if (_readOnly)
+            {
+                e.Handled = true;
+            }
         }
     }
 }

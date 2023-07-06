@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Windows;
 using System.Windows.Media.Media3D;
 using System.Windows.Threading;
@@ -258,9 +257,11 @@ namespace emdui
             // LoadProject(@"F:\games\re2\data\Pl0\emd0\em010.emd");
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\ark\pl00.pld");
             // LoadProject(@"F:\games\re2\mod_biorand\pl0\emd0\em04a.emd");
-            LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld1\ashley\PL01.PLD");
+            // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld1\ashley\PL01.PLD");
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re1\pld0\chris\char10.emd");
+            LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\ben\PL00.PLD");
 
+#if false
             var texturePackerWindow = new TexturePackerWindow();
             texturePackerWindow.Meshes = _project.Files
                 .Where(x => x.Content is ModelFile)
@@ -286,6 +287,7 @@ namespace emdui
                 }
                 LoadMesh(_project.MainModel.GetMesh(0));
             }
+#endif
 #endif
         }
 

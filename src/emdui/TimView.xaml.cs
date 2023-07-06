@@ -551,64 +551,6 @@ namespace emdui
             }
         }
 
-        private void ReorganisePreview_Click(object sender, RoutedEventArgs e)
-        {
-            Reorganise(true);
-        }
-
-        private void Reorganise(bool preview)
-        {
-            var mainWindow = MainWindow.Instance;
-            var project = mainWindow.Project;
-
-            var extraModels = project.Files
-                .Where(x => x.Kind == ProjectFileKind.Plw)
-                .Select(x => x.Content as PlwFile)
-                .ToArray();
-
-            var mainTexture = project.MainTexture;
-            var mainMesh = project.MainModel.GetMesh(0);
-            var extraMeshes = extraModels.Select(x => x.GetMesh(0)).ToArray();
-
-            var textureReorganiser = new TextureReorganiser(
-                mainMesh,
-                extraMeshes,
-                mainTexture);
-
-            if (preview)
-            {
-                textureReorganiser.Detect(new NullTextureReorganiserConstraint());
-                Primitives = textureReorganiser.Rects
-                    .Select(x => new UVPrimitive()
-                    {
-                        IsQuad = true,
-                        Page = (byte)x.Page,
-                        U0 = ClampPage(x.Page, x.Left),
-                        V0 = ClampByte(x.Top),
-                        U1 = ClampPage(x.Page, x.Right),
-                        V1 = ClampByte(x.Top),
-                        U3 = ClampPage(x.Page, x.Right),
-                        V3 = ClampByte(x.Bottom),
-                        U2 = ClampPage(x.Page, x.Left),
-                        V2 = ClampByte(x.Bottom)
-                    })
-                    .ToArray();
-            }
-            else
-            {
-                textureReorganiser.Reorganise();
-                project.MainModel.SetMesh(0, textureReorganiser.Mesh);
-                project.MainTexture = textureReorganiser.TimFile;
-
-                for (var i = 0; i < extraModels.Length; i++)
-                {
-                    extraModels[i].SetMesh(0, textureReorganiser.ExtraMeshes[i]);
-                }
-
-                mainWindow.LoadMesh(project.MainModel.GetMesh(0));
-            }
-        }
-
         private static byte ClampByte(int x) => (byte)Math.Max(0, Math.Min(255, x));
         private static byte ClampPage(int page, int x)
         {
@@ -623,6 +565,29 @@ namespace emdui
             {
                 e.Handled = true;
             }
+        }
+
+        private void SwapPage01_Click(object sender, RoutedEventArgs e)
+        {
+            var page0 = _timFile.ExportPage(0);
+            var page1 = _timFile.ExportPage(1);
+            _timFile.ImportPage(0, page1);
+            _timFile.ImportPage(1, page0);
+
+            var mainWindow = MainWindow.Instance;
+            var project = mainWindow.Project;
+            foreach (var file in project.Files)
+            {
+                if (file.Content is ModelFile modelFile)
+                {
+                    var mesh = modelFile.GetMesh(0);
+                    mesh = mesh.SwapPages(0, 1, modelFile is PldFile || (modelFile is PlwFile plw && plw.Version != BioVersion.Biohazard1));
+                    modelFile.SetMesh(0, mesh);
+                }
+            }
+
+            RefreshAndRaiseTimEvent();
+            mainWindow.LoadMesh(project.MainModel.GetMesh(0));
         }
     }
 }

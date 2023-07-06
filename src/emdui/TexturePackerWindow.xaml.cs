@@ -65,7 +65,8 @@ namespace emdui
         {
             var mainMesh = Meshes[0];
             var extra = Meshes.Skip(1).ToArray();
-            var constraint = new TextureReorganiserConstraint(mainMesh.Version, constraints);
+            var isPld = mainMesh is PldFile;
+            var constraint = new TextureReorganiserConstraint(isPld, constraints);
             var reorg = new TextureReorganiser(mainMesh, extra, Texture);
             await Task.Run(() => reorg.ReorganiseWithConstraints(constraint));
             if (ct.IsCancellationRequested)
@@ -170,12 +171,12 @@ namespace emdui
 
     internal class TextureReorganiserConstraint : ITextureReorganiserConstraint
     {
-        public BioVersion Version { get; }
+        public bool IsPld { get; }
         public PartConstraint[] Constraints { get; }
 
-        public TextureReorganiserConstraint(BioVersion version, PartConstraint[] constraints)
+        public TextureReorganiserConstraint(bool isPld, PartConstraint[] constraints)
         {
-            Version = version;
+            IsPld = isPld;
             Constraints = constraints;
         }
 
@@ -227,7 +228,7 @@ namespace emdui
 
         public bool IsLocked(in TextureReorganiser.Rect r)
         {
-            if (Version == BioVersion.Biohazard1)
+            if (!IsPld)
                 return false;
 
             var otherRect = new TextureReorganiser.Rect();

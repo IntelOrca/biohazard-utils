@@ -45,7 +45,7 @@
                 <Separator />
                 <MenuItem Header="Fix Palette for RE 3" Click="FixColours_Click" />
                 <MenuItem Header="Reorganise" Click="Reorganise_Click" />
-                <MenuItem Header="Reorganise Preview" Click="ReorganisePreview_Click" />
+                <MenuItem Header="Swap Page 0/1" Click="SwapPage01_Click" />
             </ContextMenu>
         </Grid.ContextMenu>
         <Image x:Name="image" HorizontalAlignment="Left" />

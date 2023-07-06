@@ -138,15 +138,35 @@ namespace IntelOrca.Biohazard.Extensions
             return converter.ConvertMesh(builder.ToMesh(), mesh.Version, false);
         }
 
-        public static IModelMesh SwapPages(this IModelMesh mesh, int pageA, int pageB)
+        public static IModelMesh SwapPages(this IModelMesh mesh, int pageA, int pageB, bool ignoreWeaponArea = false)
         {
             return mesh.EditMeshTextures(modify =>
             {
-                if (modify.Page == pageA)
-                    modify.Page = pageB;
-                else if (modify.Page == pageB)
-                    modify.Page = pageA;
+                if (!ignoreWeaponArea || !IsInWeaponTextureArea(in modify))
+                {
+                    if (modify.Page == pageA)
+                        modify.Page = pageB;
+                    else if (modify.Page == pageB)
+                        modify.Page = pageA;
+                }
             });
+        }
+
+        private static bool IsInWeaponTextureArea(in PrimitiveTexture pt)
+        {
+            const int left = 128 + 72;
+            const int top = 224;
+            const int right = left + 56;
+            const int bottom = top + 32;
+            for (var i = 0; i < pt.NumPoints; i++)
+            {
+                var p = pt.Points[i];
+                if (p.X >= left && p.X < right && p.Y >= top && p.Y < bottom)
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         public static IModelMesh MoveUVToPage(this IModelMesh mesh, int partIndex, int page)

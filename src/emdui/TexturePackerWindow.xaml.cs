@@ -65,7 +65,7 @@ namespace emdui
         {
             var mainMesh = Meshes[0];
             var extra = Meshes.Skip(1).ToArray();
-            var isPld = mainMesh is PldFile;
+            var isPld = MainWindow.Instance.Project.MainModel is PldFile;
             var constraint = new TextureReorganiserConstraint(isPld, constraints);
             var reorg = new TextureReorganiser(mainMesh, extra, Texture);
             await Task.Run(() => reorg.ReorganiseWithConstraints(constraint));
@@ -182,6 +182,10 @@ namespace emdui
 
         private int? GetPage(ushort partIndex)
         {
+            // PLWs always go on page 1
+            if ((partIndex & ~0xFF) != 0)
+                return 1;
+
             foreach (var constraint in Constraints)
             {
                 if (constraint.PartIndex == partIndex)
@@ -195,8 +199,10 @@ namespace emdui
 
         public bool CanMerge(in TextureReorganiser.Rect a, in TextureReorganiser.Rect b)
         {
-            if (IsLocked(a) && IsLocked(b))
-                return true;
+            var lockedA = IsLocked(a);
+            var lockedB = IsLocked(b);
+            if (lockedA || lockedB)
+                return lockedA && lockedB;
 
             var pageA = a.PartIndicies.Select(GetPage).Where(x => x != null).FirstOrDefault();
             var pageB = b.PartIndicies.Select(GetPage).Where(x => x != null).FirstOrDefault();

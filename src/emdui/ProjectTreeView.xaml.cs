@@ -642,10 +642,12 @@ namespace emdui
         {
             var project = MainWindow.Instance.Project;
             var tim = project.MainTexture;
-            var emr = Model.GetEmr(0);
             var numPages = tim.Width / 128;
             var objImporter = new ObjImporter();
-            Mesh = objImporter.Import(Mesh.Version, path, numPages, emr.GetFinalPosition);
+            if (Model is PlwFile)
+                Mesh = objImporter.Import(Mesh.Version, path, numPages);
+            else
+                Mesh = objImporter.Import(Mesh.Version, path, numPages, Model.GetEmr(0).GetFinalPosition);
         }
 
         private void ImportFromModel(string path)
@@ -744,11 +746,13 @@ namespace emdui
         {
             var project = MainWindow.Instance.Project;
             var tim = GetTimFile();
-            var emr = Model.GetEmr(0);
 
             var numPages = tim.Width / 128;
             var objExporter = new ObjExporter();
-            objExporter.Export(Mesh, path, numPages, emr.GetFinalPosition);
+            if (Model is PlwFile)
+                objExporter.Export(Mesh, path, numPages);
+            else
+                objExporter.Export(Mesh, path, numPages, Model.GetEmr(0).GetFinalPosition);
 
             var texturePath = Path.ChangeExtension(path, ".png");
             tim.ToBitmap().Save(texturePath);
@@ -760,7 +764,10 @@ namespace emdui
             var mainTexture = project.MainTexture;
             if (Model is PlwFile plw)
             {
-                return mainTexture.WithWeaponTexture(plw.Tim);
+                if (plw.Version == BioVersion.Biohazard1)
+                    return mainTexture;
+                else
+                    return mainTexture.WithWeaponTexture(plw.Tim);
             }
             else
             {

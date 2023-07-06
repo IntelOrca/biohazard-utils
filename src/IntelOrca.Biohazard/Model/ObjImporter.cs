@@ -204,8 +204,8 @@ namespace IntelOrca.Biohazard.Model
         private (byte, byte, byte) GetTextureOffset(int index)
         {
             var coord = _objFile.TextureCoordinates[index];
-            var u = (int)(coord.u * _textureWidth);
-            var v = (int)((1 - coord.v) * _textureHeight);
+            var u = (int)Math.Round(coord.u * _textureWidth);
+            var v = (int)Math.Round((1 - coord.v) * _textureHeight);
             var page = (byte)(u / 128);
             u &= 127;
             return (page, (byte)u, (byte)v);

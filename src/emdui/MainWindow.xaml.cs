@@ -3,6 +3,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Media.Media3D;
 using System.Windows.Threading;
+using emdui.Extensions;
 using IntelOrca.Biohazard;
 using IntelOrca.Biohazard.Extensions;
 using IntelOrca.Biohazard.Model;
@@ -117,7 +118,6 @@ namespace emdui
             {
                 LoadMesh(mesh);
             }
-            RefreshStatusBar();
         }
 
         private void SaveModel(string path)
@@ -167,6 +167,7 @@ namespace emdui
             viewport1.Scene = _scene;
 
             RefreshHighlightedPart();
+            RefreshStatusBar();
         }
 
         private void RefreshHighlightedPart()
@@ -219,9 +220,29 @@ namespace emdui
         private void RefreshStatusBar()
         {
             var game = _project.Version == BioVersion.Biohazard2 ? "RE 2" : "RE 3";
+            if (_project.Version == BioVersion.Biohazard1)
+                game = "RE 1";
+
             var fileType = _project.MainModel is EmdFile ? ".EMD" : ".PLD";
+            var numParts = _project.MainModel.GetMesh(0).NumParts;
+            var basePolyCount = _project.MainModel.GetMesh(0).CountPolygons();
+            var maxPolyCount = basePolyCount;
+            foreach (var file in _project.Files)
+            {
+                if (file.Content is ModelFile modelFile)
+                {
+                    if (modelFile != _project.MainModel)
+                    {
+                        var total = basePolyCount + modelFile.GetMesh(0).CountPolygons();
+                        maxPolyCount = Math.Max(maxPolyCount, total);
+                    }
+                }
+            }
+
             fileTypeLabel.Content = $"{game} {fileType} File";
-            // numPartsLabel.Content = $"{GetNumParts()} parts";
+            numPartsLabel.Content = $"{numParts} parts";
+            numPolygonsLabel.Content = $"{maxPolyCount} polygons";
+
         }
 
         private void mainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -237,8 +258,8 @@ namespace emdui
             // LoadProject(@"F:\games\re2\data\Pl0\emd0\em010.emd");
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\ark\pl00.pld");
             // LoadProject(@"F:\games\re2\mod_biorand\pl0\emd0\em04a.emd");
-            // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld1\ashley\PL01.PLD");
-            LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re1\pld0\chris\char10.emd");
+            LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld1\ashley\PL01.PLD");
+            // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re1\pld0\chris\char10.emd");
 
             var texturePackerWindow = new TexturePackerWindow();
             texturePackerWindow.Meshes = _project.Files

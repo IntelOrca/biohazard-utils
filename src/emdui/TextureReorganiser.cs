@@ -25,17 +25,21 @@ namespace emdui
 
         public void Detect(ITextureReorganiserConstraint constraint)
         {
-            Rects = Detect(Mesh)
-                .Concat(ExtraMeshes.SelectMany(x => Detect(x)))
-                .ToArray();
+            var allRects = new List<Rect>();
+            var meshes = new[] { Mesh }.Concat(ExtraMeshes).ToArray();
+            for (var i = 0; i < meshes.Length; i++)
+            {
+                allRects.AddRange(Detect(meshes[i], i * 0x100));
+            }
+            Rects = allRects.ToArray();
             while (MergeRects(constraint)) { }
             // InflateRects(32);
             // while (MergeRects()) { }
         }
 
-        private Rect[] Detect(IModelMesh mesh)
+        private Rect[] Detect(IModelMesh mesh, int basePartIndex)
         {
-            var visitor = new UVMeshVisitor();
+            var visitor = new UVMeshVisitor(basePartIndex);
             visitor.Accept(mesh);
             return visitor.Primitives;
         }
@@ -166,7 +170,11 @@ namespace emdui
         private Rect[] Reorg(ITextureReorganiserConstraint constraint, out int numPages)
         {
             var prioritisePart0 = false;
+            var lockedRects = Rects
+                .Where(x => constraint.IsLocked(x))
+                .ToArray();
             var rects = Rects
+                .Where(x => !constraint.IsLocked(x))
                 .OrderByDescending(r => r.Height)
                 .ToArray();
             if (prioritisePart0)
@@ -249,9 +257,10 @@ namespace emdui
             }
             UnplacedRects = unplaced.ToArray();
             numPages = pages.Count(x => x.Bins.Count != 0);
-            return pages
+            var newRects = pages
                 .SelectMany(x => x.GetRects())
                 .ToArray();
+            return lockedRects.Concat(newRects).ToArray();
         }
 
         private void EditTim()
@@ -281,13 +290,19 @@ namespace emdui
 
         private void EditUV(ITextureReorganiserConstraint constraint)
         {
-            Mesh = EditUV(Mesh, constraint);
-            ExtraMeshes = ExtraMeshes
-                .Select(x => EditUV(x, constraint))
+            var meshes = new[] { Mesh }.Concat(ExtraMeshes).ToArray();
+            for (var i = 0; i < meshes.Length; i++)
+            {
+                meshes[i] = EditUV(meshes[i], i * 0x100);
+            }
+
+            Mesh = meshes[0];
+            ExtraMeshes = meshes
+                .Skip(1)
                 .ToArray();
         }
 
-        private IModelMesh EditUV(IModelMesh mesh, ITextureReorganiserConstraint constraint)
+        private IModelMesh EditUV(IModelMesh mesh, int basePartIndex)
         {
             return mesh.EditMeshTextures(pt =>
             {
@@ -300,7 +315,7 @@ namespace emdui
                 var parentRect = new Rect();
                 foreach (var r in Rects)
                 {
-                    if (r.OriginallyContains(rect) && Array.IndexOf(r.PartIndicies, (byte)pt.PartIndex) != -1)
+                    if (r.OriginallyContains(rect) && r.ContainsPart(basePartIndex + pt.PartIndex))
                     {
                         parentRect = r;
                         break;
@@ -504,7 +519,7 @@ namespace emdui
         [DebuggerDisplay("Parts = [{Parts}] X = {X} Y = {Y} Width = {Width} Height = {Height}")]
         public struct Rect
         {
-            public byte[] PartIndicies { get; set; }
+            public ushort[] PartIndicies { get; set; }
             public bool ContainsPartIndex(int partIndex) => PartIndicies.Contains((byte)partIndex);
 
             public int OriginalX { get; set; }
@@ -523,6 +538,8 @@ namespace emdui
             public int Bottom => Y + Height;
 
             public string Parts => string.Join(", ", PartIndicies);
+
+            public bool ContainsPart(int partIndex) => Array.IndexOf(PartIndicies, (ushort)partIndex) != -1;
 
             public int Page
             {
@@ -740,20 +757,26 @@ namespace emdui
             private readonly List<Rect> _primitives = new List<Rect>();
             private Rect _primitive;
             private int _page;
+            private int _basePartIndex;
             private int _partIndex;
 
             public Rect[] Primitives => _primitives.ToArray();
 
+            public UVMeshVisitor(int basePartIndex)
+            {
+                _basePartIndex = basePartIndex;
+            }
+
             public override bool VisitPart(int index)
             {
-                _partIndex = index;
+                _partIndex = _basePartIndex + index;
                 return true;
             }
 
             public override void VisitPrimitive(int numPoints, byte page)
             {
                 _primitive = new Rect();
-                _primitive.PartIndicies = new[] { (byte)_partIndex };
+                _primitive.PartIndicies = new[] { (ushort)_partIndex };
                 _page = page;
             }
 
@@ -775,6 +798,7 @@ namespace emdui
         public bool CanMerge(in TextureReorganiser.Rect a, in TextureReorganiser.Rect b) => true;
         public int? GetPage(in TextureReorganiser.Rect r) => null;
         public double GetScale(in TextureReorganiser.Rect r) => 1;
+        public bool IsLocked(in TextureReorganiser.Rect r) => false;
     }
 
     internal interface ITextureReorganiserConstraint
@@ -782,5 +806,6 @@ namespace emdui
         bool CanMerge(in TextureReorganiser.Rect a, in TextureReorganiser.Rect b);
         int? GetPage(in TextureReorganiser.Rect r);
         double GetScale(in TextureReorganiser.Rect r);
+        bool IsLocked(in TextureReorganiser.Rect r);
     }
 }

@@ -396,6 +396,7 @@ namespace emdui
                 switch (Model.Version)
                 {
                     case BioVersion.Biohazard1:
+                    case BioVersion.Biohazard2:
                         mesh = mesh.ReplacePart(11, plwFile.GetMesh(0));
                         break;
                 }
@@ -833,7 +834,17 @@ namespace emdui
 
         public override void OnSelect()
         {
-            MainWindow.Instance.SelectPart(PartIndex);
+            if (Model is PlwFile)
+            {
+                if (PartIndex == 0)
+                    MainWindow.Instance.SelectPart(11);
+                else
+                    MainWindow.Instance.SelectPart(-1);
+            }
+            else
+            {
+                MainWindow.Instance.SelectPart(PartIndex);
+            }
         }
 
         public override void OnDefaultAction()

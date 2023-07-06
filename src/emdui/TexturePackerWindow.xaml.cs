@@ -65,7 +65,7 @@ namespace emdui
         {
             var mainMesh = Meshes[0];
             var extra = Meshes.Skip(1).ToArray();
-            var constraint = new TextureReorganiserConstraint() { Constraints = constraints };
+            var constraint = new TextureReorganiserConstraint(mainMesh.Version, constraints);
             var reorg = new TextureReorganiser(mainMesh, extra, Texture);
             await Task.Run(() => reorg.ReorganiseWithConstraints(constraint));
             if (ct.IsCancellationRequested)
@@ -76,6 +76,7 @@ namespace emdui
             timView.Tim = UpdatedTexture;
 
             var partConstraints = constraintListView.ItemsSource as TexturePackerConstraint[];
+            var status = true;
             foreach (var pc in partConstraints)
             {
                 pc.Status = true;
@@ -85,7 +86,11 @@ namespace emdui
                 foreach (var pi in r.PartIndicies)
                 {
                     var pc = partConstraints.FirstOrDefault(x => x.PartIndex == pi);
-                    pc.Status = false;
+                    if (pc != null)
+                    {
+                        pc.Status = false;
+                        status = false;
+                    }
                 }
             }
 
@@ -135,6 +140,8 @@ namespace emdui
             {
                 if (listView.ItemContainerGenerator.ItemFromContainer(listViewItem) is TexturePackerConstraint c)
                 {
+                    if (UpdatedMeshes == null)
+                        return;
                     timView.SetPrimitivesFromMesh(UpdatedMeshes[0], c.PartIndex);
                 }
             }
@@ -153,13 +160,26 @@ namespace emdui
             }
             return null;
         }
+
+        private void ApplyButton_Click(object sender, RoutedEventArgs e)
+        {
+            DialogResult = true;
+            Close();
+        }
     }
 
     internal class TextureReorganiserConstraint : ITextureReorganiserConstraint
     {
-        public PartConstraint[] Constraints { get; set; }
+        public BioVersion Version { get; }
+        public PartConstraint[] Constraints { get; }
 
-        private int? GetPage(byte partIndex)
+        public TextureReorganiserConstraint(BioVersion version, PartConstraint[] constraints)
+        {
+            Version = version;
+            Constraints = constraints;
+        }
+
+        private int? GetPage(ushort partIndex)
         {
             foreach (var constraint in Constraints)
             {
@@ -174,6 +194,9 @@ namespace emdui
 
         public bool CanMerge(in TextureReorganiser.Rect a, in TextureReorganiser.Rect b)
         {
+            if (IsLocked(a) && IsLocked(b))
+                return true;
+
             var pageA = a.PartIndicies.Select(GetPage).Where(x => x != null).FirstOrDefault();
             var pageB = b.PartIndicies.Select(GetPage).Where(x => x != null).FirstOrDefault();
             var result = pageA == null || pageB == null || pageA == pageB;
@@ -196,10 +219,23 @@ namespace emdui
         public double GetScale(in TextureReorganiser.Rect r)
         {
             var rr = r;
-            var c = Constraints.FirstOrDefault(x => Array.IndexOf(rr.PartIndicies, (byte)x.PartIndex) != -1);
+            var c = Constraints.FirstOrDefault(x => rr.ContainsPart(x.PartIndex));
             if (c.Scale == 0 || c.Scale > 1)
                 c.Scale = 1;
             return c.Scale;
+        }
+
+        public bool IsLocked(in TextureReorganiser.Rect r)
+        {
+            if (Version == BioVersion.Biohazard1)
+                return false;
+
+            var otherRect = new TextureReorganiser.Rect();
+            otherRect.X = 128 + 72;
+            otherRect.Y = 224;
+            otherRect.Width = 56;
+            otherRect.Height = 32;
+            return r.IntersectsWith(otherRect);
         }
     }
 
@@ -264,7 +300,7 @@ namespace emdui
             }
         }
 
-        public string DisplayPartName => PartName.GetPartName(BioVersion.Biohazard2, PartIndex);
+        public string DisplayPartName => PartName.GetPartName(MainWindow.Instance.Project.Version, PartIndex);
 
         public Brush DisplayBackground => Status ? Brushes.LightGreen : Brushes.IndianRed;
     }

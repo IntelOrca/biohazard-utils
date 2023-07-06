@@ -522,7 +522,33 @@ namespace emdui
 
         private void Reorganise_Click(object sender, RoutedEventArgs e)
         {
-            Reorganise(false);
+            var mainWindow = MainWindow.Instance;
+            var project = mainWindow.Project;
+            var texturePackerWindow = new TexturePackerWindow();
+            texturePackerWindow.Meshes = project.Files
+                .Where(x => x.Content is ModelFile)
+                .Select(x => ((ModelFile)x.Content).GetMesh(0))
+                .ToArray();
+            texturePackerWindow.Texture = project.MainTexture;
+            texturePackerWindow.Refresh();
+
+            texturePackerWindow.Owner = mainWindow;
+            texturePackerWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            if (texturePackerWindow.ShowDialog() == true)
+            {
+                var updatedMeshes = texturePackerWindow.UpdatedMeshes;
+                var index = 0;
+                project.MainTexture = texturePackerWindow.UpdatedTexture;
+                foreach (var file in project.Files)
+                {
+                    if (file.Content is ModelFile modelFile)
+                    {
+                        modelFile.SetMesh(0, updatedMeshes[index]);
+                        index++;
+                    }
+                }
+                mainWindow.LoadMesh(project.MainModel.GetMesh(0));
+            }
         }
 
         private void ReorganisePreview_Click(object sender, RoutedEventArgs e)

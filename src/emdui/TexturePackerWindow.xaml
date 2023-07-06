@@ -43,7 +43,7 @@
         <local:TimView x:Name="timView" Grid.Column="1" Grid.Row="0" Margin="0,8,8,8" ReadOnly="True" />
         <StackPanel Grid.ColumnSpan="2" Grid.Row="1" Orientation="Horizontal" Margin="8,0,8,8" HorizontalAlignment="Right">
             <Button Width="70" IsCancel="True" Margin="0,0,4,0">Cancel</Button>
-            <Button Width="70" IsDefault="True">Apply</Button>
+            <Button Width="70" IsDefault="True" Click="ApplyButton_Click">Apply</Button>
         </StackPanel>
     </Grid>
 </Window>

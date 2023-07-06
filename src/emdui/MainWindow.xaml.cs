@@ -237,7 +237,8 @@ namespace emdui
             // LoadProject(@"F:\games\re2\data\Pl0\emd0\em010.emd");
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\ark\pl00.pld");
             // LoadProject(@"F:\games\re2\mod_biorand\pl0\emd0\em04a.emd");
-            LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld1\ashley\PL01.PLD");
+            // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld1\ashley\PL01.PLD");
+            LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re1\pld0\chris\char10.emd");
 
             var texturePackerWindow = new TexturePackerWindow();
             texturePackerWindow.Meshes = _project.Files
@@ -249,7 +250,21 @@ namespace emdui
 
             texturePackerWindow.Owner = this;
             texturePackerWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-            texturePackerWindow.ShowDialog();
+            if (texturePackerWindow.ShowDialog() == true)
+            {
+                var updatedMeshes = texturePackerWindow.UpdatedMeshes;
+                var index = 0;
+                _project.MainTexture = texturePackerWindow.UpdatedTexture;
+                foreach (var file in _project.Files)
+                {
+                    if (file.Content is ModelFile modelFile)
+                    {
+                        modelFile.SetMesh(0, updatedMeshes[index]);
+                        index++;
+                    }
+                }
+                LoadMesh(_project.MainModel.GetMesh(0));
+            }
 #endif
         }
 

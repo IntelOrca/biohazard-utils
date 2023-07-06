@@ -5,6 +5,11 @@ namespace IntelOrca.Biohazard.Model
 {
     public class MeshConverter
     {
+        private static readonly int[] g_partNoRemap = new[]
+        {
+            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14
+        };
+
         private static readonly int[] g_partRemap2to1 = new[]
         {
             0, 2, 6, 7, 8, 3, 4, 5, 1, 12, 13, 14, 9, 10, 11
@@ -42,6 +47,9 @@ namespace IntelOrca.Biohazard.Model
 
         public int[] GetPartRemap(BioVersion from, BioVersion target)
         {
+            if (from == target)
+                return g_partNoRemap;
+
             if (from == BioVersion.Biohazard1)
             {
                 if (target == BioVersion.Biohazard2)

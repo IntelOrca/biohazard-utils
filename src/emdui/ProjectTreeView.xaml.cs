@@ -698,6 +698,10 @@ namespace emdui
             {
                 srcTexture = pldFile.Tim;
             }
+            else if (modelFile is EmdFile emdFile && emdFile.Version == BioVersion.Biohazard1)
+            {
+                srcTexture = emdFile.GetTim(0);
+            }
             else
             {
                 var timPath = Path.ChangeExtension(path, ".tim");

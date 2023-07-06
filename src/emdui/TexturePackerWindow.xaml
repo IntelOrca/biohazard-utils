@@ -18,32 +18,59 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <ListView x:Name="constraintListView" Grid.Column="0" Grid.Row="0" Margin="8" MouseMove="constraintListView_MouseMove">
-            <ListView.ItemsSource>
-                <x:Array Type="local:TexturePackerConstraint">
-                    <local:TexturePackerConstraint PartIndex="0" Page="0" Scale="1" />
-                    <local:TexturePackerConstraint PartIndex="1" Page="1" Scale="1" />
-                    <local:TexturePackerConstraint PartIndex="2" Page="0" Scale="1" />
-                    <local:TexturePackerConstraint PartIndex="3" Page="1" Scale="1" />
-                </x:Array>
-            </ListView.ItemsSource>
-            <ListView.ItemTemplate>
-                <DataTemplate DataType="local:TexturePackerConstraint">
-                    <StackPanel Orientation="Horizontal" Background="{Binding DisplayBackground}">
-                        <StackPanel Width="64" Margin="2">
-                            <TextBlock FontSize="12" Text="{Binding DisplayPartIndex}" />
-                            <TextBlock FontSize="8" Text="{Binding DisplayPartName}" />
-                        </StackPanel>
-                        <TextBox Width="50" Margin="2,4" Text="{Binding DisplayPage, UpdateSourceTrigger=PropertyChanged}" TextChanged="Constraint_TextChanged" />
-                        <TextBox Width="50" Margin="2,4" Text="{Binding DisplayScale, UpdateSourceTrigger=PropertyChanged}" TextChanged="Constraint_TextChanged" />
-                    </StackPanel>
-                </DataTemplate>
-            </ListView.ItemTemplate>
-        </ListView>
-        <local:TimView x:Name="timView" Grid.Column="1" Grid.Row="0" Margin="0,8,8,8" ReadOnly="True" />
-        <StackPanel Grid.ColumnSpan="2" Grid.Row="1" Orientation="Horizontal" Margin="8,0,8,8" HorizontalAlignment="Right">
-            <Button Width="70" IsCancel="True" Margin="0,0,4,0">Cancel</Button>
-            <Button Width="70" IsDefault="True" Click="ApplyButton_Click">Apply</Button>
+        <GroupBox Grid.Column="0" Grid.Row="0" Margin="8,8,4,8" Header="Constraints">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition />
+                </Grid.RowDefinitions>
+                <StackPanel Orientation="Horizontal" Margin="8,0,8,4">
+                    <TextBlock Width="68" />
+                    <TextBlock Width="50" Margin="2,0" Text="Page" TextAlignment="Center" />
+                    <TextBlock Width="50" Margin="2,0" Text="Scale" TextAlignment="Center" />
+                </StackPanel>
+                <ListView Grid.Row="1" x:Name="constraintListView" MouseMove="constraintListView_MouseMove" MouseLeave="constraintListView_MouseLeave">
+                    <ListView.ItemsSource>
+                        <x:Array Type="local:TexturePackerConstraint">
+                            <local:TexturePackerConstraint PartIndex="0" Page="0" Scale="1" />
+                            <local:TexturePackerConstraint PartIndex="1" Page="1" Scale="1" />
+                            <local:TexturePackerConstraint PartIndex="2" Page="0" Scale="1" />
+                            <local:TexturePackerConstraint PartIndex="3" Page="1" Scale="1" />
+                        </x:Array>
+                    </ListView.ItemsSource>
+                    <ListView.ItemTemplate>
+                        <DataTemplate DataType="local:TexturePackerConstraint">
+                            <StackPanel Orientation="Horizontal" Background="{Binding DisplayBackground}">
+                                <StackPanel Width="64" Margin="2">
+                                    <TextBlock FontSize="12" Text="{Binding DisplayPartIndex}" />
+                                    <TextBlock FontSize="8" Text="{Binding DisplayPartName}" />
+                                </StackPanel>
+                                <TextBox Width="50" Margin="2,4" Text="{Binding DisplayPage, UpdateSourceTrigger=PropertyChanged}" TextChanged="Constraint_TextChanged" />
+                                <TextBox Width="50" Margin="2,4" Text="{Binding DisplayScale, UpdateSourceTrigger=PropertyChanged}" TextChanged="Constraint_TextChanged" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </Grid>
+        </GroupBox>
+        <StackPanel Grid.Column="1" Grid.Row="0" Margin="0,8,8,8">
+            <GroupBox Header="Original">
+                <local:TimView x:Name="timViewOld" ReadOnly="True" />
+            </GroupBox>
+            <GroupBox Header="Modified">
+                <local:TimView x:Name="timView" ReadOnly="True" />
+            </GroupBox>
         </StackPanel>
+        <Grid Grid.ColumnSpan="2" Grid.Row="1" Margin="8,0,8,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock x:Name="warningTextBlock" Background="IndianRed" Padding="4" HorizontalAlignment="Left">Some parts were unable to be placed</TextBlock>
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <Button Width="70" IsCancel="True" Margin="0,0,4,0">Cancel</Button>
+                <Button Width="70" IsDefault="True" Click="ApplyButton_Click">Apply</Button>
+            </StackPanel>
+        </Grid>
     </Grid>
 </Window>

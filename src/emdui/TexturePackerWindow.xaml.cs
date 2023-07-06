@@ -18,6 +18,8 @@ namespace emdui
     public partial class TexturePackerWindow : Window
     {
         private CancellationTokenSource _cts;
+        private UVPrimitive[] _oldBoundaries;
+        private UVPrimitive[] _newBoundaries;
 
         public IModelMesh[] Meshes { get; set; }
         public TimFile Texture { get; set; }
@@ -68,12 +70,16 @@ namespace emdui
             var isPld = MainWindow.Instance.Project.MainModel is PldFile;
             var constraint = new TextureReorganiserConstraint(isPld, constraints);
             var reorg = new TextureReorganiser(mainMesh, extra, Texture);
+            reorg.Detect(constraint);
+            var oldRects = reorg.Rects.ToArray();
+
             await Task.Run(() => reorg.ReorganiseWithConstraints(constraint));
             if (ct.IsCancellationRequested)
                 return;
 
             UpdatedMeshes = new[] { reorg.Mesh }.Concat(reorg.ExtraMeshes).ToArray();
             UpdatedTexture = reorg.TimFile;
+            timViewOld.Tim = Texture;
             timView.Tim = UpdatedTexture;
 
             var partConstraints = constraintListView.ItemsSource as TexturePackerConstraint[];
@@ -94,9 +100,16 @@ namespace emdui
                     }
                 }
             }
+            warningTextBlock.Visibility = status ? Visibility.Hidden : Visibility.Visible;
 
             reorg.Detect(constraint);
-            timView.Primitives = reorg.Rects
+            _oldBoundaries = SetPrimitives(timViewOld, oldRects);
+            _newBoundaries = SetPrimitives(timView, reorg.Rects);
+        }
+
+        private UVPrimitive[] SetPrimitives(TimView timView, TextureReorganiser.Rect[] rects)
+        {
+            timView.Primitives = rects
                 .Select(x => new UVPrimitive()
                 {
                     IsQuad = true,
@@ -111,6 +124,7 @@ namespace emdui
                     V2 = ClampByte(x.Bottom)
                 })
                 .ToArray();
+            return timView.Primitives;
         }
 
         private async void Constraint_TextChanged(object sender, TextChangedEventArgs e)
@@ -143,9 +157,16 @@ namespace emdui
                 {
                     if (UpdatedMeshes == null)
                         return;
+                    timViewOld.SetPrimitivesFromMesh(Meshes[0], c.PartIndex);
                     timView.SetPrimitivesFromMesh(UpdatedMeshes[0], c.PartIndex);
                 }
             }
+        }
+
+        private void constraintListView_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            timViewOld.Primitives = _oldBoundaries;
+            timView.Primitives = _newBoundaries;
         }
 
         // Helper method to find the ancestor of a specific type in the visual tree

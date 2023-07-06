@@ -118,8 +118,10 @@ namespace emdui
             {
                 var offset = p.Page * 128;
                 var polygon = new Polygon();
+                polygon.SnapsToDevicePixels = true;
                 polygon.Stroke = Brushes.Lime;
-                polygon.StrokeThickness = 1;
+                polygon.StrokeThickness = 0.5;
+                polygon.StrokeMiterLimit = 1;
                 polygon.Points.Add(new Point(p.U0 + offset, p.V0));
                 polygon.Points.Add(new Point(p.U1 + offset, p.V1));
                 if (p.IsQuad)

@@ -183,7 +183,7 @@ namespace emdui
         private int? GetPage(ushort partIndex)
         {
             // PLWs always go on page 1
-            if ((partIndex & ~0xFF) != 0)
+            if (IsPld && (partIndex & ~0xFF) != 0)
                 return 1;
 
             foreach (var constraint in Constraints)

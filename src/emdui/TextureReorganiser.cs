@@ -169,7 +169,6 @@ namespace emdui
 
         private Rect[] Reorg(ITextureReorganiserConstraint constraint, out int numPages)
         {
-            var prioritisePart0 = false;
             var lockedRects = Rects
                 .Where(x => constraint.IsLocked(x))
                 .ToArray();
@@ -177,14 +176,6 @@ namespace emdui
                 .Where(x => !constraint.IsLocked(x))
                 .OrderByDescending(r => r.Height)
                 .ToArray();
-            if (prioritisePart0)
-            {
-                rects = rects
-                    .OrderBy(r => r.ContainsPartIndex(0) ? 0 : 1)
-                    .ThenByDescending(r => r.Height)
-                    // .OrderBy(r => r.PartIndex)
-                    .ToArray();
-            }
             var bins = new List<Bin>();
             foreach (var rect in rects)
             {
@@ -217,19 +208,13 @@ namespace emdui
             pages.Add(new Page(1));
             pages.Add(new Page(2));
             pages.Add(new Page(3));
-            if (prioritisePart0)
-            {
-                bins = bins
-                    .OrderBy(b => b.Rects.Any(x => x.ContainsPartIndex(0)) ? 0 : 1)
-                    .ThenByDescending(b => b.Height)
-                    .ToList();
-            }
             bins = bins
                 .OrderBy(x =>
                 {
                     var p = x.GetPage(constraint);
                     return p == null ? int.MaxValue : p;
                 })
+                .ThenByDescending(x => x.Rects.First().Width)
                 .ToList();
 
             var unplaced = new List<Rect>();

@@ -155,10 +155,9 @@ namespace emdui
             {
                 if (listView.ItemContainerGenerator.ItemFromContainer(listViewItem) is TexturePackerConstraint c)
                 {
-                    if (UpdatedMeshes == null)
-                        return;
                     timViewOld.SetPrimitivesFromMesh(Meshes[0], c.PartIndex);
-                    timView.SetPrimitivesFromMesh(UpdatedMeshes[0], c.PartIndex);
+                    if (UpdatedMeshes != null)
+                        timView.SetPrimitivesFromMesh(UpdatedMeshes[0], c.PartIndex);
                 }
             }
         }
@@ -263,7 +262,9 @@ namespace emdui
             otherRect.Y = 224;
             otherRect.Width = 56;
             otherRect.Height = 32;
-            return r.IntersectsWith(otherRect);
+            // return r.IntersectsWith(otherRect);
+            return r.X >= otherRect.X && r.Y >= otherRect.Y &&
+                r.Right <= otherRect.Right && r.Bottom <= otherRect.Bottom;
         }
     }
 

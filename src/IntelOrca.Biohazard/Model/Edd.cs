@@ -5,7 +5,7 @@ using IntelOrca.Biohazard.Extensions;
 
 namespace IntelOrca.Biohazard.Model
 {
-    public class Edd
+    public sealed partial class Edd
     {
         public ReadOnlyMemory<byte> Data { get; }
 
@@ -29,6 +29,19 @@ namespace IntelOrca.Biohazard.Model
             var animation = Animations[animationIndex];
             var offset = animation.Offset;
             return GetSpan<Frame>(offset, animation.Count);
+        }
+
+        public Builder ToBuilder()
+        {
+            var builder = new Builder();
+            for (var i = 0; i < AnimationCount; i++)
+            {
+                builder.Animations.Add(new Builder.Animation()
+                {
+                    Frames = GetFrames(i).ToArray()
+                });
+            }
+            return builder;
         }
 
         private ReadOnlySpan<T> GetSpan<T>(int offset, int count) where T : struct => Data.GetSafeSpan<T>(offset, count);

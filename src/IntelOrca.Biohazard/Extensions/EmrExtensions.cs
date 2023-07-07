@@ -1,6 +1,4 @@
-﻿using System;
-using System.Runtime.InteropServices;
-using IntelOrca.Biohazard.Model;
+﻿using IntelOrca.Biohazard.Model;
 
 namespace IntelOrca.Biohazard.Extensions
 {
@@ -14,14 +12,14 @@ namespace IntelOrca.Biohazard.Extensions
                 return emr;
 
             var emrBuilder = emr.ToBuilder();
-            var numKeyFrames = emrBuilder.KeyFrameData.Length / emrBuilder.KeyFrameSize;
-            for (var i = 0; i < numKeyFrames; i++)
+            for (var i = 0; i < emrBuilder.KeyFrames.Count; i++)
             {
-                var keyFrameOffset = i * emrBuilder.KeyFrameSize;
-                var offset = MemoryMarshal.Cast<byte, Emr.Vector>(new Span<byte>(emrBuilder.KeyFrameData).Slice(keyFrameOffset, emrBuilder.KeyFrameSize));
-                offset[0].x = (short)(offset[0].x * x);
-                offset[0].y = (short)(offset[0].y * y);
-                offset[0].z = (short)(offset[0].z * z);
+                var keyFrame = emrBuilder.KeyFrames[i];
+                var offset = keyFrame.Offset;
+                offset.x = (short)(offset.x * x);
+                offset.y = (short)(offset.y * y);
+                offset.z = (short)(offset.z * z);
+                keyFrame.Offset = offset;
             }
             return emrBuilder.ToEmr();
         }

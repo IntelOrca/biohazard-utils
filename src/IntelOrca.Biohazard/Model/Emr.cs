@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.InteropServices;
 using IntelOrca.Biohazard.Extensions;
 
 namespace IntelOrca.Biohazard.Model
 {
-    public class Emr
+    public sealed partial class Emr
     {
         public BioVersion Version { get; }
         public ReadOnlyMemory<byte> Data { get; }
@@ -126,9 +127,10 @@ namespace IntelOrca.Biohazard.Model
 
         private ReadOnlySpan<T> GetSpan<T>(int offset, int count) where T : struct => Data.GetSafeSpan<T>(offset, count);
 
-        public EmrBuilder ToBuilder()
+        public Builder ToBuilder()
         {
-            var builder = new EmrBuilder(Version);
+            var builder = new Builder(Version);
+            builder.ForceArmatureOffset = ArmatureOffset;
             builder.NumParts = NumParts;
             var numArmatures = NumArmatures;
             for (var i = 0; i < numArmatures; i++)
@@ -139,7 +141,15 @@ namespace IntelOrca.Biohazard.Model
             {
                 builder.Armatures.Add(GetArmatureParts(i).ToArray());
             }
-            builder.KeyFrameData = KeyFrameData.ToArray();
+            foreach (var kf in KeyFrames)
+            {
+                builder.KeyFrames.Add(new Builder.Keyframe()
+                {
+                    Offset = kf.Offset,
+                    Speed = kf.Speed,
+                    Angles = kf.Angles.ToArray()
+                });
+            }
             builder.KeyFrameSize = KeyFrameSize;
             return builder;
         }
@@ -161,7 +171,8 @@ namespace IntelOrca.Biohazard.Model
         {
             var builder = ToBuilder();
             builder.KeyFrameSize = emr.KeyFrameSize;
-            builder.KeyFrameData = emr.KeyFrameData.ToArray();
+            builder.KeyFrames.Clear();
+            builder.KeyFrames.AddRange(emr.ToBuilder().KeyFrames);
             return builder.ToEmr();
         }
 
@@ -232,7 +243,7 @@ namespace IntelOrca.Biohazard.Model
             {
                 get
                 {
-                    var numAngles = AngleData.Length * 2 / 3;
+                    var numAngles = (AngleData.Length * 2 / 3) / 3;
                     var result = new Vector[numAngles];
                     for (var i = 0; i < numAngles; i++)
                     {

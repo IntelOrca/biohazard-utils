@@ -73,6 +73,15 @@ namespace IntelOrca.Biohazard
             return result.ToArray();
         }
 
+        public bool Exists(string path)
+        {
+            if (File.Exists(path))
+                return true;
+
+            var normalizedPath = NormalizePath(path);
+            return _re3Paths.TryGetValue(normalizedPath, out _);
+        }
+
         public Stream GetStream(string path)
         {
             if (File.Exists(path))

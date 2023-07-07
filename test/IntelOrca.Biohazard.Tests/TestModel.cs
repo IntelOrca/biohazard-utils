@@ -132,7 +132,22 @@ namespace IntelOrca.Biohazard.Tests
         }
 
         [Fact]
-        public void RebuildEmr()
+        public void RebuildEmr1()
+        {
+            var installPath = TestInfo.GetInstallPath(0);
+            var emdPath = Path.Combine(installPath, "JPN", "ENEMY", "EM1028.EMD");
+            var emdFile = new EmdFile(BioVersion.Biohazard1, emdPath);
+            var emr = emdFile.GetEmr(0);
+            var builder = emr.ToBuilder();
+            var newEmr = builder.ToEmr();
+
+            var expectedData = emr.Data.ToArray();
+            var actualData = newEmr.Data.ToArray();
+            AssertByteArraysEqual(expectedData, actualData);
+        }
+
+        [Fact]
+        public void RebuildEmr2()
         {
             var installPath = TestInfo.GetInstallPath(1);
             var emdPath = Path.Combine(installPath, "data", "pl0", "emd0", "em010.emd");

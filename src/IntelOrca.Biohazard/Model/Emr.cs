@@ -239,13 +239,23 @@ namespace IntelOrca.Biohazard.Model
                 }
             }
 
+            public int NumAngles
+            {
+                get
+                {
+                    if (_emr.Version == BioVersion.Biohazard1)
+                        return AngleData.Length / 2 / 3;
+                    else
+                        return (AngleData.Length * 2 / 3) / 3;
+                }
+            }
+
             public Vector[] Angles
             {
                 get
                 {
-                    var numAngles = (AngleData.Length * 2 / 3) / 3;
-                    var result = new Vector[numAngles];
-                    for (var i = 0; i < numAngles; i++)
+                    var result = new Vector[NumAngles];
+                    for (var i = 0; i < result.Length; i++)
                     {
                         result[i] = GetAngle(i);
                     }

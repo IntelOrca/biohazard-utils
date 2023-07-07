@@ -102,6 +102,7 @@ namespace IntelOrca.Biohazard.Model
                     while (remaining > 0)
                     {
                         bw.Write((byte)0);
+                        remaining--;
                     }
                 }
 
@@ -111,6 +112,12 @@ namespace IntelOrca.Biohazard.Model
                 bw.Write((ushort)armatureStartOffset);
                 ms.Position = 2;
                 bw.Write((ushort)keyFrameStartOffset);
+
+                if (Version == BioVersion.Biohazard1)
+                {
+                    ms.Position = ms.Length;
+                    bw.Write((int)(ms.Position - 8));
+                }
 
                 return new Emr(Version, ms.ToArray());
             }

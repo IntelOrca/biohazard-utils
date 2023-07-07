@@ -82,7 +82,7 @@ namespace IntelOrca.Biohazard.Model
                 case ChunkKind.Morph:
                     return (T)(object)new MorphData(GetChunkData(index));
                 default:
-                    return default;
+                    return (T)(object)GetChunkData(index);
             }
         }
 
@@ -107,7 +107,10 @@ namespace IntelOrca.Biohazard.Model
                     SetChunkData(index, ((MorphData)(object)value).Data);
                     break;
                 default:
-                    throw new NotSupportedException();
+#pragma warning disable CS8605 // Unboxing a possibly null value.
+                    SetChunkData(index, (ReadOnlyMemory<byte>)(object)value);
+#pragma warning restore CS8605 // Unboxing a possibly null value.
+                    break;
             }
         }
 #pragma warning restore CS8603 // Possible null reference return.

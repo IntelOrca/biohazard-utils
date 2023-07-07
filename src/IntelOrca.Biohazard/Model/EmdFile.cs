@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 
 namespace IntelOrca.Biohazard.Model
 {
@@ -45,6 +46,11 @@ namespace IntelOrca.Biohazard.Model
 
         public EmdFile(BioVersion version, string path)
             : base(version, path)
+        {
+        }
+
+        public EmdFile(BioVersion version, Stream stream)
+            : base(version, stream)
         {
         }
 

@@ -6,10 +6,12 @@ namespace IntelOrca.Biohazard.Model
 {
     public sealed partial class MorphData
     {
+        public BioVersion Version { get; }
         public ReadOnlyMemory<byte> Data { get; }
 
-        public MorphData(ReadOnlyMemory<byte> data)
+        public MorphData(BioVersion version, ReadOnlyMemory<byte> data)
         {
+            Version = version;
             Data = data;
         }
 
@@ -30,7 +32,7 @@ namespace IntelOrca.Biohazard.Model
 
         public Builder ToBuilder()
         {
-            var builder = new Builder();
+            var builder = new Builder(Version);
             builder.Unknown00 = Unknown00;
             for (var i = 0; i < NumParts; i++)
             {

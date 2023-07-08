@@ -8,9 +8,15 @@ namespace IntelOrca.Biohazard.Model
     {
         public class Builder
         {
+            public BioVersion Version { get; }
             public int Unknown00 { get; set; }
             public List<Emr.Vector[]> Skeletons { get; } = new List<Emr.Vector[]>();
             public List<MorphGroup> Groups { get; } = new List<MorphGroup>();
+
+            public Builder(BioVersion version)
+            {
+                Version = version;
+            }
 
             public unsafe MorphData ToMorphData()
             {
@@ -76,7 +82,7 @@ namespace IntelOrca.Biohazard.Model
                 }
 
                 var data = ms.ToArray();
-                return new MorphData(data);
+                return new MorphData(Version, data);
             }
 
             public class MorphGroup

@@ -1095,6 +1095,9 @@ namespace emdui
 
         private void CreateChildren()
         {
+            if (MorphData.Version != BioVersion.Biohazard2)
+                return;
+
             Items.Clear();
             for (var i = 0; i < MorphData.NumParts; i++)
             {

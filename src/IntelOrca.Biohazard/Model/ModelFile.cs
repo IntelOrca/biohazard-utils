@@ -80,7 +80,7 @@ namespace IntelOrca.Biohazard.Model
                 case ChunkKind.Texture:
                     return (T)(object)new TimFile(GetChunkData(index));
                 case ChunkKind.Morph:
-                    return (T)(object)new MorphData(GetChunkData(index));
+                    return (T)(object)new MorphData(Version, GetChunkData(index));
                 default:
                     return (T)(object)GetChunkData(index);
             }
@@ -151,7 +151,7 @@ namespace IntelOrca.Biohazard.Model
             SetChunkData(chunkIndex, data);
         }
 
-        public MorphData GetMorph(int number) => new MorphData(GetChunk(ChunkKind.Morph, number));
+        public MorphData GetMorph(int number) => new MorphData(Version, GetChunk(ChunkKind.Morph, number));
         public void SetMorph(int number, MorphData value) => SetChunk(ChunkKind.Morph, number, value.Data);
 
         public Edd GetEdd(int number) => new Edd(GetChunk(ChunkKind.Animation, number));
@@ -241,7 +241,6 @@ namespace IntelOrca.Biohazard.Model
             Unknown,
             Animation,
             Armature,
-            Dat,
             Mesh,
             Texture,
             Morph,

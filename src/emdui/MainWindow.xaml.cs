@@ -260,10 +260,10 @@ namespace emdui
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re1\pld0\chris\char10.emd");
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\hunk\PL00.PLD");
             // LoadProject(@"F:\games\re2\mod_biorand\pl0\emd0\em04b.emd");
-            LoadProject(@"F:\games\re1\JPN\ENEMY\char10.emd");
+            // LoadProject(@"F:\games\re1\JPN\ENEMY\char10.emd");
 
-            // LoadProject(@"F:\games\re3\mod_biorand\ROOM\EMD\EM55.EMD"); // MURPHY
-            // LoadProject(@"M:\temp\re3extracted\ROOM\EMD\EM52.EMD");
+            LoadProject(@"F:\games\re3\mod_biorand\ROOM\EMD\EM5C.EMD");
+            // LoadProject(@"M:\temp\re3extracted\ROOM\EMD\EM58.EMD");
 #if false
             var texturePackerWindow = new TexturePackerWindow();
             texturePackerWindow.Meshes = _project.Files

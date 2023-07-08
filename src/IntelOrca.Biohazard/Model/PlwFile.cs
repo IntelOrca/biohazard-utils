@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 
 namespace IntelOrca.Biohazard.Model
 {
@@ -23,12 +24,12 @@ namespace IntelOrca.Biohazard.Model
         {
             ChunkKind.Animation,
             ChunkKind.Armature,
+            ChunkKind.Unknown,
+            ChunkKind.Unknown,
+            ChunkKind.Unknown,
+            ChunkKind.Unknown,
+            ChunkKind.Unknown,
             ChunkKind.Mesh,
-            ChunkKind.Unknown,
-            ChunkKind.Unknown,
-            ChunkKind.Unknown,
-            ChunkKind.Unknown,
-            ChunkKind.Unknown,
             ChunkKind.Texture,
         };
 
@@ -36,6 +37,12 @@ namespace IntelOrca.Biohazard.Model
             : base(version, path)
         {
         }
+
+        public PlwFile(BioVersion version, Stream stream)
+            : base(version, stream)
+        {
+        }
+
         protected override ReadOnlySpan<ChunkKind> ChunkKinds =>
             Version switch
             {

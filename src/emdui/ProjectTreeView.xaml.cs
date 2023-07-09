@@ -430,7 +430,7 @@ namespace emdui
             : base(projectFile, chunkIndex)
         {
             Emr = emr;
-            if (isFirstEmr && emr.NumParts > 0 && !(Model is PlwFile))
+            if ((isFirstEmr || emr.Version == BioVersion.Biohazard1) && emr.NumParts > 0 && !(Model is PlwFile))
             {
                 Items.Add(new BoneTreeViewItem(ProjectFile, chunkIndex, emr, 0));
             }

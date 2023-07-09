@@ -155,7 +155,32 @@ namespace IntelOrca.Biohazard.Tests
 
             for (var i = 0; i < 3; i++)
             {
-                var emr = emdFile.GetEmr(2);
+                var emr = emdFile.GetEmr(i);
+                var builder = emr.ToBuilder();
+                var newEmr = builder.ToEmr();
+
+                var expectedData = emr.Data.ToArray();
+                var actualData = newEmr.Data.ToArray();
+                AssertByteArraysEqual(expectedData, actualData);
+            }
+        }
+
+        [Fact]
+        public void RebuildEmr3()
+        {
+            var installPath = TestInfo.GetInstallPath(2);
+            var rofsFiles = Directory.GetFiles(installPath, "rofs*.dat");
+
+            var repo = new FileRepository(installPath);
+            foreach (var file in rofsFiles)
+                repo.AddRE3Archive(file);
+
+            var emdPath = Path.Combine(installPath, "room", "emd", "em1d.emd");
+            var emdStream = repo.GetStream(emdPath);
+            var emdFile = new EmdFile(BioVersion.Biohazard3, emdStream);
+            for (var i = 0; i < 3; i++)
+            {
+                var emr = emdFile.GetEmr(i);
                 var builder = emr.ToBuilder();
                 var newEmr = builder.ToEmr();
 

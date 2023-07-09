@@ -45,7 +45,7 @@ namespace IntelOrca.Biohazard.Model
                 }
 
                 if (ForceArmatureOffset != null && RelativePositions.Count != 0)
-                    ms.Position = 100;
+                    ms.Position = ForceArmatureOffset.Value;
 
                 // Armatures
                 var armatureStartOffset = ForceArmatureOffset ?? ms.Position;
@@ -69,13 +69,14 @@ namespace IntelOrca.Biohazard.Model
                 foreach (var kf in KeyFrames)
                 {
                     var kfOffset = ms.Position;
-                    bw.Write(kf.Offset);
                     if (Version == BioVersion.Biohazard3)
                     {
-                        bw.Write(kf.Speed.y);
+                        bw.Write(kf.Speed);
+                        bw.Write(kf.Offset.y);
                     }
                     else
                     {
+                        bw.Write(kf.Offset);
                         bw.Write(kf.Speed);
                     }
 

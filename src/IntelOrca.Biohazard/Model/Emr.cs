@@ -205,8 +205,7 @@ namespace IntelOrca.Biohazard.Model
             private readonly int _offset;
             private readonly int _length;
 
-            public Vector Offset => GetSpan<Vector>(0, 1)[0];
-            public Vector Speed
+            public Vector Offset
             {
                 get
                 {
@@ -214,6 +213,20 @@ namespace IntelOrca.Biohazard.Model
                     {
                         var y = GetSpan<short>(6, 1)[0];
                         return new Vector(0, y, 0);
+                    }
+                    else
+                    {
+                        return GetSpan<Vector>(0, 1)[0];
+                    }
+                }
+            }
+            public Vector Speed
+            {
+                get
+                {
+                    if (_emr.Version == BioVersion.Biohazard3)
+                    {
+                        return GetSpan<Vector>(0, 1)[0];
                     }
                     else
                     {

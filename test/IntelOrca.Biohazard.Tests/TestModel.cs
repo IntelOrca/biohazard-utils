@@ -102,6 +102,28 @@ namespace IntelOrca.Biohazard.Tests
         }
 
         [Fact]
+        public void RebuildMD2_Empty()
+        {
+            var installPath = TestInfo.GetInstallPath(2);
+            var rofsFiles = Directory.GetFiles(installPath, "rofs*.dat");
+
+            var repo = new FileRepository(installPath);
+            foreach (var file in rofsFiles)
+                repo.AddRE3Archive(file);
+
+            var emdPath = Path.Combine(installPath, "room", "emd", "em11.emd");
+            var emdStream = repo.GetStream(emdPath);
+            var emdFile = new EmdFile(BioVersion.Biohazard3, emdStream);
+            var mesh = (Md2)emdFile.GetMesh(0);
+            var builder = mesh.ToBuilder();
+            var newMesh = builder.ToMesh();
+
+            var expectedData = mesh.Data.ToArray();
+            var actualData = newMesh.Data.ToArray();
+            AssertByteArraysEqual(expectedData, actualData);
+        }
+
+        [Fact]
         public void RebuildMorphData()
         {
             var installPath = TestInfo.GetInstallPath(1);

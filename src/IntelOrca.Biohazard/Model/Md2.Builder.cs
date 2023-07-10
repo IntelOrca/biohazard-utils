@@ -83,33 +83,35 @@ namespace IntelOrca.Biohazard.Model
                 var ms = new MemoryStream();
                 var bw = new BinaryWriter(ms);
                 bw.Write(0);
-                bw.Write(Parts.Count);
-                for (int i = 0; i < Parts.Count; i++)
+                if (Parts.Count > 0)
                 {
-                    var md2Object = objects[i];
-                    md2Object.vtx_offset = (ushort)(vertexOffset + md2Object.vtx_offset * sizeof(Vector));
-                    md2Object.nor_offset = (ushort)(normalOffset + md2Object.nor_offset * sizeof(Vector));
-                    md2Object.tri_offset = (ushort)primitiveOffset;
-                    primitiveOffset += md2Object.tri_count * sizeof(Triangle);
-                    md2Object.quad_offset = (ushort)primitiveOffset;
-                    primitiveOffset += md2Object.quad_count * sizeof(Quad);
-                    bw.Write(md2Object);
-                }
-                foreach (var t in primitives)
-                {
-                    if (t is Triangle triangle)
-                        bw.Write(triangle);
-                    else if (t is Quad quad)
-                        bw.Write(quad);
-                }
-                foreach (var p in positions)
-                    bw.Write(p);
-                foreach (var n in normals)
-                    bw.Write(n);
+                    bw.Write(Parts.Count);
+                    for (int i = 0; i < Parts.Count; i++)
+                    {
+                        var md2Object = objects[i];
+                        md2Object.vtx_offset = (ushort)(vertexOffset + md2Object.vtx_offset * sizeof(Vector));
+                        md2Object.nor_offset = (ushort)(normalOffset + md2Object.nor_offset * sizeof(Vector));
+                        md2Object.tri_offset = (ushort)primitiveOffset;
+                        primitiveOffset += md2Object.tri_count * sizeof(Triangle);
+                        md2Object.quad_offset = (ushort)primitiveOffset;
+                        primitiveOffset += md2Object.quad_count * sizeof(Quad);
+                        bw.Write(md2Object);
+                    }
+                    foreach (var t in primitives)
+                    {
+                        if (t is Triangle triangle)
+                            bw.Write(triangle);
+                        else if (t is Quad quad)
+                            bw.Write(quad);
+                    }
+                    foreach (var p in positions)
+                        bw.Write(p);
+                    foreach (var n in normals)
+                        bw.Write(n);
 
-                ms.Position = 0;
-                bw.Write((uint)ms.Length);
-
+                    ms.Position = 0;
+                    bw.Write((uint)ms.Length);
+                }
                 return new Md2(ms.ToArray());
             }
 

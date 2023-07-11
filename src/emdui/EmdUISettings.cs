@@ -11,6 +11,7 @@ namespace emdui
 
         public string BlenderPath { get; set; }
         public bool ShowFloor { get; set; } = true;
+        public bool ShowBones { get; set; }
 
         private static string GetDataPath(string fileName)
         {

@@ -78,7 +78,13 @@ namespace emdui
             viewport.Children.Add(_scene.CreateVisual3d());
             viewport.Children.Add(new ModelVisual3D()
             {
-                Content = new AmbientLight(Colors.White)
+                Content = new AmbientLight(Color.FromScRgb(1, 0.25f, 0.25f, 0.25f))
+            });
+            viewport.Children.Add(new ModelVisual3D()
+            {
+                Content = new DirectionalLight(
+                    Color.FromScRgb(1, 0.5f, 0.5f, 0.5f),
+                    new Vector3D(-1, 1, -1))
             });
 
             UpdateCamera();

@@ -253,7 +253,7 @@ namespace emdui
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\chris\PL00.PLD");
             // LoadProject(@"F:\games\re3\mod_biorand\DATA\PLD\PL00.PLD");
             // LoadProject(@"F:\games\re2\data\Pl0\emd0\em041.emd");
-            // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\chris\pl00.pld");
+            LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\chris\pl00.pld");
             // LoadProject(@"F:\games\re2\data\Pl0\emd0\em010.emd");
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\ark\pl00.pld");
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld1\ashley\PL01.PLD");
@@ -263,7 +263,7 @@ namespace emdui
             // LoadProject(@"F:\games\re1\JPN\ENEMY\char10.emd");
 
             // LoadProject(@"F:\games\re3\mod_biorand\ROOM\EMD\EM5C.EMD");
-            LoadProject(@"F:\games\re1\JPN\ENEMY\Em1000.emd");
+            // LoadProject(@"F:\games\re1\JPN\ENEMY\Em1000.emd");
 #if false
             var texturePackerWindow = new TexturePackerWindow();
             texturePackerWindow.Meshes = _project.Files
@@ -468,6 +468,17 @@ namespace emdui
             set
             {
                 Settings.Default.ShowFloor = value;
+                Settings.Save();
+                RefreshModelView();
+            }
+        }
+
+        public bool ShowBones
+        {
+            get => Settings.Default.ShowBones;
+            set
+            {
+                Settings.Default.ShowBones = value;
                 Settings.Save();
                 RefreshModelView();
             }

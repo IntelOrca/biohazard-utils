@@ -16,8 +16,10 @@ namespace emdui
         private BitmapSource _texture;
         private Model3DGroup _root;
         private Model3DGroup[] _armature;
+        private Model3DGroup[] _rig;
         private GeometryModel3D[] _model3d;
         private GeometryModel3D _highlightedModel;
+        private int _highlightedPart = -1;
 
         private IModelMesh _mesh;
         private Emr _emr;
@@ -30,6 +32,10 @@ namespace emdui
                 if (_armature[i] is Model3DGroup armature)
                 {
                     armature.Transform = GetTransformation(i, keyframeIndex);
+                }
+                if (_rig[i] is Model3DGroup rig)
+                {
+                    rig.Transform = GetTransformation(i, keyframeIndex);
                 }
             }
         }
@@ -49,6 +55,8 @@ namespace emdui
 
         public void HighlightPart(int partIndex)
         {
+            _highlightedPart = partIndex;
+
             if (_highlightedModel != null)
             {
                 _highlightedModel.Material = CreateMaterial(false);
@@ -73,6 +81,7 @@ namespace emdui
             _numParts = _mesh.NumParts;
             _model3d = new GeometryModel3D[_numParts];
             _armature = new Model3DGroup[_numParts];
+            _rig = new Model3DGroup[_numParts];
             _root = CreateModel();
         }
 
@@ -88,21 +97,36 @@ namespace emdui
             }
             if (_emr != null && _emr.NumParts != 0)
             {
-                var main = CreateModelFromArmature(0);
-                if (main != null)
+                if (Settings.Default.ShowBones)
                 {
-                    rootGroup.Children.Add(main);
-                    armatureParts = GetAllArmatureParts(0);
+                    var rig = CreateRigFromArmature(0);
+                    if (rig != null)
+                    {
+                        rootGroup.Children.Add(rig);
+                    }
+                }
+                else
+                {
+                    var main = CreateModelFromArmature(0);
+                    if (main != null)
+                    {
+                        rootGroup.Children.Add(main);
+                        armatureParts = GetAllArmatureParts(0);
+                    }
                 }
             }
-            for (var i = 0; i < _numParts; i++)
+            if (!Settings.Default.ShowBones)
             {
-                if (!armatureParts.Contains(i))
+                for (var i = 0; i < _numParts; i++)
                 {
-                    var model = CreateModelFromPart(i);
-                    rootGroup.Children.Add(model);
+                    if (!armatureParts.Contains(i))
+                    {
+                        var model = CreateModelFromPart(i);
+                        rootGroup.Children.Add(model);
+                    }
                 }
             }
+
             return rootGroup;
         }
 
@@ -123,9 +147,12 @@ namespace emdui
 
         internal static MeshGeometry3D CreateCubeMesh(int width, int height, int depth)
         {
+            var mesh = new MeshGeometry3D();
+            mesh.Positions = new Point3DCollection();
+            mesh.Normals = new Vector3DCollection();
+            mesh.TriangleIndices = new Int32Collection();
 
-            // Vertex positions
-            var positions = new Point3D[]
+            var p = new Point3D[]
             {
                 new Point3D(-width / 2, -height / 2, -depth / 2), // 0
                 new Point3D(-width / 2, +height / 2, -depth / 2), // 1
@@ -137,51 +164,79 @@ namespace emdui
                 new Point3D(+width / 2, -height / 2, +depth / 2)  // 7
             };
 
-            // Triangle indices
-            var triangleIndices = new int[]
-            {
-                // Bottom face
-                0, 1, 2,
-                0, 2, 3,
-
-                // Top face
-                5, 4, 7,
-                5, 7, 6,
-
-                // Front face
-                1, 5, 6,
-                1, 6, 2,
-
-                // Back face
-                4, 0, 3,
-                4, 3, 7,
-
-                // Left face
-                4, 5, 1,
-                4, 1, 0,
-
-                // Right face
-                3, 2, 6,
-                3, 6, 7
-            };
-
-            // Normals
-            var normals = new[]
-            {
-                new Vector3D(0, 0, -1), // Bottom face
-                new Vector3D(0, 0, 1),  // Top face
-                new Vector3D(0, 1, 0),  // Front face
-                new Vector3D(0, -1, 0), // Back face
-                new Vector3D(-1, 0, 0), // Left face
-                new Vector3D(1, 0, 0)   // Right face
-            };
-
-            var mesh = new MeshGeometry3D();
-            mesh.Positions = new Point3DCollection(positions);
-            mesh.Normals = new Vector3DCollection(normals);
-            mesh.TriangleIndices = new Int32Collection(triangleIndices);
+            AddQuad(mesh, p[0], p[1], p[2], p[3], new Vector3D(0, 0, -1));
+            AddQuad(mesh, p[5], p[4], p[7], p[6], new Vector3D(0, 0, 1));
+            AddQuad(mesh, p[1], p[5], p[6], p[2], new Vector3D(0, 1, 0));
+            AddQuad(mesh, p[4], p[0], p[3], p[7], new Vector3D(0, -1, 0));
+            AddQuad(mesh, p[4], p[5], p[1], p[0], new Vector3D(-1, 0, 0));
+            AddQuad(mesh, p[3], p[2], p[6], p[7], new Vector3D(1, 0, 0));
             return mesh;
         }
+
+        private static void AddQuad(MeshGeometry3D mesh, Point3D a, Point3D b, Point3D c, Point3D d, Vector3D normal)
+        {
+            mesh.Positions.Add(a);
+            mesh.Positions.Add(b);
+            mesh.Positions.Add(c);
+            mesh.Positions.Add(a);
+            mesh.Positions.Add(c);
+            mesh.Positions.Add(d);
+            mesh.Normals.Add(normal);
+            mesh.Normals.Add(normal);
+            mesh.Normals.Add(normal);
+            mesh.Normals.Add(normal);
+            mesh.Normals.Add(normal);
+            mesh.Normals.Add(normal);
+        }
+
+        private static MeshGeometry3D CreateBoneMesh(double length, double radius)
+        {
+            // Create the cylinder mesh
+            MeshGeometry3D boneMesh = new MeshGeometry3D();
+
+            // Calculate the dimensions of the cylinder
+            double halfLength = length / 2;
+            int numSegments = 32;
+
+            // Generate the vertices and normals
+            for (int i = 0; i <= numSegments; i++)
+            {
+                double theta = 2.0 * Math.PI * (double)i / numSegments;
+                double x = radius * Math.Cos(theta);
+                double y = radius * Math.Sin(theta);
+
+                // Top cap vertices
+                boneMesh.Positions.Add(new Point3D(x, y, halfLength));
+
+                // Bottom cap vertices
+                boneMesh.Positions.Add(new Point3D(x, y, -halfLength));
+
+                // Top cap normals
+                boneMesh.Normals.Add(new Vector3D(x, y, 0));
+
+                // Bottom cap normals
+                boneMesh.Normals.Add(new Vector3D(x, y, 0));
+            }
+
+            // Generate the triangle indices
+            for (int i = 0; i < numSegments; i++)
+            {
+                int baseIndex = i * 2;
+
+                // Top cap triangles
+                boneMesh.TriangleIndices.Add(baseIndex);
+                boneMesh.TriangleIndices.Add(baseIndex + 1);
+                boneMesh.TriangleIndices.Add(baseIndex + 3);
+
+                // Bottom cap triangles
+                boneMesh.TriangleIndices.Add(baseIndex);
+                boneMesh.TriangleIndices.Add(baseIndex + 3);
+                boneMesh.TriangleIndices.Add(baseIndex + 2);
+            }
+
+            return boneMesh;
+        }
+
 
         private int[] GetAllArmatureParts(int rootPartIndex)
         {
@@ -227,6 +282,70 @@ namespace emdui
             armature.Transform = GetTransformation(partIndex, -1);
             _armature[partIndex] = armature;
             return armature;
+        }
+
+        private Model3DGroup CreateRigFromArmature(int partIndex, int parent = -1)
+        {
+            if (_rig.Length <= partIndex)
+                return null;
+
+            var parentModel = parent == -1 ? null : _rig[parent];
+
+            var position = _emr.GetRelativePosition(partIndex);
+            var length = Math.Sqrt((position.x * position.x) + (position.y * position.y) + (position.z * position.z));
+            var midPoint = new Emr.Vector(
+                (short)(position.x / 2.0),
+                (short)(position.y / 2.0),
+                (short)(position.z / 2.0)
+            );
+
+            var direction = new Vector3D(position.x, position.y, position.z);
+            direction.Normalize();
+
+            var rx = 0;
+            var ry = -Math.Atan2(direction.X, direction.Y) * (180 / Math.PI);
+            if (direction.Y < 0)
+                ry = -ry;
+            var rz = 90 + Math.Atan2(direction.Z, direction.Y) * (180 / Math.PI);
+
+            var boneGroup = new Model3DGroup();
+            _rig[partIndex] = boneGroup;
+            var boneModel = new GeometryModel3D();
+            boneModel.Geometry = CreateBoneMesh(length, 16);
+            boneModel.Material = CreateBoneMaterial(false);
+            boneModel.BackMaterial = boneModel.Material;
+
+            var transformGroup = new Transform3DGroup();
+            transformGroup.Children.Add(new RotateTransform3D(
+                new AxisAngleRotation3D(new Vector3D(0, 0, 1), rx)));
+            transformGroup.Children.Add(new RotateTransform3D(
+                new AxisAngleRotation3D(new Vector3D(0, 1, 0), ry)));
+            transformGroup.Children.Add(new RotateTransform3D(
+                new AxisAngleRotation3D(new Vector3D(1, 0, 0), rz)));
+            transformGroup.Children.Add(new TranslateTransform3D(midPoint.x, midPoint.y, midPoint.z));
+            boneModel.Transform = transformGroup;
+            if (parentModel != null)
+                parentModel.Children.Add(boneModel);
+
+            var cubeModel = new GeometryModel3D();
+            cubeModel.Geometry = CreateCubeMesh(96, 94, 94);
+            cubeModel.Material = CreateBoneMaterial(partIndex == 0);
+            cubeModel.BackMaterial = boneModel.Material;
+            boneGroup.Children.Add(cubeModel);
+
+            // Children
+            var subParts = _emr.GetArmatureParts(partIndex);
+            foreach (var subPart in subParts)
+            {
+                var subPartMesh = CreateRigFromArmature(subPart, partIndex);
+                if (subPartMesh != null)
+                {
+                    boneGroup.Children.Add(subPartMesh);
+                }
+            }
+
+            boneGroup.Transform = GetTransformation(partIndex, -1);
+            return boneGroup;
         }
 
         private Transform3D GetTransformation(int partIndex, int keyFrameIndex)
@@ -288,149 +407,22 @@ namespace emdui
             return material;
         }
 
+        private Material CreateBoneMaterial(bool highlighted)
+        {
+            var material = new DiffuseMaterial();
+            material.Brush = new SolidColorBrush(Colors.White);
+            if (highlighted)
+                material.AmbientColor = Colors.Blue;
+            else
+                material.AmbientColor = Colors.LightGray;
+            return material;
+        }
+
         private static MeshGeometry3D CreateMesh(IModelMesh mesh, int partIndex, Size textureSize)
         {
             var visitor = new MeshGeometry3DMeshVisitor(partIndex, textureSize);
             visitor.Accept(mesh);
             return visitor.Mesh;
-        }
-
-        private static MeshGeometry3D CreateMesh(Md1 md1, int partIndex, Size textureSize)
-        {
-            var textureWidth = (double)textureSize.Width;
-            var textureHeight = (double)textureSize.Height;
-            var mesh = new MeshGeometry3D();
-
-            // Triangles
-            {
-                var objTriangles = md1.Objects[partIndex * 2];
-                var dataTriangles = md1.GetTriangles(objTriangles);
-                var dataTriangleTextures = md1.GetTriangleTextures(objTriangles);
-                var dataPositions = md1.GetPositionData(objTriangles);
-                var dataNormals = md1.GetNormalData(objTriangles);
-                for (var i = 0; i < dataTriangles.Length; i++)
-                {
-                    var triangle = dataTriangles[i];
-                    var texture = dataTriangleTextures[i];
-
-                    mesh.Positions.Add(dataPositions[triangle.v0].ToPoint3D());
-                    mesh.Positions.Add(dataPositions[triangle.v1].ToPoint3D());
-                    mesh.Positions.Add(dataPositions[triangle.v2].ToPoint3D());
-
-                    mesh.Normals.Add(dataNormals[triangle.n0].ToVector3D());
-                    mesh.Normals.Add(dataNormals[triangle.n1].ToVector3D());
-                    mesh.Normals.Add(dataNormals[triangle.n2].ToVector3D());
-
-                    var page = texture.page & 0x0F;
-                    var offsetU = page * 128;
-                    mesh.TextureCoordinates.Add(new Point((offsetU + texture.u0) / textureWidth, (texture.v0 / textureHeight)));
-                    mesh.TextureCoordinates.Add(new Point((offsetU + texture.u1) / textureWidth, (texture.v1 / textureHeight)));
-                    mesh.TextureCoordinates.Add(new Point((offsetU + texture.u2) / textureWidth, (texture.v2 / textureHeight)));
-                }
-            }
-
-            // Quads
-            {
-                var objQuads = md1.Objects[(partIndex * 2) + 1];
-                var dataQuads = md1.GetQuads(objQuads);
-                var dataPositions = md1.GetPositionData(objQuads);
-                var dataNormals = md1.GetNormalData(objQuads);
-                var dataQuadTextures = md1.GetQuadTextures(objQuads);
-                for (var i = 0; i < dataQuads.Length; i++)
-                {
-                    var quad = dataQuads[i];
-                    var texture = dataQuadTextures[i];
-                    mesh.Positions.Add(dataPositions[quad.v0].ToPoint3D());
-                    mesh.Positions.Add(dataPositions[quad.v1].ToPoint3D());
-                    mesh.Positions.Add(dataPositions[quad.v2].ToPoint3D());
-
-                    mesh.Normals.Add(dataNormals[quad.n0].ToVector3D());
-                    mesh.Normals.Add(dataNormals[quad.n1].ToVector3D());
-                    mesh.Normals.Add(dataNormals[quad.n2].ToVector3D());
-
-                    var page = texture.page & 0x0F;
-                    var offsetU = page * 128;
-                    mesh.TextureCoordinates.Add(new Point((offsetU + texture.u0) / textureWidth, (texture.v0 / textureHeight)));
-                    mesh.TextureCoordinates.Add(new Point((offsetU + texture.u1) / textureWidth, (texture.v1 / textureHeight)));
-                    mesh.TextureCoordinates.Add(new Point((offsetU + texture.u2) / textureWidth, (texture.v2 / textureHeight)));
-
-                    mesh.Positions.Add(dataPositions[quad.v3].ToPoint3D());
-                    mesh.Positions.Add(dataPositions[quad.v2].ToPoint3D());
-                    mesh.Positions.Add(dataPositions[quad.v1].ToPoint3D());
-                    mesh.Normals.Add(dataNormals[quad.n3].ToVector3D());
-                    mesh.Normals.Add(dataNormals[quad.n2].ToVector3D());
-                    mesh.Normals.Add(dataNormals[quad.n1].ToVector3D());
-                    mesh.TextureCoordinates.Add(new Point((offsetU + texture.u3) / textureWidth, (texture.v3 / textureHeight)));
-                    mesh.TextureCoordinates.Add(new Point((offsetU + texture.u2) / textureWidth, (texture.v2 / textureHeight)));
-                    mesh.TextureCoordinates.Add(new Point((offsetU + texture.u1) / textureWidth, (texture.v1 / textureHeight)));
-                }
-            }
-
-            return mesh;
-        }
-
-        private static MeshGeometry3D CreateMesh(Md2 md2, int partIndex, Size textureSize)
-        {
-            var textureWidth = (double)textureSize.Width;
-            var textureHeight = (double)textureSize.Height;
-            var mesh = new MeshGeometry3D();
-
-            var obj = md2.Objects[partIndex];
-            var dataPositions = md2.GetPositionData(obj);
-            var dataNormals = md2.GetNormalData(obj);
-
-            // Triangles
-            var dataTriangles = md2.GetTriangles(obj);
-            for (var i = 0; i < dataTriangles.Length; i++)
-            {
-                var triangle = dataTriangles[i];
-
-                mesh.Positions.Add(dataPositions[triangle.v0].ToPoint3D());
-                mesh.Positions.Add(dataPositions[triangle.v1].ToPoint3D());
-                mesh.Positions.Add(dataPositions[triangle.v2].ToPoint3D());
-
-                mesh.Normals.Add(dataNormals[triangle.v0].ToVector3D());
-                mesh.Normals.Add(dataNormals[triangle.v1].ToVector3D());
-                mesh.Normals.Add(dataNormals[triangle.v2].ToVector3D());
-
-                var page = triangle.page & 0x0F;
-                var offsetU = page * 128;
-                mesh.TextureCoordinates.Add(new Point((offsetU + triangle.tu0) / textureWidth, (triangle.tv0 / textureHeight)));
-                mesh.TextureCoordinates.Add(new Point((offsetU + triangle.tu1) / textureWidth, (triangle.tv1 / textureHeight)));
-                mesh.TextureCoordinates.Add(new Point((offsetU + triangle.tu2) / textureWidth, (triangle.tv2 / textureHeight)));
-            }
-
-            // Quads
-            var dataQuads = md2.GetQuads(obj);
-            for (var i = 0; i < dataQuads.Length; i++)
-            {
-                var quad = dataQuads[i];
-                mesh.Positions.Add(dataPositions[quad.v0].ToPoint3D());
-                mesh.Positions.Add(dataPositions[quad.v1].ToPoint3D());
-                mesh.Positions.Add(dataPositions[quad.v2].ToPoint3D());
-
-                mesh.Normals.Add(dataNormals[quad.v0].ToVector3D());
-                mesh.Normals.Add(dataNormals[quad.v1].ToVector3D());
-                mesh.Normals.Add(dataNormals[quad.v2].ToVector3D());
-
-                var page = quad.page & 0x0F;
-                var offsetU = page * 128;
-                mesh.TextureCoordinates.Add(new Point((offsetU + quad.tu0) / textureWidth, (quad.tv0 / textureHeight)));
-                mesh.TextureCoordinates.Add(new Point((offsetU + quad.tu1) / textureWidth, (quad.tv1 / textureHeight)));
-                mesh.TextureCoordinates.Add(new Point((offsetU + quad.tu2) / textureWidth, (quad.tv2 / textureHeight)));
-
-                mesh.Positions.Add(dataPositions[quad.v3].ToPoint3D());
-                mesh.Positions.Add(dataPositions[quad.v2].ToPoint3D());
-                mesh.Positions.Add(dataPositions[quad.v1].ToPoint3D());
-                mesh.Normals.Add(dataNormals[quad.v3].ToVector3D());
-                mesh.Normals.Add(dataNormals[quad.v2].ToVector3D());
-                mesh.Normals.Add(dataNormals[quad.v1].ToVector3D());
-                mesh.TextureCoordinates.Add(new Point((offsetU + quad.tu3) / textureWidth, (quad.tv3 / textureHeight)));
-                mesh.TextureCoordinates.Add(new Point((offsetU + quad.tu2) / textureWidth, (quad.tv2 / textureHeight)));
-                mesh.TextureCoordinates.Add(new Point((offsetU + quad.tu1) / textureWidth, (quad.tv1 / textureHeight)));
-            }
-
-            return mesh;
         }
 
         private class MeshGeometry3DMeshVisitor : MeshVisitor

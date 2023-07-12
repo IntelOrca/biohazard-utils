@@ -114,6 +114,9 @@ namespace IntelOrca.Biohazard.Model
         {
             get
             {
+                if (KeyFrameSize == 0)
+                    return new KeyFrame[0];
+
                 var offset = KeyFrameOffset;
                 var count = (Data.Length - offset) / KeyFrameSize;
                 var result = new KeyFrame[count];

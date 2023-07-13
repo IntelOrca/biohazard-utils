@@ -956,7 +956,7 @@ namespace IntelOrca.Biohazard.Script
         }
 
         [DebuggerDisplay("{Kind} | {Text}")]
-        private struct Token
+        private readonly struct Token
         {
             private readonly string _content;
             private readonly int _offset;
@@ -1028,7 +1028,7 @@ namespace IntelOrca.Biohazard.Script
         }
 
         [DebuggerDisplay("{Path}({Line},{Column}): error {ErrorCodeString}: {Message}")]
-        public struct Error
+        public readonly struct Error
         {
             public string Path { get; }
             public int Line { get; }

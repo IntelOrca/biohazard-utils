@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Drawing.Printing;
 using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Text;
 using IntelOrca.Biohazard;
 using IntelOrca.Biohazard.Script;
 
@@ -123,7 +120,7 @@ namespace IntelOrca.Scd
                     var rdtFile = new RdtFile(rdtPath);
                     if (paths.Length >= 2)
                     {
-                        var inPath = paths[1];
+                        var inPath = Path.GetFullPath(paths[1]);
                         if (inPath.EndsWith(".scd", StringComparison.OrdinalIgnoreCase))
                         {
 
@@ -132,7 +129,7 @@ namespace IntelOrca.Scd
                         {
                             var s = File.ReadAllText(inPath);
                             var scdAssembler = new ScdAssembler();
-                            var result = scdAssembler.Assemble(rdtPath, s);
+                            var result = scdAssembler.Assemble(inPath, s);
                             if (result == 0)
                             {
                                 if (scdAssembler.OutputInit.Length != 0)

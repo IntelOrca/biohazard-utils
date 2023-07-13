@@ -227,6 +227,33 @@ namespace IntelOrca.Biohazard.Extensions
             }
         }
 
+        public static IModelMeshBuilderPart InsertDummyPoints(this IModelMeshBuilderPart part, int count)
+        {
+            // Open the PLD and insert n empty positions at the start of the mesh
+            // this prevents the game from morphing any visible primitives
+            var skipPositionCount = (ushort)count;
+            var md1Part = (Md1.Builder.Part)part;
+            md1Part.Positions.InsertRange(0, new Md1.Vector[skipPositionCount]);
+            for (var i = 0; i < md1Part.Triangles.Count; i++)
+            {
+                var t = md1Part.Triangles[i];
+                t.v0 += skipPositionCount;
+                t.v1 += skipPositionCount;
+                t.v2 += skipPositionCount;
+                md1Part.Triangles[i] = t;
+            }
+            for (var i = 0; i < md1Part.Quads.Count; i++)
+            {
+                var t = md1Part.Quads[i];
+                t.v0 += skipPositionCount;
+                t.v1 += skipPositionCount;
+                t.v2 += skipPositionCount;
+                t.v3 += skipPositionCount;
+                md1Part.Quads[i] = t;
+            }
+            return part;
+        }
+
         public class PrimitiveTexture
         {
             public int PartIndex { get; set; }

@@ -251,7 +251,7 @@ namespace IntelOrca.Biohazard.Script
                 case 'p':
                     return $"init_{value:X2}";
                 case 'v':
-                    return $"var_{value:X2}";
+                    return GetNamedVariable(value);
             }
             return null;
         }
@@ -344,6 +344,11 @@ namespace IntelOrca.Biohazard.Script
             if (obj == 1 && index == 28)
                 return "game.cutscene";
             return null;
+        }
+
+        public string? GetNamedVariable(int value)
+        {
+            return $"var_{value:X2}";
         }
 
         private string[] g_enemyNames = new string[]

@@ -34,7 +34,16 @@ namespace IntelOrca.Biohazard.Script
         {
             using (var br = reader.Fork())
             {
-                if (opcode == (byte)OpcodeV2.AotReset)
+                if (opcode == (byte)OpcodeV2.Ck)
+                {
+                    if (pIndex == 1)
+                    {
+                        var F = br.ReadByte();
+                        var f = br.ReadByte();
+                        return GetFlagName(F, f);
+                    }
+                }
+                else if (opcode == (byte)OpcodeV2.AotReset)
                 {
                     if (pIndex == 5)
                     {
@@ -163,17 +172,11 @@ namespace IntelOrca.Biohazard.Script
                     else
                         return GetItemName((byte)value);
                 case 'c':
-                    if (value < g_comparators.Length)
-                        return g_comparators[value];
-                    break;
+                    return GetConstantName(g_comparators, value);
                 case 'o':
-                    if (value < g_operators.Length)
-                        return g_operators[value];
-                    break;
+                    return GetConstantName(g_operators, value);
                 case 's':
-                    if (value < g_sceNames.Length)
-                        return g_sceNames[value];
-                    break;
+                    return GetConstantName(g_sceNames, value);
                 case 'a':
                     if (value == 0)
                         return "SAT_AUTO";
@@ -194,16 +197,25 @@ namespace IntelOrca.Biohazard.Script
                     sb.Remove(sb.Length - 3, 3);
                     return sb.ToString();
                 case 'w':
-                    if (value < g_workKinds.Length)
-                        return g_workKinds[value];
-                    break;
+                    return GetConstantName(g_workKinds, value);
                 case 'g':
                     if (value == (byte)OpcodeV2.Gosub)
                         return "I_GOSUB";
                     break;
                 case 'p':
                     return $"main_{value:X2}";
+                case 'f':
+                    return GetConstantName(g_flagGroups, value);
+                case 'v':
+                    return GetNamedVariable(value);
             }
+            return null;
+        }
+
+        private string? GetConstantName(string?[] table, int value)
+        {
+            if (value >= 0 && value < table.Length)
+                return table[value];
             return null;
         }
 
@@ -277,22 +289,74 @@ namespace IntelOrca.Biohazard.Script
             return false;
         }
 
-        public string? GetNamedFlag(int obj, int index)
+        public string? GetNamedFlag(int group, int index)
         {
-            if (obj == 0 && index == 0x19)
-                return "game.difficult";
-            if (obj == 1 && index == 0)
-                return "game.player";
-            if (obj == 1 && index == 1)
-                return "game.scenario";
-            if (obj == 1 && index == 6)
-                return "game.bonus";
-            if (obj == 1 && index == 0x1B)
-                return "game.cutscene";
-            if (obj == 0xB && index == 0x1F)
-                return "input.question";
-            return null;
+            var groupName = GetConstant('F', group);
+            var flagName = GetFlagName(group, index);
+            flagName ??= index.ToString();
+            return $"${groupName}.{flagName})";
         }
+
+        private static string? GetFlagName(int group, int index)
+        {
+            return group switch
+            {
+                0 when index == 0x19 => "F_DIFFICULT",
+                1 when index == 0 => "F_PLAYER",
+                1 when index == 1 => "F_SCENARIO",
+                1 when index == 6 => "F_BONUS",
+                1 when index == 0x1B => "F_CUTSCENE",
+                0xB when index == 0x1F => "F_QUESTION",
+                _ => null
+            };
+        }
+
+        public string? GetNamedVariable(int index)
+        {
+            return index switch
+            {
+                2 => "V_USED_ITEM",
+                16 => "V_TEMP",
+                26 => "V_CUT",
+                27 => "V_LAST_RDT",
+                _ => $"var_{index:X2}",
+            };
+        }
+
+        private static string?[] g_flagGroups = new[]
+        {
+            "FG_0",
+            "FG_GAME",
+            "FG_STATE",
+            "FG_3",
+            "FG_GENERAL_1",
+            "FG_GENERAL_2",
+            "FG_ENEMY",
+            "FG_7",
+            "FG_ITEM",
+            "FG_9",
+            "FG_A",
+            "FG_INPUT",
+            null,
+            null,
+            null,
+            null,
+
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            "FG_LOCK"
+        };
 
         private static int[] g_instructionSizes = new int[]
         {
@@ -533,7 +597,7 @@ namespace IntelOrca.Biohazard.Script
             "default",
             "eswitch",
             "goto:uuu~",
-            "gosub",
+            "gosub:p",
             "return",
             "break",
             "for2",
@@ -543,11 +607,11 @@ namespace IntelOrca.Biohazard.Script
             "nop_1F",
 
             "nop_20",
-            "ck",
-            "set",
+            "ck:fuu",
+            "set:fuu",
             "cmp:uucI",
             "save:uI",
-            "copy",
+            "copy:vv",
             "calc:uouI",
             "calc2:ouu",
             "sce_rnd",
@@ -564,7 +628,7 @@ namespace IntelOrca.Biohazard.Script
             "pos_set:uIII",
             "dir_set:uIII",
             "member_set",
-            "member_set2",
+            "member_set2:uv",
             "se_on:uIIIII",
             "sca_id_set",
             "flr_set",
@@ -572,7 +636,7 @@ namespace IntelOrca.Biohazard.Script
             "sce_espr_on:uUUUIIII",
             "door_aot_se:usauuIIIIIIIIuuuuuuuutu",
             "cut_auto",
-            "member_copy",
+            "member_copy:vu",
             "member_cmp",
             "plc_motion",
 

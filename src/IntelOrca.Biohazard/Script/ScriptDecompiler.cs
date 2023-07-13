@@ -383,7 +383,7 @@ namespace IntelOrca.Biohazard.Script
                 {
                     br.ReadByte();
                     var blockLen = br.ReadUInt16();
-                    _blockEnds.Push(((byte)opcode, offset + blockLen));
+                    _blockEnds.Push(((byte)opcode, offset + blockLen - 2));
                     sb.WriteLine($"do");
                     _sb.OpenBlock();
                     break;
@@ -457,46 +457,45 @@ namespace IntelOrca.Biohazard.Script
                         var ops = new[] { "==", ">", ">=", "<", "<=", "!=" };
                         var opS = ops.Length > op ? ops[op] : "?";
                         if (index == 27)
-                            sb.Write($"game.last_room {opS} 0x{value:X3}");
+                            sb.Write($"{GetVariableName(index)} {opS} 0x{value:X3}");
                         else
-                            sb.Write($"arr[{index}] {opS} {value}");
+                            sb.Write($"{GetVariableName(index)} {opS} {value}");
                         _expressionCount++;
                     }
                     break;
                 }
-                case OpcodeV2.Ck:
-                {
-                    var bitArray = br.ReadByte();
-                    var number = br.ReadByte();
-                    var value = br.ReadByte();
-                    var bitString = GetBitsString(bitArray, number);
-                    if (_constructingBinaryExpression)
-                    {
-                        if (_expressionCount != 0)
-                        {
-                            sb.Write(" && ");
-                        }
-                        sb.Write($"{GetBitsString(bitArray, number)} == {value}");
-                        _expressionCount++;
-                    }
-                    break;
-                }
-                case OpcodeV2.Set:
-                {
-                    var bitArray = br.ReadByte();
-                    var number = br.ReadByte();
-                    var opChg = br.ReadByte();
-                    sb.Write(GetBitsString(bitArray, number));
-                    if (opChg == 0)
-                        sb.WriteLine(" = 0;");
-                    else if (opChg == 1)
-                        sb.WriteLine(" = 1;");
-                    else if (opChg == 7)
-                        sb.WriteLine(" ^= 1;");
-                    else
-                        sb.WriteLine(" (INVALID);");
-                    break;
-                }
+                // case OpcodeV2.Ck:
+                // {
+                //     var bitArray = br.ReadByte();
+                //     var number = br.ReadByte();
+                //     var value = br.ReadByte();
+                //     if (_constructingBinaryExpression)
+                //     {
+                //         if (_expressionCount != 0)
+                //         {
+                //             sb.Write(" && ");
+                //         }
+                //         sb.Write($"{GetBitsString(bitArray, number)} == {value}");
+                //         _expressionCount++;
+                //     }
+                //     break;
+                // }
+                // case OpcodeV2.Set:
+                // {
+                //     var bitArray = br.ReadByte();
+                //     var number = br.ReadByte();
+                //     var opChg = br.ReadByte();
+                //     sb.Write(GetBitsString(bitArray, number));
+                //     if (opChg == 0)
+                //         sb.WriteLine(" = 0;");
+                //     else if (opChg == 1)
+                //         sb.WriteLine(" = 1;");
+                //     else if (opChg == 7)
+                //         sb.WriteLine(" ^= 1;");
+                //     else
+                //         sb.WriteLine(" (INVALID);");
+                //     break;
+                // }
                 case OpcodeV2.Calc:
                 {
                     br.ReadByte();
@@ -689,7 +688,7 @@ namespace IntelOrca.Biohazard.Script
                         if (index == 27)
                             sb.Write($"game.last_room {opS} 0x{value:X3}");
                         else
-                            sb.Write($"arr[{index}] {opS} {value}");
+                            sb.Write($"{GetVariableName(index)} {opS} {value}");
                         _expressionCount++;
                     }
                     break;
@@ -908,9 +907,12 @@ namespace IntelOrca.Biohazard.Script
             }
         }
 
-        private static string GetVariableName(int id)
+        private string GetVariableName(int id)
         {
-            return $"var_{id:X2}";
+            var name = _constantTable.GetNamedVariable(id);
+            if (name != null)
+                return name;
+            return $"var[{id}]";
         }
 
         private static string GetBitsString(int obj, int bitArray, int number)

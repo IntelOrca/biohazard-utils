@@ -14,5 +14,6 @@ namespace IntelOrca.Biohazard.Script
         bool IsOpcodeCondition(byte opcode);
         byte? FindOpcode(string name);
         string? GetNamedFlag(int obj, int index);
+        string? GetNamedVariable(int index);
     }
 }

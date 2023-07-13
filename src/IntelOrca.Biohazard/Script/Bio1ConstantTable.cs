@@ -147,6 +147,11 @@ namespace IntelOrca.Biohazard.Script
             return null;
         }
 
+        public string? GetNamedVariable(int index)
+        {
+            return null;
+        }
+
         private string[] g_enemyNames = new string[]
         {
             "Zombie (Groundskeeper)",

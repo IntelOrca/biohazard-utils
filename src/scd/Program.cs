@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using IntelOrca.Biohazard;
 using IntelOrca.Biohazard.Script;
+using IntelOrca.Biohazard.Script.Compilation;
 
 namespace IntelOrca.Scd
 {

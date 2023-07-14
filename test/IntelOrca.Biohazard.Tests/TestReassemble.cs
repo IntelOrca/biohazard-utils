@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using IntelOrca.Biohazard.Script;
+using IntelOrca.Biohazard.Script.Compilation;
 using Xunit;
 using Xunit.Abstractions;
 

@@ -258,6 +258,17 @@ namespace IntelOrca.Biohazard.Script
                 return FindConstantValue(symbol, 'a');
             else if (symbol.StartsWith("WK_"))
                 return FindConstantValue(symbol, 'w');
+            else if (symbol.StartsWith("FG_"))
+                return FindConstantValue(symbol, 'f');
+            else if (symbol.StartsWith("F_"))
+            {
+                for (var i = 0; i < 32; i++)
+                    for (var j = 0; j < 256; j++)
+                        if (GetFlagName(i, j) == symbol)
+                            return j;
+            }
+            else if (symbol.StartsWith("V_"))
+                return FindConstantValue(symbol, 'v');
 
             return null;
         }
@@ -319,7 +330,7 @@ namespace IntelOrca.Biohazard.Script
                 16 => "V_TEMP",
                 26 => "V_CUT",
                 27 => "V_LAST_RDT",
-                _ => $"var_{index:X2}",
+                _ => $"V_{index:X2}",
             };
         }
 

@@ -1,9 +1,4 @@
-﻿using System;
-using System.Buffers.Binary;
-using System.IO;
-using IntelOrca.Biohazard.Script.Opcodes;
-
-namespace IntelOrca.Biohazard.Script.Compilation
+﻿namespace IntelOrca.Biohazard.Script.Compilation
 {
     public partial class ScdCompiler
     {
@@ -22,15 +17,12 @@ namespace IntelOrca.Biohazard.Script.Compilation
             var syntaxTree = parser.BuildSyntaxTree(tokens);
 
             var generator = new Generator(Errors);
-            var ast = generator.Generate(syntaxTree);
+            var result = generator.Generate(syntaxTree);
+            if (result != 0)
+                return result;
 
-            // var processor = new AstProcessor();
-            // ast.Visit(processor);
-            // 
-            // var serializer = new AstSerializer();
-            // ast.Visit(serializer);
-            // var scd = serializer.GetBytes();
-            // OutputInit = scd;
+            OutputInit = generator.OutputInit;
+            OutputMain = generator.OutputMain;
             return 0;
         }
 
@@ -42,52 +34,6 @@ namespace IntelOrca.Biohazard.Script.Compilation
         private void EmitWarning(in Token token, int code, params object[] args)
         {
             Errors.AddWarning(token.Path, token.Line, token.Column, code, string.Format(ErrorCodes.GetMessage(code), args));
-        }
-
-        private class AstProcessor : ScriptAstVisitor
-        {
-            private int _offset;
-
-            public override void VisitIf(IfAstNode node)
-            {
-            }
-
-            public override void VisitEndIf(IfAstNode node)
-            {
-                var ifOpcode = node.If?.Opcode;
-                if (ifOpcode is UnknownOpcode op)
-                {
-                    var blockLenSpan = new Span<byte>(op.Data).Slice(1, 2);
-                    var blockLen = (ushort)(_offset - ifOpcode.Offset);
-                    if (node.EndIf != null)
-                        _offset += 2;
-                    BinaryPrimitives.WriteUInt16LittleEndian(blockLenSpan, blockLen);
-                }
-            }
-
-            public override void VisitOpcode(OpcodeAstNode node)
-            {
-                node.Opcode.Offset = _offset;
-                _offset += node.Opcode.Length;
-            }
-        }
-
-        private class AstSerializer : ScriptAstVisitor
-        {
-            private readonly MemoryStream _ms = new MemoryStream();
-            private readonly BinaryWriter _bw;
-
-            public AstSerializer()
-            {
-                _bw = new BinaryWriter(_ms);
-            }
-
-            public byte[] GetBytes() => _ms.ToArray();
-
-            public override void VisitOpcode(OpcodeAstNode node)
-            {
-                node.Opcode.Write(_bw);
-            }
         }
     }
 }

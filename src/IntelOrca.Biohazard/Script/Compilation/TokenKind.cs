@@ -22,6 +22,8 @@
         OpenParen,
         CloseParen,
         Proc,
+        If,
+        Else,
 
         EOF
     }

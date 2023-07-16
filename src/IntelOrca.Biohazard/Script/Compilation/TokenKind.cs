@@ -25,6 +25,7 @@
         Fork,
         If,
         Else,
+        While,
 
         EOF
     }

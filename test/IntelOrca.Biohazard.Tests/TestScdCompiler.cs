@@ -1,5 +1,4 @@
-﻿using System.IO;
-using System.Linq;
+﻿using System.Linq;
 using IntelOrca.Biohazard.Script;
 using IntelOrca.Biohazard.Script.Compilation;
 using Xunit;
@@ -99,6 +98,23 @@ proc init
         }
 
         [Fact]
+        public void TestWhileStatement()
+        {
+            var expected = "02000F060A0023001A0504000200100001000400060001000100";
+            AssertScd(expected, @"
+#version 2
+
+proc init
+{
+    while (cmp(0, 26, CMP_NE, 4))
+    {
+        evt_next();
+    }
+}
+");
+        }
+
+        [Fact]
         public void TestFork()
         {
             var expected = "0200010006000C000E0004FF180201000100090A1E000100";
@@ -134,13 +150,6 @@ proc wait_for_mr_x
     sleep(10, 30);
 }
 ");
-        }
-
-        [Fact]
-        public void TestMisc()
-        {
-            var expected = "020006000C00210104002201040107000800090A3200010002000100";
-            AssertScd(expected, File.ReadAllText(@"M:\git\re2mod-ada-sherry\scripts\200.bio"));
         }
 
         private void AssertCompile(string script)

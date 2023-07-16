@@ -28,6 +28,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     _ when Parse("fork") => CreateToken(TokenKind.Fork),
                     _ when Parse("if") => CreateToken(TokenKind.If),
                     _ when Parse("else") => CreateToken(TokenKind.Else),
+                    _ when Parse("while") => CreateToken(TokenKind.While),
                     _ when Parse('{') => CreateToken(TokenKind.OpenBlock),
                     _ when Parse('}') => CreateToken(TokenKind.CloseBlock),
                     _ when Parse('(') => CreateToken(TokenKind.OpenParen),

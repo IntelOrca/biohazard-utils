@@ -22,6 +22,7 @@
         OpenParen,
         CloseParen,
         Proc,
+        Fork,
         If,
         Else,
 

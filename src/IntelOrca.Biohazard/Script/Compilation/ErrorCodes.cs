@@ -30,6 +30,8 @@
         public const int ExpectedOperand = 26;
         public const int InvalidOperand = 27;
         public const int ExpectedCondition = 28;
+        public const int InvalidExpression = 29;
+        public const int UnknownProcedure = 30;
 
         public static string GetMessage(int code) => _messages[code];
 
@@ -56,14 +58,16 @@
                 "'{0}' is not a valid directive.",
                 "Expected operator.",
                 "The name '{0}' has already been defined as a procedure.",
-                "{ expected",
-                "} expected",
+                "{{ expected",
+                "}} expected",
                 "( expected",
                 ") expected",
                 "; expected",
                 "Operand expected",
                 "Invalid operand",
                 "Expected condition",
+                "Invalid expression",
+                "'{0}' has not been defined as a procedure.",
         };
     }
 }

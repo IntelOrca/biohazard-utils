@@ -46,7 +46,9 @@ namespace IntelOrca.Biohazard.Script.Compilation
 
             private static bool IsTrivialToken(TokenKind kind)
             {
-                return kind == TokenKind.NewLine || kind == TokenKind.Whitespace;
+                return kind == TokenKind.NewLine ||
+                    kind == TokenKind.Whitespace ||
+                    kind == TokenKind.Comment;
             }
 
             private ref readonly Token PeekToken()
@@ -138,6 +140,10 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 if (node != null)
                     return node;
 
+                node = ParseForkStatement();
+                if (node != null)
+                    return node;
+
                 node = ParseOpcode();
                 if (node != null)
                 {
@@ -146,6 +152,22 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 }
 
                 return null;
+            }
+
+            private ForkSyntaxNode? ParseForkStatement()
+            {
+                if (!ParseToken(TokenKind.Fork))
+                    return null;
+
+                ref readonly var token = ref PeekToken();
+                if (token.Kind != TokenKind.Symbol)
+                {
+                    EmitError(in token, ErrorCodes.ExpectedProcedureName);
+                    return null;
+                }
+
+                ReadToken();
+                return new ForkSyntaxNode(token);
             }
 
             private IfSyntaxNode? ParseIfStatement()
@@ -194,15 +216,12 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 while (true)
                 {
                     var operand = ParseOperand();
-                    if (operand == null)
+                    if (operand != null)
                     {
-                        EmitError(in LastToken, ErrorCodes.ExpectedOperand);
-                        SkipOpcode();
-                        break;
+                        operands.Add(operand);
+                        if (ParseToken(TokenKind.Comma))
+                            continue;
                     }
-                    operands.Add(operand);
-                    if (ParseToken(TokenKind.Comma))
-                        continue;
                     if (ParseToken(TokenKind.CloseParen))
                         break;
                     EmitError(in LastToken, ErrorCodes.ExpectedComma);
@@ -221,9 +240,40 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 {
                     return null;
                 }
+                return ParseExpression();
+            }
+
+            private ExpressionSyntaxNode? ParseExpression()
+            {
+                ref readonly var token = ref PeekToken();
+                if (token.Kind != TokenKind.Symbol &&
+                    token.Kind != TokenKind.Number)
+                {
+                    EmitError(in token, ErrorCodes.InvalidExpression);
+                    return null;
+                }
 
                 token = ref ReadToken();
-                return new LiteralSyntaxNode(token);
+
+                ref readonly var nextToken = ref PeekToken();
+                if (nextToken.Kind == TokenKind.BitwiseOr)
+                {
+                    ReadToken();
+                    var rhs = ParseExpression();
+                    if (rhs == null)
+                        return null;
+
+                    var kind = nextToken.Kind switch
+                    {
+                        TokenKind.BitwiseOr => ExpressionKind.BitwiseOr,
+                        _ => throw new NotSupportedException()
+                    };
+                    return new BinaryExpressionSyntaxNode(kind, new LiteralSyntaxNode(token), rhs);
+                }
+                else
+                {
+                    return new LiteralSyntaxNode(token);
+                }
             }
 
             private void SkipOpcode()
@@ -245,6 +295,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     {
                         return;
                     }
+                    ReadToken();
                 }
             }
 
@@ -349,6 +400,16 @@ namespace IntelOrca.Biohazard.Script.Compilation
             public override IEnumerable<SyntaxNode> Children => Statements;
         }
 
+        private class ForkSyntaxNode : SyntaxNode
+        {
+            public Token ProcedureToken { get; }
+
+            public ForkSyntaxNode(Token procedureToken)
+            {
+                ProcedureToken = procedureToken;
+            }
+        }
+
         private class IfSyntaxNode : SyntaxNode
         {
             public SyntaxNode[] Conditions { get; }
@@ -390,14 +451,40 @@ namespace IntelOrca.Biohazard.Script.Compilation
             public override IEnumerable<SyntaxNode> Children => Operands;
         }
 
-        private class LiteralSyntaxNode : SyntaxNode
+        private abstract class ExpressionSyntaxNode : SyntaxNode
         {
+            public abstract ExpressionKind Kind { get; }
+        }
+
+        private class BinaryExpressionSyntaxNode : ExpressionSyntaxNode
+        {
+            public override ExpressionKind Kind { get; }
+            public ExpressionSyntaxNode Left { get; }
+            public ExpressionSyntaxNode Right { get; }
+
+            public BinaryExpressionSyntaxNode(ExpressionKind kind, ExpressionSyntaxNode left, ExpressionSyntaxNode right)
+            {
+                Kind = kind;
+                Left = left;
+                Right = right;
+            }
+        }
+
+        private class LiteralSyntaxNode : ExpressionSyntaxNode
+        {
+            public override ExpressionKind Kind => ExpressionKind.Literal;
             public Token LiteralToken { get; }
 
             public LiteralSyntaxNode(Token literalToken)
             {
                 LiteralToken = literalToken;
             }
+        }
+
+        public enum ExpressionKind
+        {
+            Literal,
+            BitwiseOr,
         }
     }
 }

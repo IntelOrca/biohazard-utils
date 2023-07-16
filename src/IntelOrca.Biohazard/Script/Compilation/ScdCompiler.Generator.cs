@@ -28,41 +28,92 @@ namespace IntelOrca.Biohazard.Script.Compilation
             public int Generate(SyntaxTree tree)
             {
                 Visit(tree.Root);
+                CheckProcedureReferences();
                 if (_errors.Count != 0)
                 {
                     return 1;
                 }
 
-                var initProc = _procedures.FindIndex(x => x.Name == "init");
-                var mainProc = _procedures.FindIndex(x => x.Name == "main");
-                OutputInit = Generate(initProc);
-                OutputMain = Generate(mainProc);
+                OutputInit = GenerateScd("init");
+                OutputMain = GenerateScd("main", "aot");
                 return 0;
             }
 
-            private byte[] Generate(int startProc)
+            private void CheckProcedureReferences()
             {
-                if (startProc == -1)
+                var procedureNames = new HashSet<string>(_procedures.Select(x => x.Name));
+                foreach (var proc in _procedures)
                 {
-                    // Empty script
-                    return new byte[] { 0x02, 0x00, (byte)OpcodeV2.EvtEnd, 0x00 };
+                    var procRefs = proc.ProcedureReferences;
+                    foreach (var procRef in procRefs)
+                    {
+                        if (!procedureNames.Contains(procRef.Name))
+                        {
+                            EmitError(procRef.Token, ErrorCodes.ProcedureNameAlreadyDefined, procRef.Name);
+                        }
+                    }
+                }
+            }
+
+            private byte[] GenerateScd(params string[] startProcs)
+            {
+                // Make sure order is correct and create empty procedures for missing required ones
+                var procedures = _procedures.ToList();
+                foreach (var procName in startProcs.Reverse())
+                {
+                    var index = procedures.FindIndex(x => x.Name == procName);
+                    if (index == -1)
+                    {
+                        var proc = new ProcedureBuilder(procName);
+                        proc.Write((byte)OpcodeV2.EvtEnd);
+                        proc.Write((byte)0x00);
+                        procedures.Insert(0, proc);
+                    }
+                    else
+                    {
+                        var proc = procedures[index];
+                        procedures.RemoveAt(index);
+                        procedures.Insert(0, proc);
+                    }
                 }
 
-                var procedures = _procedures.ToList();
-                var proc = procedures[startProc];
-                procedures.RemoveAt(startProc);
-                procedures.Insert(0, proc);
+                // Removed unreferenced procedures
+                var referencedProcedures = new HashSet<ProcedureBuilder>();
+                var searchStack = new Stack<ProcedureBuilder>();
+                for (var i = 0; i < startProcs.Length; i++)
+                {
+                    referencedProcedures.Add(procedures[i]);
+                    searchStack.Push(procedures[i]);
+                }
+                while (searchStack.Count != 0)
+                {
+                    var proc = searchStack.Pop();
+                    foreach (var procRef in proc.ProcedureReferences)
+                    {
+                        var targetProc = _procedures.First(x => x.Name == procRef.Name);
+                        if (referencedProcedures.Add(targetProc))
+                        {
+                            searchStack.Push(targetProc);
+                        }
+                    }
+                }
+                procedures.RemoveAll(x => !referencedProcedures.Contains(x));
+
+                foreach (var proc in procedures)
+                {
+                    proc.FixProceduresReferences(procedures.Select(x => x.Name).ToArray());
+                }
 
                 var ms = new MemoryStream();
                 var bw = new BinaryWriter(ms);
-                ms.Position += _procedures.Count * 2;
-                for (var i = 0; i < _procedures.Count; i++)
+                ms.Position += procedures.Count * 2;
+                for (var i = 0; i < procedures.Count; i++)
                 {
                     var backupPosition = ms.Position;
                     ms.Position = i * 2;
                     bw.Write((ushort)backupPosition);
                     ms.Position = backupPosition;
-                    bw.Write(_procedures[i].ToArray());
+                    bw.Write(procedures[i].ToArray());
                 }
                 return ms.ToArray();
             }
@@ -84,6 +135,9 @@ namespace IntelOrca.Biohazard.Script.Compilation
                         break;
                     case ProcedureSyntaxNode procedureNode:
                         VisitProcedureNode(procedureNode);
+                        break;
+                    case ForkSyntaxNode forkNode:
+                        VisitForkNode(forkNode);
                         break;
                     case IfSyntaxNode ifNode:
                         VisitIfNode(ifNode);
@@ -139,6 +193,14 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 _procedures.Add(_currentProcedure);
             }
 
+            private void VisitForkNode(ForkSyntaxNode forkNode)
+            {
+                _currentProcedure.Write((byte)OpcodeV2.EvtExec);
+                _currentProcedure.Write((byte)0xFF);
+                _currentProcedure.Write((byte)0x18);
+                _currentProcedure.WriteProcedureRef(forkNode.ProcedureToken);
+            }
+
             private void VisitIfNode(IfSyntaxNode ifNode)
             {
                 _currentProcedure.Write((byte)OpcodeV2.IfelCk);
@@ -176,7 +238,15 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 var opcodeRaw = _constantTable.FindOpcode(opcodeNode.OpcodeToken.Text);
                 if (opcodeRaw == null)
                 {
-                    EmitError(opcodeNode.OpcodeToken, ErrorCodes.UnknownOpcode, opcodeNode.OpcodeToken.Text);
+                    if (opcodeNode.Operands.Length == 0)
+                    {
+                        _currentProcedure.Write((byte)OpcodeV2.Gosub);
+                        _currentProcedure.WriteProcedureRef(opcodeNode.OpcodeToken);
+                    }
+                    else
+                    {
+                        EmitError(opcodeNode.OpcodeToken, ErrorCodes.UnknownOpcode, opcodeNode.OpcodeToken.Text);
+                    }
                     return;
                 }
 
@@ -222,7 +292,22 @@ namespace IntelOrca.Biohazard.Script.Compilation
 
             private int ProcessOperand(SyntaxNode node)
             {
-                if (node is LiteralSyntaxNode literalNode)
+                return ProcessExpression((ExpressionSyntaxNode)node);
+            }
+
+            private int ProcessExpression(ExpressionSyntaxNode node)
+            {
+                if (node is BinaryExpressionSyntaxNode binaryNode)
+                {
+                    var lhs = ProcessExpression(binaryNode.Left);
+                    var rhs = ProcessExpression(binaryNode.Right);
+                    return node.Kind switch
+                    {
+                        ExpressionKind.BitwiseOr => lhs | rhs,
+                        _ => throw new NotSupportedException()
+                    };
+                }
+                else if (node is LiteralSyntaxNode literalNode)
                 {
                     var token = literalNode.LiteralToken;
                     if (token.Kind == TokenKind.Number)
@@ -231,7 +316,13 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     }
                     else if (token.Kind == TokenKind.Symbol)
                     {
-
+                        var value = _constantTable.GetConstantValue(token.Text);
+                        if (value == null)
+                        {
+                            value = 0;
+                            EmitError(in token, ErrorCodes.UnknownSymbol, token.Text);
+                        }
+                        return value.Value;
                     }
                     else
                     {
@@ -259,6 +350,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
             }
         }
 
+        [DebuggerDisplay("Name = {Name}")]
         private class ProcedureBuilder
         {
             private readonly MemoryStream _ms = new MemoryStream();
@@ -266,9 +358,11 @@ namespace IntelOrca.Biohazard.Script.Compilation
             private readonly List<Label> _labels = new List<Label>();
             private readonly List<LabelReference> _labelReferences = new List<LabelReference>();
             private readonly List<int> _labelOffsets = new List<int>();
+            private readonly List<ProcedureReference> _procedureReferences = new List<ProcedureReference>();
 
             public string Name { get; }
             public int Offset => (int)_ms.Position;
+            public List<ProcedureReference> ProcedureReferences => _procedureReferences;
 
             public ProcedureBuilder(string name)
             {
@@ -292,9 +386,10 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 return label;
             }
 
-            public void WriteProcedureRef(string name)
+            public void WriteProcedureRef(in Token token)
             {
-
+                _procedureReferences.Add(new ProcedureReference(token, Offset));
+                Write((byte)0);
             }
 
             public void FixLabels()
@@ -310,6 +405,18 @@ namespace IntelOrca.Biohazard.Script.Compilation
                         Write((short)value);
                     else
                         throw new NotSupportedException();
+                }
+            }
+
+            public void FixProceduresReferences(string[] procedureNames)
+            {
+                foreach (var reference in _procedureReferences)
+                {
+                    _ms.Position = reference.WriteOffset;
+                    var index = Array.IndexOf(procedureNames, reference.Name);
+                    if (index == -1)
+                        throw new InvalidOperationException();
+                    Write((byte)index);
                 }
             }
 
@@ -344,6 +451,20 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 WriteOffset = writeOffset;
                 WriteLength = writeLength;
                 BaseAddress = baseAddress;
+            }
+        }
+
+        [DebuggerDisplay("Name = {Name} WriteOffset = {WriteOffset}")]
+        private readonly struct ProcedureReference
+        {
+            public string Name => Token.Text;
+            public int WriteOffset { get; }
+            public Token Token { get; }
+
+            public ProcedureReference(Token token, int writeOffset)
+            {
+                Token = token;
+                WriteOffset = writeOffset;
             }
         }
     }

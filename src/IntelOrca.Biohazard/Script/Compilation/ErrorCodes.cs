@@ -22,6 +22,12 @@
         public const int UnknownDirective = 18;
         public const int ExpectedOperator = 19;
         public const int ProcedureNameAlreadyDefined = 20;
+        public const int ExpectedOpenBlock = 21;
+        public const int ExpectedCloseBlock = 22;
+        public const int ExpectedOpenParen = 23;
+        public const int ExpectedCloseParen = 24;
+        public const int ExpectedSemicolon = 25;
+        public const int ExpectedOperand = 26;
 
         public static string GetMessage(int code) => _messages[code];
 
@@ -48,6 +54,12 @@
                 "'{0}' is not a valid directive.",
                 "Expected operator.",
                 "The name '{0}' has already been defined as a procedure.",
+                "{ expected",
+                "} expected",
+                "( expected",
+                ") expected",
+                "; expected",
+                "Operand expected",
         };
     }
 }

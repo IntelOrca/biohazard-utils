@@ -18,34 +18,30 @@ namespace IntelOrca.Biohazard.Script.Compilation
             if (Errors.Count != 0)
                 return 1;
 
-            var ast = BuildAst();
+            var parser = new Parser(Errors);
+            var syntaxTree = parser.BuildSyntaxTree(tokens);
 
-            var processor = new AstProcessor();
-            ast.Visit(processor);
+            var generator = new Generator(Errors);
+            var ast = generator.Generate(syntaxTree);
 
-            var serializer = new AstSerializer();
-            ast.Visit(serializer);
-            var scd = serializer.GetBytes();
-            OutputInit = scd;
+            // var processor = new AstProcessor();
+            // ast.Visit(processor);
+            // 
+            // var serializer = new AstSerializer();
+            // ast.Visit(serializer);
+            // var scd = serializer.GetBytes();
+            // OutputInit = scd;
             return 0;
         }
 
-        private ScriptAst BuildAst()
+        private void EmitError(in Token token, int code, params object[] args)
         {
-            var builder = new ScriptAstBuilder();
-            builder.VisitVersion(BioVersion.Biohazard2);
-            builder.VisitBeginScript(BioScriptKind.Init);
-            builder.VisitBeginSubroutine(0);
+            Errors.AddError(token.Path, token.Line, token.Column, code, string.Format(ErrorCodes.GetMessage(code), args));
+        }
 
-            builder.VisitOpcode(0, new byte[] { (byte)OpcodeV2.IfelCk, 0, 0, 0 });
-            builder.VisitOpcode(0, new byte[] { (byte)OpcodeV2.Ck, 1, 4, 1 });
-            builder.VisitOpcode(0, new byte[] { (byte)OpcodeV2.Sleep, 10, 50, 0 });
-            builder.VisitOpcode(0, new byte[] { (byte)OpcodeV2.EndIf, 0 });
-
-            builder.VisitEndSubroutine(0);
-            builder.VisitEndScript(BioScriptKind.Init);
-
-            return builder.Ast;
+        private void EmitWarning(in Token token, int code, params object[] args)
+        {
+            Errors.AddWarning(token.Path, token.Line, token.Column, code, string.Format(ErrorCodes.GetMessage(code), args));
         }
 
         private class AstProcessor : ScriptAstVisitor
@@ -91,88 +87,6 @@ namespace IntelOrca.Biohazard.Script.Compilation
             public override void VisitOpcode(OpcodeAstNode node)
             {
                 node.Opcode.Write(_bw);
-            }
-        }
-
-        private class Lexer : LexerBase
-        {
-            public Lexer(ErrorList errors)
-                : base(errors)
-            {
-            }
-
-            protected override void Begin()
-            {
-            }
-
-            protected override Token ParseToken()
-            {
-                return true switch
-                {
-                    _ when ParseNewLine() => CreateToken(TokenKind.NewLine),
-                    _ when ParseWhitespace() => CreateToken(TokenKind.Whitespace),
-                    _ when ParseComment() => CreateToken(TokenKind.Comment),
-                    _ when ParseDirective() => CreateToken(TokenKind.Directive),
-                    _ when ParseNumber() => CreateToken(TokenKind.Number),
-                    _ when Parse("proc") => CreateToken(TokenKind.Proc),
-                    _ when Parse('{') => CreateToken(TokenKind.OpenBlock),
-                    _ when Parse('}') => CreateToken(TokenKind.CloseBlock),
-                    _ when Parse('(') => CreateToken(TokenKind.OpenParen),
-                    _ when Parse(')') => CreateToken(TokenKind.CloseParen),
-                    _ when Parse(',') => CreateToken(TokenKind.Comma),
-                    _ when Parse(';') => CreateToken(TokenKind.Semicolon),
-                    _ when ParseSymbol() => CreateToken(TokenKind.Symbol),
-                    _ => throw new Exception()
-                };
-            }
-
-            protected override bool ValidateToken(in Token token)
-            {
-                if (token.Kind == TokenKind.Number)
-                {
-                }
-                else if (token.Kind == TokenKind.Comma)
-                {
-                    if (token.Text != ",")
-                    {
-                        EmitError(in token, ErrorCodes.InvalidOperator, token.Text);
-                        return false;
-                    }
-                }
-                return true;
-            }
-
-            private bool ParseComment() => Parse("//");
-
-            private bool ParseDirective()
-            {
-                if (!Parse('#'))
-                    return false;
-                ReadChar();
-                ParseUntilSeperator();
-                return true;
-            }
-
-            private bool ParseSymbol()
-            {
-                var c = PeekChar();
-                if (!char.IsLetter(c))
-                    return false;
-                ParseUntilSeperator();
-                return true;
-            }
-
-            private void ParseUntilSeperator()
-            {
-                while (true)
-                {
-                    var c = PeekChar();
-                    if (!char.IsLetterOrDigit(c))
-                    {
-                        break;
-                    }
-                    ReadChar();
-                }
             }
         }
     }

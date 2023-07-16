@@ -28,6 +28,8 @@
         public const int ExpectedCloseParen = 24;
         public const int ExpectedSemicolon = 25;
         public const int ExpectedOperand = 26;
+        public const int InvalidOperand = 27;
+        public const int ExpectedCondition = 28;
 
         public static string GetMessage(int code) => _messages[code];
 
@@ -60,6 +62,8 @@
                 ") expected",
                 "; expected",
                 "Operand expected",
+                "Invalid operand",
+                "Expected condition",
         };
     }
 }

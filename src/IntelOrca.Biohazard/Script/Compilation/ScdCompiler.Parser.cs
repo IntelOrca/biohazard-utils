@@ -93,31 +93,6 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 }
 
                 return new VersionSyntaxNode(LastToken);
-#if false
-            if (_version != null)
-            {
-                EmitError(in lastToken, ErrorCodes.ScdTypeAlreadySpecified);
-                return null;
-            }
-
-            var version = ParseNumber(in LastToken);
-            _version = version switch
-            {
-                1 => BioVersion.Biohazard1,
-                2 => BioVersion.Biohazard2,
-                3 => BioVersion.Biohazard3,
-                _ => null
-            };
-            if (_version == null)
-            {
-                EmitError(in lastToken, ErrorCodes.InvalidScdVersionNumber);
-                return null;
-            }
-
-            _constantTable = ConstantTable.FromVersion(_version.Value);
-            _astBuilder.VisitVersion(_version.Value);
-            return null;
-#endif
             }
 
             private ProcedureSyntaxNode? ParseProcedure()
@@ -138,29 +113,68 @@ namespace IntelOrca.Biohazard.Script.Compilation
 
             private BlockSyntaxNode? ParseBlock()
             {
-                if (!ParseToken(TokenKind.OpenBlock))
-                {
-                    EmitError(in LastToken, ErrorCodes.ExpectedOpenBlock);
+                if (!ParseExpected(TokenKind.OpenBlock))
                     return null;
-                }
 
                 var nodes = new List<SyntaxNode>();
                 while (true)
                 {
-                    var opcode = ParseOpcode();
+                    var opcode = ParseStatement();
                     if (opcode != null)
                     {
                         nodes.Add(opcode);
                         continue;
                     }
-                    if (!ParseToken(TokenKind.CloseBlock))
-                    {
-                        EmitError(in LastToken, ErrorCodes.ExpectedCloseBlock);
-                    }
+                    ParseExpected(TokenKind.CloseBlock);
                     break;
                 }
 
                 return new BlockSyntaxNode(nodes.ToArray());
+            }
+
+            private SyntaxNode? ParseStatement()
+            {
+                SyntaxNode? node = ParseIfStatement();
+                if (node != null)
+                    return node;
+
+                node = ParseOpcode();
+                if (node != null)
+                {
+                    ParseExpected(TokenKind.Semicolon);
+                    return node;
+                }
+
+                return null;
+            }
+
+            private IfSyntaxNode? ParseIfStatement()
+            {
+                if (!ParseToken(TokenKind.If))
+                    return null;
+
+                ref readonly var ifToken = ref LastToken;
+
+                if (!ParseExpected(TokenKind.OpenParen))
+                    return null;
+
+                var condition = ParseOpcode();
+                if (condition == null)
+                {
+                    EmitError(in ifToken, ErrorCodes.ExpectedCondition);
+                    return null;
+                }
+
+                if (!ParseExpected(TokenKind.CloseParen))
+                    return null;
+
+                var ifBlock = ParseBlock();
+                var elseBlock = null as BlockSyntaxNode;
+                if (ParseToken(TokenKind.Else))
+                {
+                    elseBlock = ParseBlock();
+                }
+                return new IfSyntaxNode(new[] { condition }, ifBlock, elseBlock);
             }
 
             private OpcodeSyntaxNode? ParseOpcode()
@@ -195,9 +209,6 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     SkipOpcode();
                     break;
                 }
-
-                if (!ParseToken(TokenKind.Semicolon))
-                    EmitError(in LastToken, ErrorCodes.ExpectedSemicolon);
 
                 return new OpcodeSyntaxNode(opcodeToken, operands.ToArray());
             }
@@ -234,6 +245,28 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     {
                         return;
                     }
+                }
+            }
+
+            private bool ParseExpected(TokenKind kind)
+            {
+                if (ParseToken(kind))
+                {
+                    return true;
+                }
+                else
+                {
+                    var errorCode = kind switch
+                    {
+                        TokenKind.OpenParen => ErrorCodes.ExpectedOpenParen,
+                        TokenKind.CloseParen => ErrorCodes.ExpectedCloseParen,
+                        TokenKind.OpenBlock => ErrorCodes.ExpectedOpenBlock,
+                        TokenKind.CloseBlock => ErrorCodes.ExpectedCloseBlock,
+                        TokenKind.Semicolon => ErrorCodes.ExpectedSemicolon,
+                        _ => throw new NotImplementedException(),
+                    };
+                    EmitError(in LastToken, errorCode);
+                    return false;
                 }
             }
 
@@ -314,6 +347,33 @@ namespace IntelOrca.Biohazard.Script.Compilation
             }
 
             public override IEnumerable<SyntaxNode> Children => Statements;
+        }
+
+        private class IfSyntaxNode : SyntaxNode
+        {
+            public SyntaxNode[] Conditions { get; }
+            public BlockSyntaxNode? IfBlock { get; }
+            public BlockSyntaxNode? ElseBlock { get; }
+
+            public IfSyntaxNode(SyntaxNode[] conditions, BlockSyntaxNode? ifBlock, BlockSyntaxNode? elseBlock)
+            {
+                Conditions = conditions;
+                IfBlock = ifBlock;
+                ElseBlock = elseBlock;
+            }
+
+            public override IEnumerable<SyntaxNode> Children
+            {
+                get
+                {
+                    foreach (var condition in Conditions)
+                        yield return condition;
+                    if (IfBlock != null)
+                        yield return IfBlock;
+                    if (ElseBlock != null)
+                        yield return ElseBlock;
+                }
+            }
         }
 
         private class OpcodeSyntaxNode : SyntaxNode

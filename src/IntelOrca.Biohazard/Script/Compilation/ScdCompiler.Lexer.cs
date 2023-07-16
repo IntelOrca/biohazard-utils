@@ -25,6 +25,8 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     _ when ParseDirective() => CreateToken(TokenKind.Directive),
                     _ when ParseNumber() => CreateToken(TokenKind.Number),
                     _ when Parse("proc") => CreateToken(TokenKind.Proc),
+                    _ when Parse("if") => CreateToken(TokenKind.If),
+                    _ when Parse("else") => CreateToken(TokenKind.Else),
                     _ when Parse('{') => CreateToken(TokenKind.OpenBlock),
                     _ when Parse('}') => CreateToken(TokenKind.CloseBlock),
                     _ when Parse('(') => CreateToken(TokenKind.OpenParen),

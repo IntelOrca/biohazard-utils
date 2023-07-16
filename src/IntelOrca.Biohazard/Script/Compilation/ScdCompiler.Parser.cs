@@ -136,21 +136,22 @@ namespace IntelOrca.Biohazard.Script.Compilation
 
             private SyntaxNode? ParseStatement()
             {
-                SyntaxNode? node = ParseIfStatement();
-                if (node != null)
-                    return node;
-
-                node = ParseForkStatement();
-                if (node != null)
-                    return node;
-
-                node = ParseOpcode();
-                if (node != null)
+                var parsers = new Func<SyntaxNode?>[]
                 {
-                    ParseExpected(TokenKind.Semicolon);
-                    return node;
+                    ParseIfStatement,
+                    ParseWhileStatement,
+                    ParseForkStatement,
+                    ParseOpcode,
+                };
+                foreach (var parser in parsers)
+                {
+                    if (parser() is SyntaxNode node)
+                    {
+                        if (node is OpcodeSyntaxNode)
+                            ParseExpected(TokenKind.Semicolon);
+                        return node;
+                    }
                 }
-
                 return null;
             }
 
@@ -175,19 +176,8 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 if (!ParseToken(TokenKind.If))
                     return null;
 
-                ref readonly var ifToken = ref LastToken;
-
-                if (!ParseExpected(TokenKind.OpenParen))
-                    return null;
-
-                var condition = ParseOpcode();
+                var condition = ParseCondition();
                 if (condition == null)
-                {
-                    EmitError(in ifToken, ErrorCodes.ExpectedCondition);
-                    return null;
-                }
-
-                if (!ParseExpected(TokenKind.CloseParen))
                     return null;
 
                 var ifBlock = ParseBlock();
@@ -196,7 +186,38 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 {
                     elseBlock = ParseBlock();
                 }
-                return new IfSyntaxNode(new[] { condition }, ifBlock, elseBlock);
+                return new IfSyntaxNode(condition, ifBlock, elseBlock);
+            }
+
+            private WhileSyntaxNode? ParseWhileStatement()
+            {
+                if (!ParseToken(TokenKind.While))
+                    return null;
+
+                var condition = ParseCondition();
+                if (condition == null)
+                    return null;
+
+                var block = ParseBlock();
+                return new WhileSyntaxNode(condition, block);
+            }
+
+            private ConditionalExpressionSyntaxNode? ParseCondition()
+            {
+                if (!ParseExpected(TokenKind.OpenParen))
+                    return null;
+
+                var condition = ParseOpcode();
+                if (condition == null)
+                {
+                    EmitError(in LastToken, ErrorCodes.ExpectedCondition);
+                    return null;
+                }
+
+                if (!ParseExpected(TokenKind.CloseParen))
+                    return null;
+
+                return new ConditionalExpressionSyntaxNode(new[] { condition });
             }
 
             private OpcodeSyntaxNode? ParseOpcode()
@@ -412,13 +433,13 @@ namespace IntelOrca.Biohazard.Script.Compilation
 
         private class IfSyntaxNode : SyntaxNode
         {
-            public SyntaxNode[] Conditions { get; }
+            public ConditionalExpressionSyntaxNode Condition { get; }
             public BlockSyntaxNode? IfBlock { get; }
             public BlockSyntaxNode? ElseBlock { get; }
 
-            public IfSyntaxNode(SyntaxNode[] conditions, BlockSyntaxNode? ifBlock, BlockSyntaxNode? elseBlock)
+            public IfSyntaxNode(ConditionalExpressionSyntaxNode condition, BlockSyntaxNode? ifBlock, BlockSyntaxNode? elseBlock)
             {
-                Conditions = conditions;
+                Condition = condition;
                 IfBlock = ifBlock;
                 ElseBlock = elseBlock;
             }
@@ -427,14 +448,49 @@ namespace IntelOrca.Biohazard.Script.Compilation
             {
                 get
                 {
-                    foreach (var condition in Conditions)
-                        yield return condition;
+                    if (Condition != null)
+                        yield return Condition;
                     if (IfBlock != null)
                         yield return IfBlock;
                     if (ElseBlock != null)
                         yield return ElseBlock;
                 }
             }
+        }
+
+        private class WhileSyntaxNode : SyntaxNode
+        {
+            public ConditionalExpressionSyntaxNode Condition { get; }
+            public BlockSyntaxNode? Block { get; }
+
+            public WhileSyntaxNode(ConditionalExpressionSyntaxNode condition, BlockSyntaxNode? block)
+            {
+                Condition = condition;
+                Block = block;
+            }
+
+            public override IEnumerable<SyntaxNode> Children
+            {
+                get
+                {
+                    if (Condition != null)
+                        yield return Condition;
+                    if (Block != null)
+                        yield return Block;
+                }
+            }
+        }
+
+        private class ConditionalExpressionSyntaxNode : SyntaxNode
+        {
+            public SyntaxNode[] Conditions { get; }
+
+            public ConditionalExpressionSyntaxNode(SyntaxNode[] conditions)
+            {
+                Conditions = conditions;
+            }
+
+            public override IEnumerable<SyntaxNode> Children => Conditions;
         }
 
         private class OpcodeSyntaxNode : SyntaxNode

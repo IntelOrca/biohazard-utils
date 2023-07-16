@@ -25,6 +25,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     _ when ParseDirective() => CreateToken(TokenKind.Directive),
                     _ when ParseNumber() => CreateToken(TokenKind.Number),
                     _ when Parse("proc") => CreateToken(TokenKind.Proc),
+                    _ when Parse("fork") => CreateToken(TokenKind.Fork),
                     _ when Parse("if") => CreateToken(TokenKind.If),
                     _ when Parse("else") => CreateToken(TokenKind.Else),
                     _ when Parse('{') => CreateToken(TokenKind.OpenBlock),
@@ -33,6 +34,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     _ when Parse(')') => CreateToken(TokenKind.CloseParen),
                     _ when Parse(',') => CreateToken(TokenKind.Comma),
                     _ when Parse(';') => CreateToken(TokenKind.Semicolon),
+                    _ when Parse('|') => CreateToken(TokenKind.BitwiseOr),
                     _ when ParseSymbol() => CreateToken(TokenKind.Symbol),
                     _ => throw new Exception()
                 };
@@ -54,7 +56,22 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 return true;
             }
 
-            private bool ParseComment() => Parse("//");
+            private bool ParseComment()
+            {
+                if (!Parse("//"))
+                    return false;
+
+                while (true)
+                {
+                    var c = PeekChar();
+                    if (c == '\n' || c == '\r' || c == '\0')
+                    {
+                        break;
+                    }
+                    ReadChar();
+                }
+                return true;
+            }
 
             private bool ParseDirective()
             {
@@ -79,7 +96,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 while (true)
                 {
                     var c = PeekChar();
-                    if (!char.IsLetterOrDigit(c))
+                    if (!char.IsLetterOrDigit(c) && c != '_')
                     {
                         break;
                     }

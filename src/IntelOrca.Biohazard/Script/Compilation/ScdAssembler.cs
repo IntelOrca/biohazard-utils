@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace IntelOrca.Biohazard.Script.Compilation
 {
-    public partial class ScdAssembler
+    public partial class ScdAssembler : IScdGenerator
     {
         private const byte UnkOpcode = 255;
 
@@ -37,7 +37,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
         public byte[] OutputInit { get; private set; } = new byte[0];
         public byte[] OutputMain { get; private set; } = new byte[0];
 
-        public int Assemble(string path, string script)
+        public int Generate(string path, string script)
         {
             var lexer = new Lexer(Errors);
             var tokens = lexer.ParseAllTokens(path, script);

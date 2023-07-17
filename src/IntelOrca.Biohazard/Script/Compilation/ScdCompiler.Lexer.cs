@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace IntelOrca.Biohazard.Script.Compilation
 {
@@ -6,8 +7,8 @@ namespace IntelOrca.Biohazard.Script.Compilation
     {
         private class Lexer : LexerBase
         {
-            public Lexer(ErrorList errors)
-                : base(errors)
+            public Lexer(IFileIncluder includer, ErrorList errors)
+                : base(includer, errors)
             {
             }
 
@@ -15,7 +16,46 @@ namespace IntelOrca.Biohazard.Script.Compilation
             {
             }
 
-            protected override Token ParseToken()
+            protected override IEnumerable<Token> GetNextToken()
+            {
+                var token = ScanSingleToken();
+                if (token.Kind == TokenKind.Directive)
+                {
+                    if (token.Text == "#include")
+                    {
+                        var nextToken = ScanSingleNonWhitespaceToken();
+                        if (nextToken.Kind == TokenKind.String)
+                        {
+                            var includeLexer = new Lexer(Includer, Errors);
+                            var includePath = nextToken.Text.Substring(1, nextToken.Text.Length - 2);
+                            var fullPath = Includer.GetIncludePath(Path, includePath);
+                            foreach (var includeToken in includeLexer.GetTokens(fullPath))
+                            {
+                                if (includeToken.Kind == TokenKind.EOF)
+                                    break;
+                                yield return includeToken;
+                            }
+                            yield break;
+                        }
+                        else
+                        {
+                            EmitError(in nextToken, ErrorCodes.ExpectedPath);
+                        }
+                    }
+                }
+                yield return token;
+            }
+
+            private Token ScanSingleNonWhitespaceToken()
+            {
+                Token token;
+                while ((token = ScanSingleToken()).Kind == TokenKind.Whitespace)
+                {
+                }
+                return token;
+            }
+
+            private Token ScanSingleToken()
             {
                 return true switch
                 {
@@ -23,6 +63,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     _ when ParseWhitespace() => CreateToken(TokenKind.Whitespace),
                     _ when ParseComment() => CreateToken(TokenKind.Comment),
                     _ when ParseDirective() => CreateToken(TokenKind.Directive),
+                    _ when ParseString() => CreateToken(TokenKind.String),
                     _ when ParseNumber() => CreateToken(TokenKind.Number),
                     _ when Parse("proc") => CreateToken(TokenKind.Proc),
                     _ when Parse("fork") => CreateToken(TokenKind.Fork),

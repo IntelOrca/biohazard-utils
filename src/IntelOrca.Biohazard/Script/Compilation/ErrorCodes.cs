@@ -32,6 +32,8 @@
         public const int ExpectedCondition = 28;
         public const int InvalidExpression = 29;
         public const int UnknownProcedure = 30;
+        public const int ExpectedPath = 31;
+        public const int FileNotFound = 32;
 
         public static string GetMessage(int code) => _messages[code];
 
@@ -68,6 +70,8 @@
                 "Expected condition",
                 "Invalid expression",
                 "'{0}' has not been defined as a procedure.",
+                "Expected quoted path.",
+                "'{0}' could not found or read.",
         };
     }
 }

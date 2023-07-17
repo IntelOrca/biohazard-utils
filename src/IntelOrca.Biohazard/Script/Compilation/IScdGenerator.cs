@@ -6,6 +6,6 @@
         byte[] OutputInit { get; }
         byte[] OutputMain { get; }
 
-        int Generate(string path, string script);
+        int Generate(IFileIncluder includer, string path);
     }
 }

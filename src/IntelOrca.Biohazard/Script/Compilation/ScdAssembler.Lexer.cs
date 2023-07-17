@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace IntelOrca.Biohazard.Script.Compilation
 {
@@ -8,8 +9,8 @@ namespace IntelOrca.Biohazard.Script.Compilation
         {
             private bool _expectingOpcode;
 
-            public Lexer(ErrorList errors)
-                : base(errors)
+            public Lexer(IFileIncluder includer, ErrorList errors)
+                : base(includer, errors)
             {
             }
 
@@ -18,7 +19,12 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 _expectingOpcode = true;
             }
 
-            protected override Token ParseToken()
+            protected override IEnumerable<Token> GetNextToken()
+            {
+                yield return ScanSingleToken();
+            }
+
+            private Token ScanSingleToken()
             {
                 if (ParseNewLine())
                 {

@@ -152,17 +152,53 @@ proc wait_for_mr_x
 ");
         }
 
+        [Fact]
+        public void TestInclude()
+        {
+            var mainScript = @"
+#version 2
+
+proc main
+{
+    wait_for_mr_x();
+}
+
+#include ""common.bio""
+";
+            var incScript = @"
+proc wait_for_mr_x
+{
+    sleep(10, 30);
+}
+";
+
+            var includer = new StringFileIncluder();
+            includer.AddFile("/test/main.bio", mainScript);
+            includer.AddFile("/test/common.bio", incScript);
+            var expected = "0200010006000A000C00180201000100090A1E000100";
+            AssertScd(expected, includer, "/test/main.bio");
+
+        }
+
         private void AssertCompile(string script)
         {
+            var fileName = "temp.bio";
             var scdCompiler = new ScdCompiler();
-            var result = scdCompiler.Generate("temp.bio", script);
+            var result = scdCompiler.Generate(new StringFileIncluder(fileName, script), fileName);
             Assert.Equal(0, result);
         }
 
         private void AssertScd(string expected, string script)
         {
+            var fileName = "temp.bio";
+            var includer = new StringFileIncluder(fileName, script);
+            AssertScd(expected, includer, fileName);
+        }
+
+        private void AssertScd(string expected, IFileIncluder includer, string path)
+        {
             var scdCompiler = new ScdCompiler();
-            var result = scdCompiler.Generate("temp.bio", script);
+            var result = scdCompiler.Generate(includer, path);
             Assert.Equal(0, result);
 
             var scdInit = scdCompiler.OutputInit;

@@ -71,7 +71,7 @@ namespace IntelOrca.Biohazard.Tests
             var diassembly = rdtFile.DisassembleScd();
 
             var scdAssembler = new ScdAssembler();
-            var err = scdAssembler.Generate(sPath, diassembly);
+            var err = scdAssembler.Generate(new StringFileIncluder(sPath, diassembly), sPath);
             var fail = false;
             if (err != 0)
             {

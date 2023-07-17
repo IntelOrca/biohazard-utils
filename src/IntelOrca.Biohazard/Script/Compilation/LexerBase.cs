@@ -194,6 +194,20 @@ namespace IntelOrca.Biohazard.Script.Compilation
             return _s[offset];
         }
 
+        protected char PeekNonWhitespaceChar()
+        {
+            var i = 0;
+            while (true)
+            {
+                var c = PeekChar(i);
+                if (c == '\0' || !char.IsWhiteSpace(c))
+                {
+                    return c;
+                }
+                i++;
+            }
+        }
+
         protected char ReadChar()
         {
             var result = PeekChar();

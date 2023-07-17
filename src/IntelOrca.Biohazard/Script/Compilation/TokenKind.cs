@@ -11,9 +11,10 @@
         Symbol,
         Label,
         Comma,
-        Add,
-        Subtract,
-        BitwiseOr,
+        Plus,
+        Minus,
+        Asterisk,
+        Pipe,
         Opcode,
         Directive,
 

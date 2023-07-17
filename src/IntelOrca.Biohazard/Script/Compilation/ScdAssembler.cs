@@ -183,17 +183,17 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     }
                     break;
                 case ParserState.ExpectCommaOrOperator:
-                    if (token.Kind == TokenKind.Add)
+                    if (token.Kind == TokenKind.Plus)
                     {
                         _operandState = OperandStateAdd;
                         _state = ParserState.ExpectOperand;
                     }
-                    else if (token.Kind == TokenKind.Subtract)
+                    else if (token.Kind == TokenKind.Minus)
                     {
                         _operandState = OperandStateSubtract;
                         _state = ParserState.ExpectOperand;
                     }
-                    else if (token.Kind == TokenKind.BitwiseOr)
+                    else if (token.Kind == TokenKind.Pipe)
                     {
                         _operandState = OperandStateOr;
                         _state = ParserState.ExpectOperand;

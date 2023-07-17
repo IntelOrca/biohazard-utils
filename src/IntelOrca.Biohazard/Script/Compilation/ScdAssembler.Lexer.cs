@@ -70,11 +70,11 @@ namespace IntelOrca.Biohazard.Script.Compilation
                         if (ch == ',')
                             return CreateToken(TokenKind.Comma);
                         else if (ch == '+')
-                            return CreateToken(TokenKind.Add);
+                            return CreateToken(TokenKind.Plus);
                         else if (ch == '-')
-                            return CreateToken(TokenKind.Subtract);
+                            return CreateToken(TokenKind.Minus);
                         else if (ch == '|')
-                            return CreateToken(TokenKind.BitwiseOr);
+                            return CreateToken(TokenKind.Pipe);
                     }
                     return CreateToken(TokenKind.Unknown);
                 }

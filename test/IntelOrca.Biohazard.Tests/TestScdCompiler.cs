@@ -196,6 +196,37 @@ proc main
         }
 
         [Fact]
+        public void TestDefine_ConstantFn()
+        {
+            var expected = "0200010004000A00090A1E0001000100";
+            AssertScd(expected, @"
+#version 2
+#define SLEEP_1s() 30
+
+proc main
+{
+    sleep(10, SLEEP_1s());
+}
+");
+        }
+
+        [Fact]
+        public void TestDefine_ConstantRecursive()
+        {
+            var expected = "0200010004000A00090A1E0001000100";
+            AssertScd(expected, @"
+#version 2
+#define SEC_1       30
+#define SLEEP_1s    SEC_1
+
+proc main
+{
+    sleep(10, SLEEP_1s);
+}
+");
+        }
+
+        [Fact]
         public void TestDefine_WithArgs()
         {
             var expected = "0200010004000A00090A1E0001000100";
@@ -238,6 +269,23 @@ proc main
 proc main
 {
     SLEEP(1);
+}
+");
+        }
+
+        [Fact]
+        public void TestDefine_ComplexExpression()
+        {
+            var expected = "0200010004000A00090A1E0001000100";
+            AssertScd(expected, @"
+#version 2
+#define BGM_TYRANT                  0x001E
+#define MUS_NONE                    0xFF00
+#define SET_BGM(room, bgm, mus)     sce_bgmtbl_set(0, room & 8, room >> 8 & 0xFF, bgm | mus, 0)
+
+proc main
+{
+    SET_BGM(0x201, BGM_TYRANT, MUS_NONE);
 }
 ");
         }

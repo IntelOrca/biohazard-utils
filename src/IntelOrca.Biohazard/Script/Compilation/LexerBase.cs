@@ -49,17 +49,15 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 }
                 else
                 {
-                    foreach (var token in GetNextToken())
-                    {
-                        ValidateToken(in token);
-                        yield return token;
-                    }
+                    var token = GetNextToken();
+                    ValidateToken(in token);
+                    yield return token;
                 }
             }
         }
 
         protected virtual void Begin() { }
-        protected abstract IEnumerable<Token> GetNextToken();
+        protected abstract Token GetNextToken();
         protected abstract bool ValidateToken(in Token token);
 
         protected void EmitError(in Token token, int code, params object[] args)
@@ -183,6 +181,12 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 return false;
 
             _sIndex += s.Length;
+            return true;
+        }
+
+        protected bool ParseAny()
+        {
+            ReadChar();
             return true;
         }
 

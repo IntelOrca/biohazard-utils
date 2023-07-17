@@ -870,6 +870,8 @@ namespace emdui
             AddSeperator();
             AddMenuItem("Move all UV to page 0", () => MoveUVToPage(0));
             AddMenuItem("Move all UV to page 1", () => MoveUVToPage(1));
+            AddMenuItem("Move all UV to page 2", () => MoveUVToPage(2));
+            AddMenuItem("Move all UV to page 3", () => MoveUVToPage(3));
         }
 
         public override void OnSelect()
@@ -920,11 +922,11 @@ namespace emdui
                     }
                     else if (path.EndsWith(".md1", StringComparison.OrdinalIgnoreCase))
                     {
-                        ImportMesh(new Tmd(File.ReadAllBytes(path)));
+                        ImportMesh(new Md1(File.ReadAllBytes(path)));
                     }
                     else if (path.EndsWith(".md2", StringComparison.OrdinalIgnoreCase))
                     {
-                        ImportMesh(new Tmd(File.ReadAllBytes(path)));
+                        ImportMesh(new Md2(File.ReadAllBytes(path)));
                     }
                 });
         }
@@ -1120,6 +1122,9 @@ namespace emdui
         {
             MorphData = morphData;
             CreateChildren();
+
+            AddMenuItem("Import...", Import);
+            AddMenuItem("Export...", Export);
         }
 
         private void CreateChildren()
@@ -1132,6 +1137,29 @@ namespace emdui
             {
                 Items.Add(new MorphGroupTreeViewItem(this, i));
             }
+        }
+
+        private void Import()
+        {
+            CommonFileDialog
+                .Open()
+                .AddExtension("*.dat")
+                .Show(path =>
+                {
+                    Model.SetMorph(0, new MorphData(MorphData.Version, File.ReadAllBytes(path)));
+                });
+        }
+
+        private void Export()
+        {
+            var dialog = CommonFileDialog.Save();
+            if (ProjectFile != null)
+            {
+                dialog.WithDefaultFileName(Path.ChangeExtension(ProjectFile.Filename, ".DAT"));
+            }
+            dialog
+                .AddExtension("*.dat")
+                .Show(path => File.WriteAllBytes(path, MorphData.Data.ToArray()));
         }
     }
 

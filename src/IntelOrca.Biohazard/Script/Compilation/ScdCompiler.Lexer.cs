@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace IntelOrca.Biohazard.Script.Compilation
 {
@@ -7,9 +9,18 @@ namespace IntelOrca.Biohazard.Script.Compilation
     {
         private class Lexer : LexerBase
         {
+            private readonly MacroTable _macroTable;
+
             public Lexer(IFileIncluder includer, ErrorList errors)
                 : base(includer, errors)
             {
+                _macroTable = new MacroTable();
+            }
+
+            private Lexer(Lexer baseLexer)
+                : base(baseLexer.Includer, baseLexer.Errors)
+            {
+                _macroTable = baseLexer._macroTable;
             }
 
             protected override void Begin()
@@ -26,7 +37,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                         var nextToken = ScanSingleNonWhitespaceToken();
                         if (nextToken.Kind == TokenKind.String)
                         {
-                            var includeLexer = new Lexer(Includer, Errors);
+                            var includeLexer = new Lexer(this);
                             var includePath = nextToken.Text.Substring(1, nextToken.Text.Length - 2);
                             var fullPath = Includer.GetIncludePath(Path, includePath);
                             foreach (var includeToken in includeLexer.GetTokens(fullPath))
@@ -42,8 +53,59 @@ namespace IntelOrca.Biohazard.Script.Compilation
                             EmitError(in nextToken, ErrorCodes.ExpectedPath);
                         }
                     }
+                    else if (token.Text == "#define")
+                    {
+                        var nameToken = ScanSingleNonWhitespaceToken();
+                        if (nameToken.Kind != TokenKind.Symbol)
+                        {
+                            EmitError(in nameToken, ErrorCodes.ExpectedMacroName);
+                            yield break;
+                        }
+
+                        var definedTokens = ScanDefineTokens()
+                            .SkipWhile(x => x.Kind == TokenKind.Whitespace)
+                            .ToList();
+
+                        var endToken = definedTokens.Last();
+                        definedTokens.RemoveAt(definedTokens.Count - 1);
+                        DefineMacro(nameToken, definedTokens.ToArray());
+                        yield return endToken;
+                        yield break;
+                    }
+                }
+                else if (token.Kind == TokenKind.Symbol)
+                {
+                    var macroName = token.Text;
+                    var tokens = _macroTable.TryGetMacroTokens(macroName);
+                    if (tokens != null)
+                    {
+                        foreach (var t in tokens)
+                        {
+                            yield return t;
+                        }
+                        yield break;
+                    }
                 }
                 yield return token;
+            }
+
+            private void DefineMacro(in Token nameToken, Token[] tokens)
+            {
+                var name = nameToken.Text;
+                if (_macroTable.Contains(name))
+                {
+                    EmitError(in nameToken, ErrorCodes.MacroAlreadyDefined, name);
+                    return;
+                }
+
+                var nameRegex = new Regex("^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.Compiled);
+                if (!nameRegex.IsMatch(name))
+                {
+                    EmitError(in nameToken, ErrorCodes.InvalidMacroName, name);
+                    return;
+                }
+
+                _macroTable.Add(name, tokens);
             }
 
             private Token ScanSingleNonWhitespaceToken()
@@ -53,6 +115,19 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 {
                 }
                 return token;
+            }
+
+            private IEnumerable<Token> ScanDefineTokens()
+            {
+                while (true)
+                {
+                    var token = ScanSingleToken();
+                    yield return token;
+                    if (token.Kind == TokenKind.NewLine || token.Kind == TokenKind.EOF)
+                    {
+                        yield break;
+                    }
+                }
             }
 
             private Token ScanSingleToken()
@@ -144,6 +219,27 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     }
                     ReadChar();
                 }
+            }
+        }
+
+        private class MacroTable
+        {
+            private readonly Dictionary<string, Token[]> _macros = new Dictionary<string, Token[]>();
+
+            public bool Contains(string name)
+            {
+                return _macros.ContainsKey(name);
+            }
+
+            public void Add(string name, Token[] tokens)
+            {
+                _macros.Add(name, tokens);
+            }
+
+            public Token[] TryGetMacroTokens(string name)
+            {
+                _macros.TryGetValue(name, out var result);
+                return result;
             }
         }
     }

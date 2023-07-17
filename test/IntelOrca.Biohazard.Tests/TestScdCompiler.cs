@@ -180,6 +180,21 @@ proc wait_for_mr_x
 
         }
 
+        [Fact]
+        public void TestDefine_Constant()
+        {
+            var expected = "0200010004000A00090A1E0001000100";
+            AssertScd(expected, @"
+#version 2
+#define SLEEP_1s 30
+
+proc main
+{
+    sleep(10, SLEEP_1s);
+}
+");
+        }
+
         private void AssertCompile(string script)
         {
             var fileName = "temp.bio";

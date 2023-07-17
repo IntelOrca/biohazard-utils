@@ -34,6 +34,9 @@
         public const int UnknownProcedure = 30;
         public const int ExpectedPath = 31;
         public const int FileNotFound = 32;
+        public const int ExpectedMacroName = 33;
+        public const int MacroAlreadyDefined = 34;
+        public const int InvalidMacroName = 35;
 
         public static string GetMessage(int code) => _messages[code];
 
@@ -72,6 +75,9 @@
                 "'{0}' has not been defined as a procedure.",
                 "Expected quoted path.",
                 "'{0}' could not found or read.",
+                "Macro name expected.",
+                "'{0}' has already been defined.",
+                "'{0}' is an invalid name for a macro.",
         };
     }
 }

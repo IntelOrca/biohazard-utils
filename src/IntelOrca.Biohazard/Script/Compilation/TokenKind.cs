@@ -15,6 +15,9 @@
         Minus,
         Asterisk,
         Pipe,
+        Ampersand,
+        LShift,
+        RShift,
         Opcode,
         Directive,
 

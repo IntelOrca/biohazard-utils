@@ -337,6 +337,9 @@ namespace IntelOrca.Biohazard.Script.Compilation
                         ExpressionKind.Subtract => lhs - rhs,
                         ExpressionKind.Multiply => lhs * rhs,
                         ExpressionKind.BitwiseOr => lhs | rhs,
+                        ExpressionKind.BitwiseAnd => lhs & rhs,
+                        ExpressionKind.LogicalShiftLeft => lhs << rhs,
+                        ExpressionKind.ArithmeticShiftRight => lhs >> rhs,
                         _ => throw new NotSupportedException()
                     };
                 }

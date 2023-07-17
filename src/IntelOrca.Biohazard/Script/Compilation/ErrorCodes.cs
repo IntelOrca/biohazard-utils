@@ -37,6 +37,7 @@
         public const int ExpectedMacroName = 33;
         public const int MacroAlreadyDefined = 34;
         public const int InvalidMacroName = 35;
+        public const int ParserFailure = 36;
 
         public static string GetMessage(int code) => _messages[code];
 
@@ -78,6 +79,7 @@
                 "Macro name expected.",
                 "'{0}' has already been defined.",
                 "'{0}' is an invalid name for a macro.",
+                "The parser unexpectedly failed",
         };
     }
 }

@@ -195,6 +195,53 @@ proc main
 ");
         }
 
+        [Fact]
+        public void TestDefine_WithArgs()
+        {
+            var expected = "0200010004000A00090A1E0001000100";
+            AssertScd(expected, @"
+#version 2
+#define SLEEP(time) sleep(10, time)
+
+proc main
+{
+    SLEEP(30);
+}
+");
+        }
+
+        [Fact]
+        public void TestDefine_Nested()
+        {
+            var expected = "0200010004000A00090A1E0001000100";
+            AssertScd(expected, @"
+#version 2
+#define SECONDS(time) time * 30
+#define SLEEP(time) sleep(10, time)
+
+proc main
+{
+    SLEEP(SECONDS(1));
+}
+");
+        }
+
+        [Fact]
+        public void TestDefine_Recursive()
+        {
+            var expected = "0200010004000A00090A1E0001000100";
+            AssertScd(expected, @"
+#version 2
+#define SECONDS(time) time * 30
+#define SLEEP(time) sleep(10, SECONDS(time))
+
+proc main
+{
+    SLEEP(1);
+}
+");
+        }
+
         private void AssertCompile(string script)
         {
             var fileName = "temp.bio";

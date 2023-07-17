@@ -73,20 +73,36 @@ namespace IntelOrca.Biohazard.Script.Compilation
                         yield break;
                     }
                 }
-                else if (token.Kind == TokenKind.Symbol)
+                foreach (var t in ExpandToken(token))
                 {
-                    var macroName = token.Text;
-                    var tokens = _macroTable.TryGetMacroTokens(macroName);
-                    if (tokens != null)
+                    yield return t;
+                }
+            }
+
+            private IEnumerable<Token> ExpandToken(Token token)
+            {
+                if (token.Kind != TokenKind.Symbol)
+                {
+                    yield return token;
+                    yield break;
+                }
+
+                var macroName = token.Text;
+                var macro = _macroTable.TryGetMacro(macroName);
+                if (macro != null)
+                {
+                    foreach (var t in ProcessMacro(token, macro))
                     {
-                        foreach (var t in tokens)
+                        foreach (var t2 in ExpandToken(t))
                         {
-                            yield return t;
+                            yield return t2;
                         }
-                        yield break;
                     }
                 }
-                yield return token;
+                else
+                {
+                    yield return token;
+                }
             }
 
             private void DefineMacro(in Token nameToken, Token[] tokens)
@@ -105,7 +121,166 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     return;
                 }
 
-                _macroTable.Add(name, tokens);
+                var macro = ParseMacro(name, tokens);
+                if (macro != null)
+                {
+                    _macroTable.Add(macro);
+                }
+            }
+
+            private Macro? ParseMacro(string name, Token[] tokens)
+            {
+                var parameters = new List<string>();
+                var newTokenList = new List<Token>();
+                const int stateBegin = 1;
+                const int stateParameter = 2;
+                const int stateParameterSep = 3;
+                const int stateEndParameter = 4;
+                const int stateBody = 5;
+                var state = stateBegin;
+                for (var i = 0; i < tokens.Length; i++)
+                {
+                    ref readonly var t = ref tokens[i];
+                    switch (state)
+                    {
+                        case stateBegin:
+                            if (t.Kind == TokenKind.Whitespace)
+                                continue;
+                            if (t.Kind == TokenKind.OpenParen)
+                            {
+                                state = stateParameter;
+                            }
+                            else
+                            {
+                                state = stateBody;
+                                goto case stateBody;
+                            }
+                            break;
+                        case stateParameter:
+                            if (t.Kind == TokenKind.Whitespace)
+                                continue;
+                            if (t.Kind == TokenKind.CloseParen)
+                            {
+                                state = stateEndParameter;
+                            }
+                            else if (t.Kind != TokenKind.Symbol)
+                            {
+                                EmitError(in t, ErrorCodes.ExpectedOperand);
+                                return null;
+                            }
+                            else
+                            {
+                                parameters.Add(t.Text);
+                                state = stateParameterSep;
+                            }
+                            break;
+                        case stateParameterSep:
+                            if (t.Kind == TokenKind.Whitespace)
+                                continue;
+                            if (t.Kind == TokenKind.CloseParen)
+                            {
+                                state = stateEndParameter;
+                            }
+                            else if (t.Kind != TokenKind.Comma)
+                            {
+                                EmitError(in t, ErrorCodes.ExpectedComma);
+                                return null;
+                            }
+                            else
+                            {
+                                state = stateParameter;
+                            }
+                            break;
+                        case stateEndParameter:
+                            if (t.Kind == TokenKind.Whitespace)
+                                continue;
+                            state = stateBody;
+                            goto case stateBody;
+                        case stateBody:
+                            newTokenList.Add(t);
+                            break;
+                    }
+                }
+                while (newTokenList.Count != 0 && newTokenList[newTokenList.Count - 1].Kind == TokenKind.Whitespace)
+                {
+                    newTokenList.RemoveAt(newTokenList.Count - 1);
+                }
+                return new Macro(name, parameters.ToArray(), newTokenList.ToArray());
+            }
+
+            private IEnumerable<Token> ProcessMacro(Token token, Macro macro)
+            {
+                var c = PeekNonWhitespaceChar();
+                if (c != '(')
+                {
+                    if (macro.Parameters.Length == 0)
+                    {
+                        foreach (var mt in macro.Tokens)
+                            yield return mt;
+                    }
+                    else
+                    {
+                        EmitError(in token, ErrorCodes.ExpectedOperand);
+                    }
+                    yield break;
+                }
+
+                var t = ScanSingleNonWhitespaceToken();
+                if (t.Kind != TokenKind.OpenParen)
+                {
+                    EmitError(in token, ErrorCodes.ExpectedOperand);
+                    yield break;
+                }
+
+                var signature = new List<Token[]>();
+                var argument = new List<Token>();
+                var parenCount = 1;
+                while (parenCount != 0)
+                {
+                    // Scan argument
+                    t = ScanSingleToken();
+                    if (t.Kind == TokenKind.OpenParen)
+                    {
+                        parenCount++;
+                    }
+                    else if (t.Kind == TokenKind.CloseParen)
+                    {
+                        parenCount--;
+                    }
+                    else if (t.Kind == TokenKind.Comma && parenCount == 1)
+                    {
+                        signature.Add(argument.ToArray());
+                        argument.Clear();
+                    }
+                    else if (t.Kind == TokenKind.EOF)
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        foreach (var t2 in ExpandToken(t))
+                        {
+                            argument.Add(t2);
+                        }
+                    }
+                }
+                if (argument.Count != 0)
+                {
+                    signature.Add(argument.ToArray());
+                }
+                if (parenCount != 0)
+                {
+                    EmitError(in token, ErrorCodes.ExpectedOperand);
+                    yield break;
+                }
+
+                foreach (var mt in macro.GetTokens(signature.ToArray()))
+                {
+                    foreach (var mt2 in ExpandToken(mt))
+                    {
+                        yield return mt2;
+                    }
+                }
             }
 
             private Token ScanSingleNonWhitespaceToken()
@@ -151,7 +326,10 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     _ when Parse(')') => CreateToken(TokenKind.CloseParen),
                     _ when Parse(',') => CreateToken(TokenKind.Comma),
                     _ when Parse(';') => CreateToken(TokenKind.Semicolon),
-                    _ when Parse('|') => CreateToken(TokenKind.BitwiseOr),
+                    _ when Parse('+') => CreateToken(TokenKind.Plus),
+                    _ when Parse('-') => CreateToken(TokenKind.Minus),
+                    _ when Parse('*') => CreateToken(TokenKind.Asterisk),
+                    _ when Parse('|') => CreateToken(TokenKind.Pipe),
                     _ when ParseSymbol() => CreateToken(TokenKind.Symbol),
                     _ => throw new Exception()
                 };
@@ -224,22 +402,68 @@ namespace IntelOrca.Biohazard.Script.Compilation
 
         private class MacroTable
         {
-            private readonly Dictionary<string, Token[]> _macros = new Dictionary<string, Token[]>();
+            private readonly Dictionary<string, Macro> _macros = new Dictionary<string, Macro>();
 
             public bool Contains(string name)
             {
                 return _macros.ContainsKey(name);
             }
 
-            public void Add(string name, Token[] tokens)
+            public void Add(Macro macro)
             {
-                _macros.Add(name, tokens);
+                _macros.Add(macro.Name, macro);
             }
 
-            public Token[] TryGetMacroTokens(string name)
+            public Macro TryGetMacro(string name)
             {
                 _macros.TryGetValue(name, out var result);
                 return result;
+            }
+
+            public Token[]? TryGetMacroTokens(string name)
+            {
+                if (!_macros.TryGetValue(name, out var result))
+                    return null;
+                return result.Tokens;
+            }
+        }
+
+        private class Macro
+        {
+            public string Name { get; }
+            public string[] Parameters { get; }
+            public Token[] Tokens { get; }
+
+            public Macro(string name, string[] parameters, Token[] tokens)
+            {
+                Name = name;
+                Parameters = parameters;
+                Tokens = tokens;
+            }
+
+            public IEnumerable<Token> GetTokens(Token[][] arguments)
+            {
+                foreach (var token in Tokens)
+                {
+                    if (token.Kind == TokenKind.Symbol)
+                    {
+                        var parameterIndex = FindParameter(token.Text);
+                        if (parameterIndex != -1)
+                        {
+                            foreach (var t in arguments[parameterIndex])
+                            {
+                                yield return t;
+                            }
+                            continue;
+                        }
+                    }
+                    yield return token;
+                }
+            }
+
+            private int FindParameter(string name)
+            {
+                return Array.IndexOf(Parameters, name);
             }
         }
     }

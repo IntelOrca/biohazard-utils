@@ -31,14 +31,24 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 var nodes = new List<SyntaxNode>();
                 while (!ParseToken(TokenKind.EOF))
                 {
+                    var foundParser = false;
                     foreach (var parser in parsers)
                     {
                         var node = parser();
                         if (node != null)
                         {
                             nodes.Add(node);
+                            foundParser = true;
                             break;
                         }
+                    }
+                    if (!foundParser)
+                    {
+                        if (_errors.Count == 0)
+                        {
+                            EmitError(in LastToken, ErrorCodes.ParserFailure);
+                        }
+                        break;
                     }
                 }
                 return new SyntaxTree(new BlockSyntaxNode(nodes.ToArray()));
@@ -277,7 +287,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 token = ref ReadToken();
 
                 ref readonly var nextToken = ref PeekToken();
-                if (nextToken.Kind == TokenKind.BitwiseOr)
+                if (IsBinaryOperator(nextToken.Kind))
                 {
                     ReadToken();
                     var rhs = ParseExpression();
@@ -286,7 +296,10 @@ namespace IntelOrca.Biohazard.Script.Compilation
 
                     var kind = nextToken.Kind switch
                     {
-                        TokenKind.BitwiseOr => ExpressionKind.BitwiseOr,
+                        TokenKind.Plus => ExpressionKind.Add,
+                        TokenKind.Minus => ExpressionKind.Subtract,
+                        TokenKind.Asterisk => ExpressionKind.Multiply,
+                        TokenKind.Pipe => ExpressionKind.BitwiseOr,
                         _ => throw new NotSupportedException()
                     };
                     return new BinaryExpressionSyntaxNode(kind, new LiteralSyntaxNode(token), rhs);
@@ -296,6 +309,16 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     return new LiteralSyntaxNode(token);
                 }
             }
+
+            private static bool IsBinaryOperator(TokenKind kind) =>
+                kind switch
+                {
+                    TokenKind.Plus => true,
+                    TokenKind.Minus => true,
+                    TokenKind.Asterisk => true,
+                    TokenKind.Pipe => true,
+                    _ => false
+                };
 
             private void SkipOpcode()
             {
@@ -540,6 +563,9 @@ namespace IntelOrca.Biohazard.Script.Compilation
         public enum ExpressionKind
         {
             Literal,
+            Add,
+            Subtract,
+            Multiply,
             BitwiseOr,
         }
     }

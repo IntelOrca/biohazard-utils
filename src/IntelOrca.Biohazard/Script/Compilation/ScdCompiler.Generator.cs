@@ -333,6 +333,9 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     var rhs = ProcessExpression(binaryNode.Right);
                     return node.Kind switch
                     {
+                        ExpressionKind.Add => lhs + rhs,
+                        ExpressionKind.Subtract => lhs - rhs,
+                        ExpressionKind.Multiply => lhs * rhs,
                         ExpressionKind.BitwiseOr => lhs | rhs,
                         _ => throw new NotSupportedException()
                     };

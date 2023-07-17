@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -437,6 +438,8 @@ namespace emdui
 
             AddMenuItem("Import...", Import);
             AddMenuItem("Export...", Export);
+            AddSeperator();
+            AddMenuItem("Copy Y to all animations", CopyYToAnimations);
         }
 
         public override void OnSelect()
@@ -473,6 +476,32 @@ namespace emdui
             dialog
                 .AddExtension("*.emr")
                 .Show(path => File.WriteAllBytes(path, Emr.Data.ToArray()));
+        }
+
+        private void CopyYToAnimations()
+        {
+            var yPos = Emr.GetRelativePosition(0).y;
+            if (Emr.KeyFrames.Length != 0)
+            {
+                var animationY = Emr.KeyFrames[0].Offset.y;
+                var scale = (double)yPos / animationY;
+
+                var project = MainWindow.Instance.Project;
+                foreach (var file in project.Files)
+                {
+                    if (file.Content is ModelFile modelFile)
+                    {
+                        var numEmrs = Enumerable
+                            .Range(0, modelFile.NumChunks)
+                            .Select(i => modelFile.GetChunkKind(i))
+                            .Count(x => x == ModelFile.ChunkKind.Armature);
+                        for (var i = 0; i < numEmrs; i++)
+                        {
+                            modelFile.SetEmr(i, modelFile.GetEmr(i).Scale(scale));
+                        }
+                    }
+                }
+            }
         }
     }
 

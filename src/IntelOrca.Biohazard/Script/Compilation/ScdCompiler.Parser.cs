@@ -267,7 +267,8 @@ namespace IntelOrca.Biohazard.Script.Compilation
             {
                 ref readonly var token = ref PeekToken();
                 if (token.Kind != TokenKind.Symbol &&
-                    token.Kind != TokenKind.Number)
+                    token.Kind != TokenKind.Number &&
+                    token.Kind != TokenKind.OpenParen)
                 {
                     return null;
                 }
@@ -276,15 +277,33 @@ namespace IntelOrca.Biohazard.Script.Compilation
 
             private ExpressionSyntaxNode? ParseExpression()
             {
+                ExpressionSyntaxNode? expression;
                 ref readonly var token = ref PeekToken();
-                if (token.Kind != TokenKind.Symbol &&
-                    token.Kind != TokenKind.Number)
+                switch (token.Kind)
                 {
-                    EmitError(in token, ErrorCodes.InvalidExpression);
-                    return null;
-                }
+                    case TokenKind.OpenParen:
+                        token = ref ReadToken();
+                        expression = ParseExpression();
+                        if (expression == null)
+                            return null;
 
-                token = ref ReadToken();
+                        token = ref PeekToken();
+                        if (token.Kind != TokenKind.CloseParen)
+                        {
+                            EmitError(in token, ErrorCodes.ExpectedCloseParen);
+                            return null;
+                        }
+                        ReadToken();
+                        break;
+                    case TokenKind.Symbol:
+                    case TokenKind.Number:
+                        token = ref ReadToken();
+                        expression = new LiteralSyntaxNode(token);
+                        break;
+                    default:
+                        EmitError(in token, ErrorCodes.InvalidExpression);
+                        return null;
+                }
 
                 ref readonly var nextToken = ref PeekToken();
                 if (IsBinaryOperator(nextToken.Kind))
@@ -300,13 +319,16 @@ namespace IntelOrca.Biohazard.Script.Compilation
                         TokenKind.Minus => ExpressionKind.Subtract,
                         TokenKind.Asterisk => ExpressionKind.Multiply,
                         TokenKind.Pipe => ExpressionKind.BitwiseOr,
+                        TokenKind.Ampersand => ExpressionKind.BitwiseAnd,
+                        TokenKind.LShift => ExpressionKind.LogicalShiftLeft,
+                        TokenKind.RShift => ExpressionKind.ArithmeticShiftRight,
                         _ => throw new NotSupportedException()
                     };
-                    return new BinaryExpressionSyntaxNode(kind, new LiteralSyntaxNode(token), rhs);
+                    return new BinaryExpressionSyntaxNode(kind, expression, rhs);
                 }
                 else
                 {
-                    return new LiteralSyntaxNode(token);
+                    return expression;
                 }
             }
 
@@ -317,6 +339,9 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     TokenKind.Minus => true,
                     TokenKind.Asterisk => true,
                     TokenKind.Pipe => true,
+                    TokenKind.Ampersand => true,
+                    TokenKind.LShift => true,
+                    TokenKind.RShift => true,
                     _ => false
                 };
 
@@ -567,6 +592,9 @@ namespace IntelOrca.Biohazard.Script.Compilation
             Subtract,
             Multiply,
             BitwiseOr,
+            BitwiseAnd,
+            LogicalShiftLeft,
+            ArithmeticShiftRight,
         }
     }
 }

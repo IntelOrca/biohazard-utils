@@ -276,12 +276,12 @@ proc main
         [Fact]
         public void TestDefine_ComplexExpression()
         {
-            var expected = "0200010004000A00090A1E0001000100";
+            var expected = "0200010004000E00570001021EFF000001000100";
             AssertScd(expected, @"
 #version 2
 #define BGM_TYRANT                  0x001E
 #define MUS_NONE                    0xFF00
-#define SET_BGM(room, bgm, mus)     sce_bgmtbl_set(0, room & 8, room >> 8 & 0xFF, bgm | mus, 0)
+#define SET_BGM(room, bgm, mus)     sce_bgmtbl_set(0, room & 0xFF, (room >> 8) & 0xFF, bgm | mus, 0)
 
 proc main
 {

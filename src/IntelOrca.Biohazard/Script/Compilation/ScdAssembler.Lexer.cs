@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace IntelOrca.Biohazard.Script.Compilation
 {
@@ -19,12 +18,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 _expectingOpcode = true;
             }
 
-            protected override IEnumerable<Token> GetNextToken()
-            {
-                yield return ScanSingleToken();
-            }
-
-            private Token ScanSingleToken()
+            protected override Token GetNextToken()
             {
                 if (ParseNewLine())
                 {

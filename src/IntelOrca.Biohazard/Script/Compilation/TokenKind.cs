@@ -7,6 +7,7 @@
         NewLine,
         Comment,
         Number,
+        String,
         Symbol,
         Label,
         Comma,

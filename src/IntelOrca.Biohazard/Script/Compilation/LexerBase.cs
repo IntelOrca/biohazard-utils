@@ -4,7 +4,6 @@ namespace IntelOrca.Biohazard.Script.Compilation
 {
     internal abstract class LexerBase
     {
-        private string _path = "";
         private string _s = "";
         private int _sIndex;
 
@@ -12,36 +11,55 @@ namespace IntelOrca.Biohazard.Script.Compilation
         private int _line;
         private int _column;
 
+        protected IFileIncluder Includer { get; }
+        protected string Path { get; private set; } = "";
         protected int CurrentTokenLength => _sIndex - _offset;
 
         public ErrorList Errors { get; }
 
-        public LexerBase(ErrorList errors)
+        public LexerBase(IFileIncluder includer, ErrorList errors)
         {
+            Includer = includer;
             Errors = errors;
         }
 
-        public Token[] ParseAllTokens(string path, string script)
+        public IEnumerable<Token> GetTokens(string path)
         {
-            _path = path;
+            var content = Includer.GetContent(path);
+            if (content == null)
+            {
+                Errors.AddError(path, 0, 0, ErrorCodes.FileNotFound, string.Format(ErrorCodes.GetMessage(ErrorCodes.FileNotFound), path));
+                return new Token[0];
+            }
+            return GetTokens(path, content);
+        }
+
+        private IEnumerable<Token> GetTokens(string path, string script)
+        {
+            Path = path;
             _s = script;
 
-            var tokens = new List<Token>();
-            Token token;
-            do
+            while (true)
             {
                 var c = PeekChar();
-                token = c == char.MinValue ?
-                    new Token(TokenKind.EOF, _path, _line, _column) :
-                    ParseToken();
-                ValidateToken(in token);
-                tokens.Add(token);
-            } while (token.Kind != TokenKind.EOF);
-            return tokens.ToArray();
+                if (c == char.MinValue)
+                {
+                    yield return new Token(TokenKind.EOF, Path, _line, _column);
+                    break;
+                }
+                else
+                {
+                    foreach (var token in GetNextToken())
+                    {
+                        ValidateToken(in token);
+                        yield return token;
+                    }
+                }
+            }
         }
 
         protected virtual void Begin() { }
-        protected abstract Token ParseToken();
+        protected abstract IEnumerable<Token> GetNextToken();
         protected abstract bool ValidateToken(in Token token);
 
         protected void EmitError(in Token token, int code, params object[] args)
@@ -57,7 +75,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
         protected Token CreateToken(TokenKind kind)
         {
             var length = _sIndex - _offset;
-            var token = new Token(_s, _offset, kind, _path, _line, _column, length);
+            var token = new Token(_s, _offset, kind, Path, _line, _column, length);
             if (kind == TokenKind.NewLine)
             {
                 _line++;
@@ -94,6 +112,24 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 ReadChar();
                 c = PeekChar();
             } while (c != char.MinValue && char.IsWhiteSpace(c));
+            return true;
+        }
+
+        protected bool ParseString()
+        {
+            var c = PeekChar();
+            if (c != '"')
+                return false;
+            ReadChar();
+
+            var escaped = false;
+            while (PeekChar() != '\0')
+            {
+                c = ReadChar();
+                if (!escaped && c == '"')
+                    break;
+                escaped = c == '\\';
+            }
             return true;
         }
 

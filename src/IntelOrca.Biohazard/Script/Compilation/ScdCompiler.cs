@@ -1,4 +1,6 @@
-﻿namespace IntelOrca.Biohazard.Script.Compilation
+﻿using System.Linq;
+
+namespace IntelOrca.Biohazard.Script.Compilation
 {
     public partial class ScdCompiler : IScdGenerator
     {
@@ -6,10 +8,10 @@
         public byte[] OutputInit { get; private set; } = new byte[0];
         public byte[] OutputMain { get; private set; } = new byte[0];
 
-        public int Generate(string path, string script)
+        public int Generate(IFileIncluder includer, string path)
         {
-            var lexer = new Lexer(Errors);
-            var tokens = lexer.ParseAllTokens(path, script);
+            var lexer = new Lexer(includer, Errors);
+            var tokens = lexer.GetTokens(path).ToArray();
             if (Errors.Count != 0)
                 return 1;
 

@@ -92,8 +92,7 @@ namespace IntelOrca.Scd
             {
                 if (CreateGenerator(rdtPath) is IScdGenerator generator)
                 {
-                    var s = File.ReadAllText(rdtPath);
-                    var result = generator.Generate(rdtPath, s);
+                    var result = generator.Generate(new SimpleFileIncluder(), rdtPath);
                     if (result == 0)
                     {
                         if (generator.OutputInit != null && generator.OutputInit.Length != 0)
@@ -127,8 +126,7 @@ namespace IntelOrca.Scd
                         }
                         else if (CreateGenerator(inPath) is IScdGenerator generator2)
                         {
-                            var s = File.ReadAllText(inPath);
-                            var result = generator2.Generate(inPath, s);
+                            var result = generator2.Generate(new SimpleFileIncluder(), inPath);
                             if (result == 0)
                             {
                                 if (generator2.OutputInit.Length != 0)

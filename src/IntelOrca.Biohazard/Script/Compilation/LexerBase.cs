@@ -95,10 +95,15 @@ namespace IntelOrca.Biohazard.Script.Compilation
             if (c != '\n' && c != '\r')
                 return false;
 
-            ReadChar();
-            c = PeekChar();
-            if (c == '\n')
-                ReadChar();
+            c = ReadChar();
+            if (c == '\r')
+            {
+                c = PeekChar();
+                if (c == '\n')
+                {
+                    ReadChar();
+                }
+            }
             return true;
         }
 

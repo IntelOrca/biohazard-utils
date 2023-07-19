@@ -553,8 +553,6 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     var baseAddress = _currentOpcodeOffset;
                     if (arg == 'l' || arg == 'L' || arg == '\'')
                         baseAddress += _currentOpcodeLength;
-                    if (arg == '~')
-                        baseAddress += _currentOpcodeLength - 2;
 
                     var size = arg == 'l' || arg == '\'' ? 1 : 2;
                     RecordLabelReference(baseAddress, size, in token);

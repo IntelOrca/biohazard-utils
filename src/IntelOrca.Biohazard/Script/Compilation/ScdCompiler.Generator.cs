@@ -13,7 +13,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
             private readonly ErrorList _errors;
             private BioVersion? _version;
             private IConstantTable _constantTable = new Bio1ConstantTable();
-            private List<string> _procedureNames = new List<string>();
+            private HashSet<string> _procedureNames = new HashSet<string>();
             private List<ProcedureBuilder> _procedures = new List<ProcedureBuilder>();
             private ProcedureBuilder _currentProcedure = new ProcedureBuilder("");
 
@@ -27,8 +27,8 @@ namespace IntelOrca.Biohazard.Script.Compilation
 
             public int Generate(SyntaxTree tree)
             {
+                _procedureNames = GetAllProcedureNames(tree);
                 Visit(tree.Root);
-                CheckProcedureReferences();
                 if (_errors.Count != 0)
                 {
                     return 1;
@@ -39,20 +39,31 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 return 0;
             }
 
-            private void CheckProcedureReferences()
+            private HashSet<string> GetAllProcedureNames(SyntaxTree tree)
             {
-                var procedureNames = new HashSet<string>(_procedures.Select(x => x.Name));
-                foreach (var proc in _procedures)
+                var names = new HashSet<string>();
+                var stack = new Stack<SyntaxNode>();
+                stack.Push(tree.Root);
+                while (stack.Count != 0)
                 {
-                    var procRefs = proc.ProcedureReferences;
-                    foreach (var procRef in procRefs)
+                    var node = stack.Pop();
+                    if (node is ProcedureSyntaxNode procNode)
                     {
-                        if (!procedureNames.Contains(procRef.Name))
+                        var procName = procNode.NameToken.Text;
+                        if (!names.Add(procName))
                         {
-                            EmitError(procRef.Token, ErrorCodes.ProcedureNameAlreadyDefined, procRef.Name);
+                            EmitError(procNode.NameToken, ErrorCodes.ProcedureNameAlreadyDefined, procName);
+                        }
+                    }
+                    else
+                    {
+                        foreach (var child in node.Children)
+                        {
+                            stack.Push(child);
                         }
                     }
                 }
+                return names;
             }
 
             private byte[] GenerateScd(params string[] startProcs)
@@ -185,13 +196,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
 
             private void VisitProcedureNode(ProcedureSyntaxNode procedureNode)
             {
-                var name = procedureNode.NameToken.Text;
-                if (_procedureNames.Contains(name))
-                {
-                    EmitError(procedureNode.NameToken, ErrorCodes.ProcedureNameAlreadyDefined, name);
-                }
-
-                _currentProcedure = new ProcedureBuilder(name);
+                _currentProcedure = new ProcedureBuilder(procedureNode.NameToken.Text);
                 VisitChildren(procedureNode);
                 _currentProcedure.Align();
                 _currentProcedure.Write((byte)OpcodeV2.EvtEnd);
@@ -330,16 +335,46 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 for (var i = 0; i < numOperands; i++)
                 {
                     var arg = opcodeSignature[i];
-                    var value = ProcessOperand(operands[i]);
-                    if (char.IsUpper(arg) || arg == '@' || arg == '~')
+                    var argLen = char.IsUpper(arg) || arg == '@' || arg == '~' ? 2 : 1;
+                    if (ProcessProcedureRef(operands[i], out var procRefToken))
                     {
-                        _currentProcedure.Write((short)value);
+                        if (argLen == 2)
+                        {
+                            EmitError(in procRefToken, ErrorCodes.InvalidOperand);
+                        }
+                        else
+                        {
+                            _currentProcedure.WriteProcedureRef(in procRefToken);
+                        }
                     }
                     else
                     {
-                        _currentProcedure.Write((byte)value);
+                        var value = ProcessOperand(operands[i]);
+                        if (argLen == 2)
+                        {
+                            _currentProcedure.Write((short)value);
+                        }
+                        else
+                        {
+                            _currentProcedure.Write((byte)value);
+                        }
                     }
                 }
+            }
+
+            private bool ProcessProcedureRef(SyntaxNode node, out Token procRefToken)
+            {
+                if (node is LiteralSyntaxNode literal && literal.LiteralToken.Kind == TokenKind.Symbol)
+                {
+                    var tokenText = literal.LiteralToken.Text;
+                    if (_procedureNames.Contains(tokenText))
+                    {
+                        procRefToken = literal.LiteralToken;
+                        return true;
+                    }
+                }
+                procRefToken = default;
+                return false;
             }
 
             private int ProcessOperand(SyntaxNode node)
@@ -374,13 +409,22 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     }
                     else if (token.Kind == TokenKind.Symbol)
                     {
-                        var value = _constantTable.GetConstantValue(token.Text);
-                        if (value == null)
+                        var tokenText = token.Text;
+                        if (_procedureNames.Contains(tokenText))
                         {
-                            value = 0;
-                            EmitError(in token, ErrorCodes.UnknownSymbol, token.Text);
+                            EmitError(in token, ErrorCodes.InvalidExpression);
+                            return 0;
                         }
-                        return value.Value;
+                        else
+                        {
+                            var value = _constantTable.GetConstantValue(tokenText);
+                            if (value == null)
+                            {
+                                value = 0;
+                                EmitError(in token, ErrorCodes.UnknownSymbol, tokenText);
+                            }
+                            return value.Value;
+                        }
                     }
                     else
                     {

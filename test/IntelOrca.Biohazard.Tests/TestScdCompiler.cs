@@ -169,6 +169,24 @@ proc wait_for_mr_x
         }
 
         [Fact]
+        public void TestAotEvent()
+        {
+            var expected = "0200010006001C001E002C060541000000C242C1100E0807FF0018020000010001000100";
+            AssertScd(expected, @"
+#version 2
+
+proc main
+{
+    aot_set(6, SCE_EVENT, SAT_PL | SAT_UNDER, 0, 0, -15872, -16062, 3600, 1800, 255, 0, I_GOSUB, some_event, 0, 0);
+}
+
+proc some_event
+{
+}
+");
+        }
+
+        [Fact]
         public void TestInclude()
         {
             var mainScript = @"

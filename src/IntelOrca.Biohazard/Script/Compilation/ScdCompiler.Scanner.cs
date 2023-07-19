@@ -64,19 +64,34 @@ namespace IntelOrca.Biohazard.Script.Compilation
 
             private bool ParseComment()
             {
-                if (!Parse("//"))
-                    return false;
-
-                while (true)
+                if (Parse("//"))
                 {
-                    var c = PeekChar();
-                    if (c == '\n' || c == '\r' || c == '\0')
+                    while (true)
                     {
-                        break;
+                        var c = PeekChar();
+                        if (c == '\n' || c == '\r' || c == '\0')
+                        {
+                            break;
+                        }
+                        ReadChar();
                     }
-                    ReadChar();
+                    return true;
                 }
-                return true;
+                else if (Parse("/*"))
+                {
+                    while ((PeekChar()) != '\0')
+                    {
+                        var c0 = ReadChar();
+                        var c1 = PeekChar();
+                        if (c0 == '*' && c1 == '/')
+                        {
+                            ReadChar();
+                            break;
+                        }
+                    }
+                    return true;
+                }
+                return false;
             }
 
             private bool ParseDirective()

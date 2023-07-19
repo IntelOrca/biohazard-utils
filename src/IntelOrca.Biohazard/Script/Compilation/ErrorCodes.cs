@@ -39,6 +39,7 @@
         public const int InvalidMacroName = 35;
         public const int ParserFailure = 36;
         public const int ExpectedWhile = 37;
+        public const int ExpectedColon = 38;
 
         public static string GetMessage(int code) => _messages[code];
 
@@ -82,6 +83,7 @@
                 "'{0}' is an invalid name for a macro.",
                 "The parser unexpectedly failed.",
                 "while expected.",
+                ": expected",
         };
     }
 }

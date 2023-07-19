@@ -21,6 +21,7 @@
         Opcode,
         Directive,
 
+        Colon,
         Semicolon,
         OpenBlock,
         CloseBlock,
@@ -32,6 +33,10 @@
         Else,
         While,
         Do,
+        Switch,
+        Case,
+        Default,
+        Break,
 
         EOF
     }

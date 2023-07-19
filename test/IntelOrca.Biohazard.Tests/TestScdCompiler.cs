@@ -148,6 +148,34 @@ proc init
         }
 
         [Fact]
+        public void TestSwitchStatement()
+        {
+            var expected = "0200131A2800140006000000090A14001A00140000000100140006000200090A1E001A001500090A28001A00160001000400060001000100";
+            AssertScd(expected, @"
+#version 2
+
+proc init
+{
+    switch (V_CUT)
+    {
+        case 0:
+            sleep(10, 20);
+            break;
+        case 1:
+        case 2:
+        {
+            sleep(10, 30);
+            break;
+        }
+        default:
+            sleep(10, 40);
+            break;
+    }
+}
+");
+        }
+
+        [Fact]
         public void TestFork()
         {
             var expected = "0200010006000C000E0004FF180201000100090A1E000100";
@@ -156,7 +184,7 @@ proc init
 
 proc main
 {
-    fork wait_for_mr_x
+    fork wait_for_mr_x;
 }
 
 proc wait_for_mr_x

@@ -150,6 +150,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 {
                     ParseIfStatement,
                     ParseWhileStatement,
+                    ParseDoWhileStatement,
                     ParseForkStatement,
                     ParseOpcode,
                 };
@@ -210,6 +211,26 @@ namespace IntelOrca.Biohazard.Script.Compilation
 
                 var block = ParseBlock();
                 return new WhileSyntaxNode(condition, block);
+            }
+
+            private DoWhileSyntaxNode? ParseDoWhileStatement()
+            {
+                if (!ParseToken(TokenKind.Do))
+                    return null;
+
+                var block = ParseBlock();
+
+                if (!ParseExpected(TokenKind.While))
+                    return null;
+
+                var condition = ParseCondition();
+                if (condition == null)
+                    return null;
+
+                if (!ParseExpected(TokenKind.Semicolon))
+                    return null;
+
+                return new DoWhileSyntaxNode(block, condition);
             }
 
             private ConditionalExpressionSyntaxNode? ParseCondition()
@@ -383,6 +404,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                         TokenKind.OpenBlock => ErrorCodes.ExpectedOpenBlock,
                         TokenKind.CloseBlock => ErrorCodes.ExpectedCloseBlock,
                         TokenKind.Semicolon => ErrorCodes.ExpectedSemicolon,
+                        TokenKind.While => ErrorCodes.ExpectedWhile,
                         _ => throw new NotImplementedException(),
                     };
                     EmitError(in LastToken, errorCode);
@@ -525,6 +547,29 @@ namespace IntelOrca.Biohazard.Script.Compilation
                         yield return Condition;
                     if (Block != null)
                         yield return Block;
+                }
+            }
+        }
+
+        private class DoWhileSyntaxNode : SyntaxNode
+        {
+            public BlockSyntaxNode? Block { get; }
+            public ConditionalExpressionSyntaxNode Condition { get; }
+
+            public DoWhileSyntaxNode(BlockSyntaxNode? block, ConditionalExpressionSyntaxNode condition)
+            {
+                Block = block;
+                Condition = condition;
+            }
+
+            public override IEnumerable<SyntaxNode> Children
+            {
+                get
+                {
+                    if (Block != null)
+                        yield return Block;
+                    if (Condition != null)
+                        yield return Condition;
                 }
             }
         }

@@ -145,6 +145,9 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     case WhileSyntaxNode whileNode:
                         VisitWhileNode(whileNode);
                         break;
+                    case DoWhileSyntaxNode doWhileNode:
+                        VisitDoWhileNode(doWhileNode);
+                        break;
                     case OpcodeSyntaxNode opcodeNode:
                         VisitOpcodeNode(opcodeNode);
                         break;
@@ -256,6 +259,25 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 _currentProcedure.Align();
                 _currentProcedure.Write((byte)OpcodeV2.Ewhile);
                 _currentProcedure.Write((byte)0);
+                _currentProcedure.WriteLabel(endLabel);
+            }
+
+            private void VisitDoWhileNode(DoWhileSyntaxNode whileNode)
+            {
+                _currentProcedure.Align();
+                _currentProcedure.Write((byte)OpcodeV2.Do);
+                _currentProcedure.Write((byte)0);
+                var endLabel = _currentProcedure.WriteLabelRef(2, 2);
+                if (whileNode.Block != null)
+                {
+                    Visit(whileNode.Block);
+                }
+
+                _currentProcedure.Align();
+                _currentProcedure.Write((byte)OpcodeV2.Edwhile);
+                _currentProcedure.WriteLabelRef(endLabel, 1, 1);
+                Visit(whileNode.Condition);
+                _currentProcedure.Align();
                 _currentProcedure.WriteLabel(endLabel);
             }
 
@@ -425,6 +447,11 @@ namespace IntelOrca.Biohazard.Script.Compilation
             {
                 var label = new Label(_labels.Count);
                 _labels.Add(label);
+                return WriteLabelRef(label, size, relativeBaseAddress);
+            }
+
+            public Label WriteLabelRef(Label label, byte size, int relativeBaseAddress)
+            {
                 _labelReferences.Add(new LabelReference(label, Offset, size, Offset + relativeBaseAddress));
                 if (size == 1)
                     Write((byte)0);

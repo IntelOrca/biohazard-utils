@@ -31,6 +31,7 @@
         If,
         Else,
         While,
+        Do,
 
         EOF
     }

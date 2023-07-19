@@ -115,6 +115,22 @@ proc init
         }
 
         [Fact]
+        public void TestDoWhileStatement()
+        {
+            var expected = "020011000800020012042105200001000400060001000100";
+            AssertScd(expected, @"
+#version 2
+
+proc init
+{
+    do {
+        evt_next();
+    } while (ck(5, 32, 0));
+}
+");
+        }
+
+        [Fact]
         public void TestFork()
         {
             var expected = "0200010006000C000E0004FF180201000100090A1E000100";

@@ -180,6 +180,11 @@ namespace IntelOrca.Biohazard.Script.Compilation
             if (string.Compare(_s, _sIndex, s, 0, s.Length) != 0)
                 return false;
 
+            // If we are parsing a keyword, we must not have a letter/digit straight after
+            var nextIndex = _sIndex + s.Length;
+            if (_s.Length > nextIndex && char.IsLetter(s[0]) && char.IsLetterOrDigit(_s[nextIndex]))
+                return false;
+
             _sIndex += s.Length;
             return true;
         }

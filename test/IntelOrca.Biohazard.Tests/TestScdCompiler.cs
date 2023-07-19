@@ -36,6 +36,23 @@ proc init
         }
 
         [Fact]
+        public void TestBlockComment()
+        {
+            var expected = "020001000400060001000100";
+            AssertScd(expected, @"
+#version 2
+
+proc init
+{
+    /*
+        sleep(10, 50);
+        sleep(10, 50);
+    */
+}
+");
+        }
+
+        [Fact]
         public void TestBuiltInConstant()
         {
             var expected = "02004400002A00800012005A00830000008300000000000001000400060001000100";

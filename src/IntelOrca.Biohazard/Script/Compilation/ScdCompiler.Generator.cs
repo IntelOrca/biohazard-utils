@@ -159,6 +159,12 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     case DoWhileSyntaxNode doWhileNode:
                         VisitDoWhileNode(doWhileNode);
                         break;
+                    case SwitchSyntaxNode switchNode:
+                        VisitSwitchNode(switchNode);
+                        break;
+                    case BreakSyntaxNode breakNode:
+                        VisitBreakNode(breakNode);
+                        break;
                     case OpcodeSyntaxNode opcodeNode:
                         VisitOpcodeNode(opcodeNode);
                         break;
@@ -284,6 +290,48 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 Visit(whileNode.Condition);
                 _currentProcedure.Align();
                 _currentProcedure.WriteLabel(endLabel);
+            }
+
+            private void VisitSwitchNode(SwitchSyntaxNode switchNode)
+            {
+                _currentProcedure.Align();
+                _currentProcedure.Write((byte)OpcodeV2.Switch);
+                _currentProcedure.Write((byte)ProcessOperand(switchNode.Variable));
+                var endLabel = _currentProcedure.WriteLabelRef(2, 2);
+
+                foreach (var caseNode in switchNode.Cases)
+                {
+                    if (caseNode.Value is ExpressionSyntaxNode valueNode)
+                    {
+                        _currentProcedure.Write((byte)OpcodeV2.Case);
+                        _currentProcedure.Write((byte)0);
+                        var endCaseLabel = _currentProcedure.WriteLabelRef(2, 4);
+                        _currentProcedure.Write((byte)ProcessOperand(valueNode));
+                        Visit(caseNode.Block);
+                        _currentProcedure.Align();
+                        _currentProcedure.WriteLabel(endCaseLabel);
+                    }
+                    else
+                    {
+                        _currentProcedure.Align();
+                        _currentProcedure.Write((byte)OpcodeV2.Default);
+                        _currentProcedure.Write((byte)0);
+                        Visit(caseNode.Block);
+                        _currentProcedure.Align();
+                    }
+                }
+
+                _currentProcedure.Align();
+                _currentProcedure.Write((byte)OpcodeV2.Eswitch);
+                _currentProcedure.Write((byte)0);
+                _currentProcedure.WriteLabel(endLabel);
+            }
+
+            private void VisitBreakNode(BreakSyntaxNode breakNode)
+            {
+                _currentProcedure.Align();
+                _currentProcedure.Write((byte)OpcodeV2.Break);
+                _currentProcedure.Write((byte)0);
             }
 
             private void VisitOpcodeNode(OpcodeSyntaxNode opcodeNode)

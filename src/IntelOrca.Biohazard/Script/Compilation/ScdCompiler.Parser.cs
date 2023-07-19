@@ -119,38 +119,47 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 }
 
                 ref readonly var nameToken = ref LastToken;
-                var block = ParseBlock();
+                var block = ParseExpectedBlock();
                 return new ProcedureSyntaxNode(nameToken, block);
             }
 
             private BlockSyntaxNode? ParseBlock()
             {
-                if (!ParseExpected(TokenKind.OpenBlock))
+                var token = PeekToken();
+                if (token.Kind != TokenKind.OpenBlock)
                     return null;
 
+                ReadToken();
                 var nodes = new List<SyntaxNode>();
-                while (true)
+                SyntaxNode? opcode;
+                while ((opcode = ParseStatement()) != null)
                 {
-                    var opcode = ParseStatement();
-                    if (opcode != null)
-                    {
-                        nodes.Add(opcode);
-                        continue;
-                    }
-                    ParseExpected(TokenKind.CloseBlock);
-                    break;
+                    nodes.Add(opcode);
                 }
-
+                ParseExpected(TokenKind.CloseBlock);
                 return new BlockSyntaxNode(nodes.ToArray());
+            }
+
+            private BlockSyntaxNode? ParseExpectedBlock()
+            {
+                if (PeekToken().Kind != TokenKind.OpenBlock)
+                {
+                    ParseExpected(TokenKind.OpenBlock);
+                    return null;
+                }
+                return ParseBlock();
             }
 
             private SyntaxNode? ParseStatement()
             {
                 var parsers = new Func<SyntaxNode?>[]
                 {
+                    ParseBlock,
                     ParseIfStatement,
                     ParseWhileStatement,
                     ParseDoWhileStatement,
+                    ParseSwitchStatement,
+                    ParseBreakStatement,
                     ParseForkStatement,
                     ParseOpcode,
                 };
@@ -158,8 +167,12 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 {
                     if (parser() is SyntaxNode node)
                     {
-                        if (node is OpcodeSyntaxNode)
+                        if (node is OpcodeSyntaxNode ||
+                            node is BreakSyntaxNode ||
+                            node is ForkSyntaxNode)
+                        {
                             ParseExpected(TokenKind.Semicolon);
+                        }
                         return node;
                     }
                 }
@@ -191,11 +204,11 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 if (condition == null)
                     return null;
 
-                var ifBlock = ParseBlock();
+                var ifBlock = ParseExpectedBlock();
                 var elseBlock = null as BlockSyntaxNode;
                 if (ParseToken(TokenKind.Else))
                 {
-                    elseBlock = ParseBlock();
+                    elseBlock = ParseExpectedBlock();
                 }
                 return new IfSyntaxNode(condition, ifBlock, elseBlock);
             }
@@ -209,7 +222,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 if (condition == null)
                     return null;
 
-                var block = ParseBlock();
+                var block = ParseExpectedBlock();
                 return new WhileSyntaxNode(condition, block);
             }
 
@@ -218,7 +231,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 if (!ParseToken(TokenKind.Do))
                     return null;
 
-                var block = ParseBlock();
+                var block = ParseExpectedBlock();
 
                 if (!ParseExpected(TokenKind.While))
                     return null;
@@ -231,6 +244,90 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     return null;
 
                 return new DoWhileSyntaxNode(block, condition);
+            }
+
+            private SwitchSyntaxNode? ParseSwitchStatement()
+            {
+                if (!ParseToken(TokenKind.Switch))
+                    return null;
+
+                var variable = ParseExpression();
+                if (variable == null)
+                    return null;
+
+                if (!ParseExpected(TokenKind.OpenBlock))
+                    return null;
+
+                var cases = new List<CaseSyntaxNode>();
+                CaseSyntaxNode? caseNode;
+                while ((caseNode = ParseSwitchCase()) != null)
+                {
+                    cases.Add(caseNode);
+                }
+
+                if (!ParseExpected(TokenKind.CloseBlock))
+                    return null;
+
+                return new SwitchSyntaxNode(variable, cases.ToArray());
+            }
+
+            private CaseSyntaxNode? ParseSwitchCase()
+            {
+                var value = null as ExpressionSyntaxNode;
+                var token = PeekToken();
+                if (token.Kind == TokenKind.Case)
+                {
+                    ReadToken();
+                    value = ParseExpression();
+                    if (value == null)
+                        return null;
+                }
+                else if (token.Kind == TokenKind.Default)
+                {
+                    ReadToken();
+                }
+                else
+                {
+                    return null;
+                }
+
+                if (!ParseExpected(TokenKind.Colon))
+                    return null;
+
+                var block = ParseCaseBlock();
+                if (block == null)
+                    return null;
+                return new CaseSyntaxNode(value, block);
+            }
+
+            private BlockSyntaxNode? ParseCaseBlock()
+            {
+                var nodes = new List<SyntaxNode>();
+                while (true)
+                {
+                    ref readonly var token = ref PeekToken();
+                    if (token.Kind == TokenKind.Case || token.Kind == TokenKind.Default || token.Kind == TokenKind.CloseBlock)
+                        break;
+
+                    var opcode = ParseStatement();
+                    if (opcode != null)
+                    {
+                        nodes.Add(opcode);
+                        continue;
+                    }
+                    break;
+                }
+
+                return new BlockSyntaxNode(nodes.ToArray());
+            }
+
+            private BreakSyntaxNode? ParseBreakStatement()
+            {
+                if (PeekToken().Kind != TokenKind.Break)
+                    return null;
+
+                ReadToken();
+                return new BreakSyntaxNode();
             }
 
             private ConditionalExpressionSyntaxNode? ParseCondition()
@@ -403,6 +500,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                         TokenKind.CloseParen => ErrorCodes.ExpectedCloseParen,
                         TokenKind.OpenBlock => ErrorCodes.ExpectedOpenBlock,
                         TokenKind.CloseBlock => ErrorCodes.ExpectedCloseBlock,
+                        TokenKind.Colon => ErrorCodes.ExpectedColon,
                         TokenKind.Semicolon => ErrorCodes.ExpectedSemicolon,
                         TokenKind.While => ErrorCodes.ExpectedWhile,
                         _ => throw new NotImplementedException(),
@@ -572,6 +670,56 @@ namespace IntelOrca.Biohazard.Script.Compilation
                         yield return Condition;
                 }
             }
+        }
+
+        private class SwitchSyntaxNode : SyntaxNode
+        {
+            public ExpressionSyntaxNode Variable { get; }
+            public CaseSyntaxNode[] Cases { get; }
+
+            public SwitchSyntaxNode(ExpressionSyntaxNode variable, CaseSyntaxNode[] cases)
+            {
+                Variable = variable;
+                Cases = cases;
+            }
+
+            public override IEnumerable<SyntaxNode> Children
+            {
+                get
+                {
+                    if (Variable != null)
+                        yield return Variable;
+                    foreach (var c in Cases)
+                        yield return c;
+                }
+            }
+        }
+
+        private class CaseSyntaxNode : SyntaxNode
+        {
+            public ExpressionSyntaxNode? Value { get; }
+            public BlockSyntaxNode Block { get; }
+
+            public CaseSyntaxNode(ExpressionSyntaxNode? value, BlockSyntaxNode block)
+            {
+                Value = value;
+                Block = block;
+            }
+
+            public override IEnumerable<SyntaxNode> Children
+            {
+                get
+                {
+                    if (Value != null)
+                        yield return Value;
+                    if (Block != null)
+                        yield return Block;
+                }
+            }
+        }
+
+        private class BreakSyntaxNode : SyntaxNode
+        {
         }
 
         private class ConditionalExpressionSyntaxNode : SyntaxNode

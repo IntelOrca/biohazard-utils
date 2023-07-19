@@ -819,7 +819,7 @@ namespace IntelOrca.Biohazard.Script
                                 var blockLen = c == '~' ? (int)br.ReadInt16() : (int)br.ReadUInt16();
                                 var labelOffset = offset + instructionLength + blockLen;
                                 if (c == '~')
-                                    labelOffset -= 2;
+                                    labelOffset = offset + blockLen;
                                 _sb.InsertLabel(labelOffset);
                                 parameters.Add(_sb.GetLabelName(labelOffset));
                                 break;

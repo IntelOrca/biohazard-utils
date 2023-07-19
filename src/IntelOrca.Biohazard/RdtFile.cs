@@ -46,11 +46,16 @@ namespace IntelOrca.Biohazard
             Version = version ?? DetectVersion(data);
             _offsets = ReadHeader();
             _lengths = GetChunkLengths();
-            if (Version != BioVersion.Biohazard1)
+            if (Version == BioVersion.Biohazard2)
             {
                 // We need to do AST analysis on SCD to find where the end is
                 _lengths[GetScdChunkIndex(BioScriptKind.Init)] = MeasureScript(BioScriptKind.Init);
                 _lengths[GetScdChunkIndex(BioScriptKind.Main)] = MeasureScript(BioScriptKind.Main);
+            }
+            else if (Version == BioVersion.Biohazard3)
+            {
+                // We need to do AST analysis on SCD to find where the end is
+                _lengths[GetScdChunkIndex(BioScriptKind.Init)] = MeasureScript(BioScriptKind.Init);
             }
             GetNumEventScripts();
             Checksum = Data.CalculateFnv1a();

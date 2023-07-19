@@ -46,6 +46,12 @@ namespace IntelOrca.Biohazard
             Version = version ?? DetectVersion(data);
             _offsets = ReadHeader();
             _lengths = GetChunkLengths();
+            if (Version != BioVersion.Biohazard1)
+            {
+                // We need to do AST analysis on SCD to find where the end is
+                _lengths[GetScdChunkIndex(BioScriptKind.Init)] = MeasureScript(BioScriptKind.Init);
+                _lengths[GetScdChunkIndex(BioScriptKind.Main)] = MeasureScript(BioScriptKind.Main);
+            }
             GetNumEventScripts();
             Checksum = Data.CalculateFnv1a();
             if (version == BioVersion.Biohazard2)
@@ -317,6 +323,16 @@ namespace IntelOrca.Biohazard
                 scdReader.BaseOffset = scriptOffset;
                 scdReader.ReadScript(new ReadOnlyMemory<byte>(Data, scriptOffset, scriptLength), Version, kind, visitor);
             }
+        }
+
+        private int MeasureScript(BioScriptKind kind)
+        {
+            var chunkIndex = GetScdChunkIndex(kind);
+            var scriptOffset = _offsets[chunkIndex];
+            var scriptLength = _lengths[chunkIndex];
+            var span = new ReadOnlyMemory<byte>(Data, scriptOffset, scriptLength);
+            var scdReader = new ScdReader();
+            return scdReader.MeasureScript(span, Version, kind);
         }
 
         private void ReadEMRs()

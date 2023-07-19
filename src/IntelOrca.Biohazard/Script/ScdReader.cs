@@ -16,12 +16,12 @@ namespace IntelOrca.Biohazard.Script
             return decompiler.GetScript();
         }
 
-        internal void ReadScript(ReadOnlyMemory<byte> data, BioVersion version, BioScriptKind kind, BioScriptVisitor visitor)
+        internal void ReadScript(ReadOnlyMemory<byte> data, BioVersion version, BioScriptKind kind, IBioScriptVisitor visitor)
         {
             ReadScript(new SpanStream(data), data.Length, version, kind, visitor);
         }
 
-        internal void ReadScript(Stream stream, int length, BioVersion version, BioScriptKind kind, BioScriptVisitor visitor)
+        internal void ReadScript(Stream stream, int length, BioVersion version, BioScriptKind kind, IBioScriptVisitor visitor)
         {
             var br = new BinaryReader(stream);
             switch (version)
@@ -40,7 +40,7 @@ namespace IntelOrca.Biohazard.Script
             }
         }
 
-        private void ReadScript1(BinaryReader br, int length, BioScriptKind kind, BioScriptVisitor visitor)
+        private void ReadScript1(BinaryReader br, int length, BioScriptKind kind, IBioScriptVisitor visitor)
         {
             var scriptEnd = kind == BioScriptKind.Event ? length : br.ReadUInt16();
             var constantTable = new Bio1ConstantTable();
@@ -73,12 +73,12 @@ namespace IntelOrca.Biohazard.Script
             visitor.VisitEndScript(kind);
         }
 
-        private void ReadScript2(BinaryReader br, int length, BioScriptKind kind, BioScriptVisitor visitor)
+        private void ReadScript2(BinaryReader br, int length, BioScriptKind kind, IBioScriptVisitor visitor)
         {
             ReadScript23(br, length, kind, visitor, BioVersion.Biohazard2, new Bio2ConstantTable());
         }
 
-        private void ReadScript3(BinaryReader br, int length, BioScriptKind kind, BioScriptVisitor visitor)
+        private void ReadScript3(BinaryReader br, int length, BioScriptKind kind, IBioScriptVisitor visitor)
         {
             ReadScript23(br, length, kind, visitor, BioVersion.Biohazard3, new Bio3ConstantTable());
         }
@@ -87,7 +87,7 @@ namespace IntelOrca.Biohazard.Script
             BinaryReader br,
             int length,
             BioScriptKind kind,
-            BioScriptVisitor visitor,
+            IBioScriptVisitor visitor,
             BioVersion version,
             IConstantTable constantTable)
         {
@@ -119,7 +119,7 @@ namespace IntelOrca.Biohazard.Script
                     var remainingSize = functionEnd - instructionPosition;
                     if (isEnd)
                     {
-                        visitor.VisitTrailingData(BaseOffset + instructionPosition, br.ReadBytes(remainingSize));
+                        // visitor.VisitTrailingData(BaseOffset + instructionPosition, br.ReadBytes(remainingSize));
                         break;
                     }
 
@@ -190,6 +190,13 @@ namespace IntelOrca.Biohazard.Script
             }
 
             visitor.VisitEndScript(kind);
+        }
+
+        public int MeasureScript(ReadOnlyMemory<byte> data, BioVersion version, BioScriptKind kind)
+        {
+            var stream = new SpanStream(data);
+            ReadScript(stream, data.Length, version, kind, new NullBioScriptVisitor());
+            return (int)stream.Position;
         }
     }
 }

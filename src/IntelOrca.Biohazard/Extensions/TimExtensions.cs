@@ -1,4 +1,7 @@
-﻿namespace IntelOrca.Biohazard.Extensions
+﻿using System;
+using System.IO;
+
+namespace IntelOrca.Biohazard.Extensions
 {
     public static class TimFileExtensions
     {
@@ -63,6 +66,59 @@
                 }
             }
             return tim;
+        }
+
+        public static byte[] ToBitmapBuffer(this TimFile tim, Func<int, int, int>? getClutIndex = null)
+        {
+            getClutIndex ??= (x, y) => 0;
+
+            var stride = (((tim.Width * 3) + 3) / 4) * 4;
+            var padding = stride - (tim.Width * 3);
+            var rawDataLength = stride * tim.Height;
+
+            var ms = new MemoryStream();
+            var bw = new BinaryWriter(ms);
+
+            // BMP header
+            bw.Write((byte)0x42);
+            bw.Write((byte)0x4D);
+            bw.Write(0);
+            bw.Write((ushort)0);
+            bw.Write((ushort)0);
+            bw.Write((uint)54);
+
+            // DIB header
+            bw.Write((uint)40);
+            bw.Write((uint)tim.Width);
+            bw.Write((uint)tim.Height);
+            bw.Write((ushort)1);
+            bw.Write((ushort)24);
+            bw.Write((uint)0);
+            bw.Write((uint)rawDataLength);
+            bw.Write((uint)0x0B13); // DPI X
+            bw.Write((uint)0x0B13); // DPI Y
+            bw.Write((uint)0);
+            bw.Write((uint)0);
+
+            for (var y = 0; y < tim.Height; y++)
+            {
+                for (var x = 0; x < tim.Width; x++)
+                {
+                    var p = tim.GetPixel(x, y, getClutIndex(x, y));
+                    bw.Write((p >> 0) & 0xFF);
+                    bw.Write((p >> 8) & 0xFF);
+                    bw.Write((p >> 16) & 0xFF);
+                }
+                for (var i = 0; i < padding; i++)
+                {
+                    bw.Write(0);
+                }
+            }
+
+            ms.Position = 2;
+            bw.Write((uint)ms.Length);
+
+            return ms.ToArray();
         }
     }
 }

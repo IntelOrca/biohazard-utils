@@ -181,6 +181,22 @@ proc init
         }
 
         [Fact]
+        public void TestRepeatCount()
+        {
+            var expected = "02000D0004002A0002000E0001000400060001000100";
+            AssertScd(expected, @"
+#version 2
+
+proc init
+{
+    repeat (42) {
+        evt_next();
+    }
+}
+");
+        }
+
+        [Fact]
         public void TestSwitchStatement()
         {
             var expected = "0200131A2800140006000000090A14001A00140000000100140006000200090A1E001A001500090A28001A00160001000400060001000100";

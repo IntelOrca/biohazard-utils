@@ -298,14 +298,29 @@ namespace IntelOrca.Biohazard.Script.Compilation
             private void VisitRepeatNode(RepeatSyntaxNode repeatNode)
             {
                 _currentProcedure.Align();
-                var beginLabel = _currentProcedure.WriteLabel();
-                Visit(repeatNode.Block);
-                _currentProcedure.Align();
-                _currentProcedure.Write((byte)OpcodeV2.Goto);
-                _currentProcedure.Write((byte)0xFF);
-                _currentProcedure.Write((byte)0xFF);
-                _currentProcedure.Write((byte)0x00);
-                _currentProcedure.WriteLabelRef(beginLabel, 2, -4);
+                if (repeatNode.Count == null)
+                {
+                    var beginLabel = _currentProcedure.WriteLabel();
+                    Visit(repeatNode.Block);
+                    _currentProcedure.Align();
+                    _currentProcedure.Write((byte)OpcodeV2.Goto);
+                    _currentProcedure.Write((byte)0xFF);
+                    _currentProcedure.Write((byte)0xFF);
+                    _currentProcedure.Write((byte)0x00);
+                    _currentProcedure.WriteLabelRef(beginLabel, 2, -4);
+                }
+                else
+                {
+                    _currentProcedure.Write((byte)OpcodeV2.For);
+                    _currentProcedure.Write((byte)0);
+                    var endLabel = _currentProcedure.WriteLabelRef(2, 4);
+                    _currentProcedure.Write((ushort)ProcessOperand(repeatNode.Count));
+                    Visit(repeatNode.Block);
+                    _currentProcedure.Align();
+                    _currentProcedure.Write((byte)OpcodeV2.Next);
+                    _currentProcedure.Write((byte)0);
+                    _currentProcedure.WriteLabel(endLabel);
+                }
             }
 
             private void VisitSwitchNode(SwitchSyntaxNode switchNode)

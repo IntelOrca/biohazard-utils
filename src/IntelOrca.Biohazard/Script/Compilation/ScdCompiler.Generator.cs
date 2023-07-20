@@ -19,6 +19,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
 
             public byte[] OutputInit { get; private set; } = new byte[0];
             public byte[] OutputMain { get; private set; } = new byte[0];
+            public List<string?> Messages { get; } = new List<string>();
 
             public Generator(ErrorList errors)
             {
@@ -144,6 +145,9 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     case VersionSyntaxNode versionNode:
                         VisitVersionNode(versionNode);
                         break;
+                    case MessageTextSyntaxNode messageTextNode:
+                        VisitMessageTextNode(messageTextNode);
+                        break;
                     case ProcedureSyntaxNode procedureNode:
                         VisitProcedureNode(procedureNode);
                         break;
@@ -201,6 +205,15 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 }
 
                 _constantTable = ConstantTable.FromVersion(_version.Value);
+            }
+
+            private void VisitMessageTextNode(MessageTextSyntaxNode messageTextNode)
+            {
+                while (Messages.Count <= messageTextNode.Id)
+                {
+                    Messages.Add(null);
+                }
+                Messages[messageTextNode.Id] = messageTextNode.Text;
             }
 
             private void VisitProcedureNode(ProcedureSyntaxNode procedureNode)

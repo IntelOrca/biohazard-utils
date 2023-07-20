@@ -137,6 +137,31 @@ namespace IntelOrca.Scd
                                 {
                                     rdtFile.SetScd(BioScriptKind.Main, generator2.OutputMain);
                                 }
+
+                                if (generator2.Messages.Length != 0)
+                                {
+                                    var jpn = rdtFile.GetTexts(0).ToList();
+                                    var eng = rdtFile.GetTexts(1).ToList();
+                                    for (var i = 0; i < generator2.Messages.Length; i++)
+                                    {
+                                        var msg = generator2.Messages[i];
+                                        if (msg == null)
+                                            continue;
+
+                                        while (i >= jpn.Count)
+                                        {
+                                            jpn.Add(new BioString());
+                                        }
+                                        while (i >= eng.Count)
+                                        {
+                                            eng.Add(new BioString());
+                                        }
+                                        jpn[i] = new BioString(msg);
+                                        eng[i] = new BioString(msg);
+                                    }
+                                    rdtFile.SetTexts(0, jpn.ToArray());
+                                    rdtFile.SetTexts(1, eng.ToArray());
+                                }
                             }
                             else
                             {

@@ -86,25 +86,43 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 return true;
             }
 
-            private VersionSyntaxNode? ParseDirective()
+            private SyntaxNode? ParseDirective()
             {
                 if (!ParseToken(TokenKind.Directive))
                     return null;
 
                 ref readonly var lastToken = ref LastToken;
-                if (lastToken.Text != "#version")
+                var directive = lastToken.Text;
+                if (directive == "#version")
+                {
+                    if (!ParseToken(TokenKind.Number))
+                    {
+                        EmitError(in lastToken, ErrorCodes.ExpectedScdVersionNumber);
+                        return null;
+                    }
+                    return new VersionSyntaxNode(LastToken);
+                }
+                else if (directive == "#message")
+                {
+                    if (!ParseToken(TokenKind.Number))
+                    {
+                        EmitError(in lastToken, ErrorCodes.ExpectedOperand);
+                        return null;
+                    }
+                    var id = int.Parse(LastToken.Text);
+                    if (!ParseToken(TokenKind.String))
+                    {
+                        EmitError(in lastToken, ErrorCodes.ExpectedOperand);
+                        return null;
+                    }
+                    var text = LastToken.Text;
+                    return new MessageTextSyntaxNode(id, text.Substring(1, text.Length - 2));
+                }
+                else
                 {
                     EmitError(in lastToken, ErrorCodes.UnknownDirective, lastToken.Text);
                     return null;
                 }
-
-                if (!ParseToken(TokenKind.Number))
-                {
-                    EmitError(in lastToken, ErrorCodes.ExpectedScdVersionNumber);
-                    return null;
-                }
-
-                return new VersionSyntaxNode(LastToken);
             }
 
             private ProcedureSyntaxNode? ParseProcedure()
@@ -589,6 +607,18 @@ namespace IntelOrca.Biohazard.Script.Compilation
             public VersionSyntaxNode(Token versionToken)
             {
                 VersionToken = versionToken;
+            }
+        }
+
+        private class MessageTextSyntaxNode : SyntaxNode
+        {
+            public int Id { get; }
+            public string Text { get; }
+
+            public MessageTextSyntaxNode(int id, string text)
+            {
+                Id = id;
+                Text = text;
             }
         }
 

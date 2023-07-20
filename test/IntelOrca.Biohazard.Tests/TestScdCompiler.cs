@@ -98,6 +98,22 @@ proc init
         }
 
         [Fact]
+        public void TestIfAndStatement()
+        {
+            var expected = "020006000E002101040021020500090A3200080001000400060001000100";
+            AssertScd(expected, @"
+#version 2
+
+proc init
+{
+    if (ck(1, 4, 0) && ck(2, 5, 0)) {
+        sleep(10, 50);
+    }
+}
+");
+        }
+
+        [Fact]
         public void TestIfElseStatement()
         {
             var expected = "020006000C00210104002201040107000800090A320001000400060001000100";

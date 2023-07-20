@@ -17,6 +17,7 @@ namespace IntelOrca.Biohazard.Tests
 proc init
 {
     sleep(10, 50);
+    ;
 }
 ");
         }
@@ -143,6 +144,22 @@ proc init
     do {
         evt_next();
     } while (ck(5, 32, 0));
+}
+");
+        }
+
+        [Fact]
+        public void TestRepeatStatement()
+        {
+            var expected = "0200020017FFFF00FEFF01000400060001000100";
+            AssertScd(expected, @"
+#version 2
+
+proc init
+{
+    repeat {
+        evt_next();
+    }
 }
 ");
         }

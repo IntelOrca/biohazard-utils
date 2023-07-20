@@ -21,6 +21,7 @@
         Opcode,
         Directive,
 
+        FowardSlash,
         Colon,
         Semicolon,
         OpenBlock,

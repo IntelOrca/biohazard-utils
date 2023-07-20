@@ -44,6 +44,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     _ when Parse('*') => CreateToken(TokenKind.Asterisk),
                     _ when Parse('|') => CreateToken(TokenKind.Pipe),
                     _ when Parse('&') => CreateToken(TokenKind.Ampersand),
+                    _ when Parse('/') => CreateToken(TokenKind.FowardSlash),
                     _ when Parse("<<") => CreateToken(TokenKind.LShift),
                     _ when Parse(">>") => CreateToken(TokenKind.RShift),
                     _ when ParseSymbol() => CreateToken(TokenKind.Symbol),

@@ -170,15 +170,44 @@ namespace IntelOrca.Biohazard.Script.Compilation
             {
                 reader.SkipWhitespace();
                 var tokens = new List<Token>();
+                var continueLine = false;
                 while (true)
                 {
                     var t = reader.Peek();
-                    if (t.Kind == TokenKind.NewLine || t.Kind == TokenKind.Comment || t.Kind == TokenKind.EOF)
+                    if (t.Kind == TokenKind.EOF)
                     {
+                        if (continueLine)
+                        {
+                            EmitError(in t, ErrorCodes.InvalidExpression);
+                        }
                         break;
                     }
-                    reader.Read();
-                    tokens.Add(t);
+                    else if (t.Kind == TokenKind.FowardSlash)
+                    {
+                        reader.Read();
+                        continueLine = true;
+                    }
+                    else if (t.Kind == TokenKind.Comment)
+                    {
+                        reader.Read();
+                    }
+                    else if (t.Kind == TokenKind.NewLine)
+                    {
+                        if (continueLine)
+                        {
+                            reader.Read();
+                            continueLine = false;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        reader.Read();
+                        tokens.Add(t);
+                    }
                 }
 
                 // Trim whitespace tokens

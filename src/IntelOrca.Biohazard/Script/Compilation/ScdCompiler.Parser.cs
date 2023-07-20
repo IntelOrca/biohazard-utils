@@ -261,11 +261,20 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 if (!ParseToken(TokenKind.Repeat))
                     return null;
 
+                var count = null as ExpressionSyntaxNode;
+                if (ParseToken(TokenKind.OpenParen))
+                {
+                    count = ParseExpression();
+                    if (count == null)
+                        return null;
+                    ParseExpected(TokenKind.CloseParen);
+                }
+
                 var block = ParseExpectedBlock();
                 if (block == null)
                     return null;
 
-                return new RepeatSyntaxNode(block);
+                return new RepeatSyntaxNode(count, block);
             }
 
             private SwitchSyntaxNode? ParseSwitchStatement()
@@ -701,10 +710,12 @@ namespace IntelOrca.Biohazard.Script.Compilation
 
         private class RepeatSyntaxNode : SyntaxNode
         {
+            public ExpressionSyntaxNode? Count { get; }
             public BlockSyntaxNode Block { get; }
 
-            public RepeatSyntaxNode(BlockSyntaxNode block)
+            public RepeatSyntaxNode(ExpressionSyntaxNode? count, BlockSyntaxNode block)
             {
+                Count = count;
                 Block = block;
             }
 
@@ -712,6 +723,8 @@ namespace IntelOrca.Biohazard.Script.Compilation
             {
                 get
                 {
+                    if (Count != null)
+                        yield return Count;
                     yield return Block;
                 }
             }

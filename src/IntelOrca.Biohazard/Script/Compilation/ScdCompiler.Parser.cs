@@ -158,11 +158,13 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     ParseIfStatement,
                     ParseWhileStatement,
                     ParseDoWhileStatement,
+                    ParseRepeatStatement,
                     ParseSwitchStatement,
                     ParseBreakStatement,
                     ParseForkStatement,
                     ParseOpcode,
                 };
+                SkipSemicolons();
                 foreach (var parser in parsers)
                 {
                     if (parser() is SyntaxNode node)
@@ -177,6 +179,14 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     }
                 }
                 return null;
+            }
+
+            private void SkipSemicolons()
+            {
+                while (PeekToken().Kind == TokenKind.Semicolon)
+                {
+                    ReadToken();
+                }
             }
 
             private ForkSyntaxNode? ParseForkStatement()
@@ -244,6 +254,18 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     return null;
 
                 return new DoWhileSyntaxNode(block, condition);
+            }
+
+            private RepeatSyntaxNode? ParseRepeatStatement()
+            {
+                if (!ParseToken(TokenKind.Repeat))
+                    return null;
+
+                var block = ParseExpectedBlock();
+                if (block == null)
+                    return null;
+
+                return new RepeatSyntaxNode(block);
             }
 
             private SwitchSyntaxNode? ParseSwitchStatement()
@@ -668,6 +690,24 @@ namespace IntelOrca.Biohazard.Script.Compilation
                         yield return Block;
                     if (Condition != null)
                         yield return Condition;
+                }
+            }
+        }
+
+        private class RepeatSyntaxNode : SyntaxNode
+        {
+            public BlockSyntaxNode Block { get; }
+
+            public RepeatSyntaxNode(BlockSyntaxNode block)
+            {
+                Block = block;
+            }
+
+            public override IEnumerable<SyntaxNode> Children
+            {
+                get
+                {
+                    yield return Block;
                 }
             }
         }

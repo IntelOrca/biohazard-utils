@@ -31,6 +31,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     _ when Parse("case") => CreateToken(TokenKind.Case),
                     _ when Parse("default") => CreateToken(TokenKind.Default),
                     _ when Parse("break") => CreateToken(TokenKind.Break),
+                    _ when Parse("repeat") => CreateToken(TokenKind.Repeat),
                     _ when Parse('{') => CreateToken(TokenKind.OpenBlock),
                     _ when Parse('}') => CreateToken(TokenKind.CloseBlock),
                     _ when Parse('(') => CreateToken(TokenKind.OpenParen),

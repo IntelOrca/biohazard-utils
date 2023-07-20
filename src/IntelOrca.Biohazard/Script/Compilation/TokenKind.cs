@@ -37,6 +37,7 @@
         Case,
         Default,
         Break,
+        Repeat,
 
         EOF
     }

@@ -383,18 +383,19 @@ namespace IntelOrca.Biohazard.Script
                 {
                     br.ReadByte();
                     var blockLen = br.ReadUInt16();
-                    _blockEnds.Push(((byte)opcode, offset + blockLen - 2));
+                    _blockEnds.Push(((byte)opcode, offset + blockLen));
                     sb.WriteLine($"do");
                     _sb.OpenBlock();
                     break;
                 }
                 case OpcodeV2.Edwhile:
                 {
+                    _endDoWhile = true;
+                    CloseCurrentBlock();
                     sb.Unindent();
                     sb.Write("} while (");
                     _constructingBinaryExpression = true;
                     _expressionCount = 0;
-                    _endDoWhile = true;
                     break;
                 }
                 case OpcodeV2.Switch:

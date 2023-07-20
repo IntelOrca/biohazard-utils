@@ -159,6 +159,9 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     case DoWhileSyntaxNode doWhileNode:
                         VisitDoWhileNode(doWhileNode);
                         break;
+                    case RepeatSyntaxNode repeatNode:
+                        VisitRepeatNode(repeatNode);
+                        break;
                     case SwitchSyntaxNode switchNode:
                         VisitSwitchNode(switchNode);
                         break;
@@ -290,6 +293,19 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 Visit(whileNode.Condition);
                 _currentProcedure.Align();
                 _currentProcedure.WriteLabel(endLabel);
+            }
+
+            private void VisitRepeatNode(RepeatSyntaxNode repeatNode)
+            {
+                _currentProcedure.Align();
+                var beginLabel = _currentProcedure.WriteLabel();
+                Visit(repeatNode.Block);
+                _currentProcedure.Align();
+                _currentProcedure.Write((byte)OpcodeV2.Goto);
+                _currentProcedure.Write((byte)0xFF);
+                _currentProcedure.Write((byte)0xFF);
+                _currentProcedure.Write((byte)0x00);
+                _currentProcedure.WriteLabelRef(beginLabel, 2, -4);
             }
 
             private void VisitSwitchNode(SwitchSyntaxNode switchNode)
@@ -528,11 +544,19 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 }
             }
 
-            public void WriteLabel(Label label)
+            public Label WriteLabel()
+            {
+                var label = new Label(_labels.Count);
+                _labels.Add(label);
+                return WriteLabel(label);
+            }
+
+            public Label WriteLabel(Label label)
             {
                 while (_labelOffsets.Count <= label.Id)
                     _labelOffsets.Add(0);
                 _labelOffsets[label.Id] = Offset;
+                return label;
             }
 
             public Label WriteLabelRef(byte size, int relativeBaseAddress)

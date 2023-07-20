@@ -16,6 +16,7 @@
         Asterisk,
         Pipe,
         Ampersand,
+        AmpersandAmpersand,
         LShift,
         RShift,
         Opcode,

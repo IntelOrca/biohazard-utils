@@ -357,17 +357,22 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 if (!ParseExpected(TokenKind.OpenParen))
                     return null;
 
-                var condition = ParseOpcode();
-                if (condition == null)
+                var conditions = new List<OpcodeSyntaxNode>();
+                do
                 {
-                    EmitError(in LastToken, ErrorCodes.ExpectedCondition);
-                    return null;
-                }
+                    var condition = ParseOpcode();
+                    if (condition == null)
+                    {
+                        EmitError(in LastToken, ErrorCodes.ExpectedCondition);
+                        return null;
+                    }
+                    conditions.Add(condition);
+                } while (ParseToken(TokenKind.AmpersandAmpersand));
 
                 if (!ParseExpected(TokenKind.CloseParen))
                     return null;
 
-                return new ConditionalExpressionSyntaxNode(new[] { condition });
+                return new ConditionalExpressionSyntaxNode(conditions.ToArray());
             }
 
             private OpcodeSyntaxNode? ParseOpcode()

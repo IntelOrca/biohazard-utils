@@ -370,6 +370,24 @@ proc main
         }
 
         [Fact]
+        public void TestDefine_MultiLine()
+        {
+            var expected = "02000100040014000F060A0023001A0501000200100001000100";
+            AssertScd(expected, @"
+#version 2
+#define WAIT_FOR_CUT(n)                  /
+    while (cmp(0, V_CUT, CMP_NE, n)) {  /
+        evt_next();                    /
+    }
+
+proc main
+{
+    WAIT_FOR_CUT(1);
+}
+");
+        }
+
+        [Fact]
         public void TestDefine_ComplexExpression()
         {
             var expected = "0200010004000E00570001021EFF000001000100";

@@ -16,6 +16,7 @@ namespace IntelOrca.Biohazard.Script
         public bool ListingFormat { get; set; }
         public int CurrentOffset { get; set; }
         public byte[] CurrentOpcodeBytes { get; set; } = new byte[0];
+        public int LineCount => _lines.Count;
 
         public void ResetIndent()
         {
@@ -206,6 +207,11 @@ namespace IntelOrca.Biohazard.Script
                 sb.Replace(oldName, newName);
             }
             return sb.ToString();
+        }
+
+        public void RemoveLine(int lastReturnLine)
+        {
+            _lines.RemoveAt(lastReturnLine);
         }
 
         private struct Line

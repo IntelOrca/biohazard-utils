@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace IntelOrca.Biohazard.Script.Compilation
 {
@@ -115,14 +116,41 @@ namespace IntelOrca.Biohazard.Script.Compilation
                         EmitError(in lastToken, ErrorCodes.ExpectedOperand);
                         return null;
                     }
-                    var text = LastToken.Text;
-                    return new MessageTextSyntaxNode(id, text.Substring(1, text.Length - 2));
+                    var text = ConvertStringToken(in LastToken);
+                    return new MessageTextSyntaxNode(id, text);
                 }
                 else
                 {
                     EmitError(in lastToken, ErrorCodes.UnknownDirective, lastToken.Text);
                     return null;
                 }
+            }
+
+            private string ConvertStringToken(in Token token)
+            {
+                var s = token.Text;
+                var sb = new StringBuilder();
+                for (var i = 1; i < s.Length - 1; i++)
+                {
+                    var c = s[i];
+                    if (c == '\\')
+                    {
+                        c = s[++i];
+                        if (c == 'n')
+                        {
+                            sb.Append('\n');
+                        }
+                        else
+                        {
+                            EmitError(in token, ErrorCodes.InvalidOperand);
+                        }
+                    }
+                    else
+                    {
+                        sb.Append(c);
+                    }
+                }
+                return sb.ToString();
             }
 
             private ProcedureSyntaxNode? ParseProcedure()

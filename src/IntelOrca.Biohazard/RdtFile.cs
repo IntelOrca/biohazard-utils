@@ -90,6 +90,9 @@ namespace IntelOrca.Biohazard
         {
             var chunkIndex = language == 0 ? 13 : 14;
             var offset = _offsets[chunkIndex];
+            if (offset == 0)
+                return 0;
+
             var ms = new MemoryStream(Data);
             var br = new BinaryReader(ms);
             ms.Position = offset;
@@ -107,13 +110,19 @@ namespace IntelOrca.Biohazard
                     break;
                 }
             }
-            return (int)(ms.Position - offset);
+            var len = (int)(ms.Position - offset);
+            return ((len + 3) / 4) * 4;
         }
 
         public BioString[] GetTexts(int language)
         {
             var chunkIndex = language == 0 ? 13 : 14;
             var offset = _offsets[chunkIndex];
+            if (offset == 0)
+            {
+                return new BioString[0];
+            }
+
             var length = _lengths[chunkIndex];
             var ms = new MemoryStream(Data);
             ms.Position = offset;
@@ -160,6 +169,12 @@ namespace IntelOrca.Biohazard
             foreach (var offset in offsets)
             {
                 bw.Write((ushort)offset);
+            }
+
+            ms.Position = ms.Length;
+            while (ms.Position % 4 != 0)
+            {
+                bw.Write((byte)0);
             }
 
             UpdateChunk(chunkIndex, ms.ToArray());
@@ -520,18 +535,42 @@ namespace IntelOrca.Biohazard
             else
             {
                 var start = _offsets[index];
+                if (start == 0)
+                {
+                    start = EmbeddedModels[0].MD1;
+                    // var order = new[] { 3, 4, 7, 10, 8, 9, 6, 12, 11, 16, 17, 13, 14, 15, 18, 19, 22, 0, 5, 1, 2, 20, 21 };
+                    // var finding = false;
+                    // for (var i = 0; i < order.Length; i++)
+                    // {
+                    //     if (order[i] == index)
+                    //     {
+                    //         finding = true;
+                    //     }
+                    //     if (finding)
+                    //     {
+                    //         var o = _offsets[order[i]];
+                    //         if (o != 0)
+                    //         {
+                    //             start = o;
+                    //             break;
+                    //         }
+                    //     }
+                    // }
+                }
+
                 var length = _lengths[index];
-                var end = _offsets[index] + length;
+                var end = start + length;
                 var lengthDelta = data.Length - length;
                 var sliceA = Data.Take(start).ToArray();
                 var sliceB = Data.Skip(end).ToArray();
                 for (int i = 0; i < _offsets.Length; i++)
                 {
-                    if (_offsets[i] != 0 && _offsets[i] > start)
+                    if (_offsets[i] != 0 && _offsets[i] >= start)
                     {
                         _offsets[i] += lengthDelta;
                     }
                 }
+                _offsets[index] = start;
                 _lengths[index] = data.Length;
                 Data = sliceA.Concat(data).Concat(sliceB).ToArray();
 
@@ -601,6 +640,36 @@ namespace IntelOrca.Biohazard
             var scriptDecompiler = new ScriptDecompiler(false, false);
             ReadScript(scriptDecompiler);
             return scriptDecompiler.GetScript();
+        }
+
+        public EmbeddedModel[] EmbeddedModels
+        {
+            get
+            {
+                var count = Data[2];
+                var result = new EmbeddedModel[count];
+                var br = new BinaryReader(new MemoryStream(Data));
+                br.BaseStream.Position = _offsets[10];
+                for (var i = 0; i < count; i++)
+                {
+                    var tim = br.ReadInt32();
+                    var md1 = br.ReadInt32();
+                    result[i] = new EmbeddedModel(tim, md1);
+                }
+                return result;
+            }
+        }
+
+        public readonly struct EmbeddedModel
+        {
+            public int TIM { get; }
+            public int MD1 { get; }
+
+            public EmbeddedModel(int tim, int md1)
+            {
+                TIM = tim;
+                MD1 = md1;
+            }
         }
     }
 

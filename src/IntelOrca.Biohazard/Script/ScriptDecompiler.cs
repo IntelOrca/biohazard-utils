@@ -15,6 +15,7 @@ namespace IntelOrca.Biohazard.Script
         private int _expressionCount;
         private IConstantTable _constantTable = new Bio1ConstantTable();
         private BioScriptKind _kind;
+        private int _lastReturnLine;
 
         public bool AssemblyFormat => _sb.AssemblyFormat;
 
@@ -51,7 +52,11 @@ namespace IntelOrca.Biohazard.Script
                 default:
                     throw new NotSupportedException();
             }
-            _sb.WriteLine(".version " + versionNumber);
+            if (AssemblyFormat)
+                _sb.WriteLine(".version " + versionNumber);
+            else
+                _sb.WriteLine("#version " + versionNumber);
+            _sb.WriteLine();
         }
 
         public override void VisitBeginScript(BioScriptKind kind)
@@ -64,11 +69,6 @@ namespace IntelOrca.Biohazard.Script
                     {
                         _sb.WriteLine(".init");
                     }
-                    else
-                    {
-                        _sb.WriteLine("init");
-                        _sb.OpenBlock();
-                    }
                     break;
                 case BioScriptKind.Main:
                     _kind = BioScriptKind.Main;
@@ -76,11 +76,6 @@ namespace IntelOrca.Biohazard.Script
                     if (AssemblyFormat)
                     {
                         _sb.WriteLine(".main");
-                    }
-                    else
-                    {
-                        _sb.WriteLine("main");
-                        _sb.OpenBlock();
                     }
                     break;
                 case BioScriptKind.Event:
@@ -90,11 +85,6 @@ namespace IntelOrca.Biohazard.Script
                     {
                         _sb.WriteLine(".event");
                     }
-                    else
-                    {
-                        _sb.WriteLine("event");
-                        _sb.OpenBlock();
-                    }
                     break;
             }
         }
@@ -103,9 +93,6 @@ namespace IntelOrca.Biohazard.Script
         {
             if (AssemblyFormat)
                 return;
-
-            _sb.ResetIndent();
-            _sb.CloseBlock();
         }
 
         public override void VisitBeginSubroutine(int index)
@@ -122,9 +109,7 @@ namespace IntelOrca.Biohazard.Script
             else
             {
                 _sb.ResetIndent();
-
-                _sb.Indent();
-                _sb.WriteLine($"{GetProcedureName(index)}()");
+                _sb.WriteLine($"proc {GetProcedureName(index)}");
                 _sb.OpenBlock();
 
                 _blockEnds.Clear();
@@ -150,6 +135,7 @@ namespace IntelOrca.Biohazard.Script
             }
 
             _sb.CloseBlock();
+            _sb.RemoveLine(_lastReturnLine);
         }
 
         public override void VisitOpcode(int offset, Span<byte> opcodeSpan)
@@ -330,8 +316,9 @@ namespace IntelOrca.Biohazard.Script
                     break;
                 case OpcodeV2.EvtEnd:
                 {
-                    var ret = br.ReadByte();
-                    sb.WriteLine($"return {ret};");
+                    br.ReadByte();
+                    _lastReturnLine = sb.LineCount;
+                    sb.WriteLine($"return;");
                     break;
                 }
                 case OpcodeV2.IfelCk:
@@ -359,7 +346,7 @@ namespace IntelOrca.Biohazard.Script
                     br.ReadByte();
                     var blockLen = br.ReadUInt16();
                     var count = br.ReadUInt16();
-                    sb.WriteLine($"for {count} times");
+                    sb.WriteLine($"repeat ({count})");
                     _sb.OpenBlock();
                     break;
                 }
@@ -442,6 +429,7 @@ namespace IntelOrca.Biohazard.Script
                 case OpcodeV2.Break:
                     sb.WriteLine("break;");
                     break;
+#if false
                 case OpcodeV2.Cmp:
                 {
                     br.ReadByte();
@@ -465,38 +453,38 @@ namespace IntelOrca.Biohazard.Script
                     }
                     break;
                 }
-                // case OpcodeV2.Ck:
-                // {
-                //     var bitArray = br.ReadByte();
-                //     var number = br.ReadByte();
-                //     var value = br.ReadByte();
-                //     if (_constructingBinaryExpression)
-                //     {
-                //         if (_expressionCount != 0)
-                //         {
-                //             sb.Write(" && ");
-                //         }
-                //         sb.Write($"{GetBitsString(bitArray, number)} == {value}");
-                //         _expressionCount++;
-                //     }
-                //     break;
-                // }
-                // case OpcodeV2.Set:
-                // {
-                //     var bitArray = br.ReadByte();
-                //     var number = br.ReadByte();
-                //     var opChg = br.ReadByte();
-                //     sb.Write(GetBitsString(bitArray, number));
-                //     if (opChg == 0)
-                //         sb.WriteLine(" = 0;");
-                //     else if (opChg == 1)
-                //         sb.WriteLine(" = 1;");
-                //     else if (opChg == 7)
-                //         sb.WriteLine(" ^= 1;");
-                //     else
-                //         sb.WriteLine(" (INVALID);");
-                //     break;
-                // }
+                case OpcodeV2.Ck:
+                {
+                    var bitArray = br.ReadByte();
+                    var number = br.ReadByte();
+                    var value = br.ReadByte();
+                    if (_constructingBinaryExpression)
+                    {
+                        if (_expressionCount != 0)
+                        {
+                            sb.Write(" && ");
+                        }
+                        sb.Write($"{GetBitsString(bitArray, number)} == {value}");
+                        _expressionCount++;
+                    }
+                    break;
+                }
+                case OpcodeV2.Set:
+                {
+                    var bitArray = br.ReadByte();
+                    var number = br.ReadByte();
+                    var opChg = br.ReadByte();
+                    sb.Write(GetBitsString(bitArray, number));
+                    if (opChg == 0)
+                        sb.WriteLine(" = 0;");
+                    else if (opChg == 1)
+                        sb.WriteLine(" = 1;");
+                    else if (opChg == 7)
+                        sb.WriteLine(" ^= 1;");
+                    else
+                        sb.WriteLine(" (INVALID);");
+                    break;
+                }
                 case OpcodeV2.Calc:
                 {
                     br.ReadByte();
@@ -546,6 +534,7 @@ namespace IntelOrca.Biohazard.Script
                     }
                     break;
                 }
+#endif
             }
             return true;
         }
@@ -591,7 +580,7 @@ namespace IntelOrca.Biohazard.Script
                     br.ReadByte();
                     var blockLen = br.ReadUInt16();
                     var count = br.ReadUInt16();
-                    sb.WriteLine($"for {count} times");
+                    sb.WriteLine($"repeat ({count})");
                     _sb.OpenBlock();
                     break;
                 }

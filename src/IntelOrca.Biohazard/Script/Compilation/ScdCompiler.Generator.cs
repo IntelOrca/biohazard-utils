@@ -19,7 +19,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
 
             public byte[] OutputInit { get; private set; } = new byte[0];
             public byte[] OutputMain { get; private set; } = new byte[0];
-            public List<string?> Messages { get; } = new List<string>();
+            public List<string?> Messages { get; } = new List<string?>();
 
             public Generator(ErrorList errors)
             {

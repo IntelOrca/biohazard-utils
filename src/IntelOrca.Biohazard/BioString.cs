@@ -39,6 +39,10 @@ namespace IntelOrca.Biohazard
                     bw.Write(YesNoQuestion);
                     bw.Write((byte)0x40);
                 }
+                else if (c == '\n')
+                {
+                    bw.Write(NewLine);
+                }
                 else
                 {
                     var index = EnTable.IndexOf(c);

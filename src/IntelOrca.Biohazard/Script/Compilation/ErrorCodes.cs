@@ -40,6 +40,7 @@
         public const int ParserFailure = 36;
         public const int ExpectedWhile = 37;
         public const int ExpectedColon = 38;
+        public const int InvalidSyntax = 39;
 
         public static string GetMessage(int code) => _messages[code];
 
@@ -84,6 +85,7 @@
                 "The parser unexpectedly failed.",
                 "while expected.",
                 ": expected",
+                "Invalid syntax",
         };
     }
 }

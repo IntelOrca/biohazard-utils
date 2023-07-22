@@ -47,7 +47,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     {
                         if (_errors.Count == 0)
                         {
-                            EmitError(in LastToken, ErrorCodes.ParserFailure);
+                            EmitError(in PeekToken(), ErrorCodes.InvalidSyntax);
                         }
                         break;
                     }
@@ -587,7 +587,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                         TokenKind.While => ErrorCodes.ExpectedWhile,
                         _ => throw new NotImplementedException(),
                     };
-                    EmitError(in LastToken, errorCode);
+                    EmitError(in PeekToken(), errorCode);
                     return false;
                 }
             }

@@ -114,7 +114,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
             private bool ParseSymbol()
             {
                 var c = PeekChar();
-                if (!char.IsLetter(c))
+                if (!IsValidSymbolChar(c, first: true))
                     return false;
                 ParseUntilSeperator();
                 return true;
@@ -125,12 +125,23 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 while (true)
                 {
                     var c = PeekChar();
-                    if (!char.IsLetterOrDigit(c) && c != '_')
+                    if (!IsValidSymbolChar(c))
                     {
                         break;
                     }
                     ReadChar();
                 }
+            }
+
+            private static bool IsValidSymbolChar(char c, bool first = false)
+            {
+                if (c == '_')
+                    return true;
+                if (char.IsLetter(c))
+                    return true;
+                if (!first && char.IsDigit(c))
+                    return true;
+                return false;
             }
         }
     }

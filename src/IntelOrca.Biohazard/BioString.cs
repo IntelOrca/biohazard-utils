@@ -6,12 +6,12 @@ namespace IntelOrca.Biohazard
 {
     public sealed class BioString
     {
-        private const string EnTable = " .___()_____0123456789:_,\"!?_ABCDEFGHIJKLMNOPQRSTUVWXYZ[/]'-_abcdefghijklmnopqrstuvwxyz_________";
+        private const string EnTable = " .___()__“”_0123456789:_,\"!?_ABCDEFGHIJKLMNOPQRSTUVWXYZ[/]'-_abcdefghijklmnopqrstuvwxyz_________";
         private const byte Green = 0xF9;
         private const byte StartText = 0xFA;
         private const byte YesNoQuestion = 0xFB;
-        private const byte NewLine = 0xFC;
-        private const byte UnknownFD = 0xFD;
+        private const byte LineBreak = 0xFC;
+        private const byte PageBreak = 0xFD;
         private const byte EndText = 0xFE;
 
         private readonly byte[] _data;
@@ -35,13 +35,18 @@ namespace IntelOrca.Biohazard
             {
                 if (c == '@')
                 {
-                    bw.Write(NewLine);
+                    bw.Write(LineBreak);
                     bw.Write(YesNoQuestion);
                     bw.Write((byte)0x40);
                 }
                 else if (c == '\n')
                 {
-                    bw.Write(NewLine);
+                    bw.Write(LineBreak);
+                }
+                else if (c == '#')
+                {
+                    bw.Write(PageBreak);
+                    bw.Write((byte)0x00);
                 }
                 else
                 {
@@ -81,10 +86,11 @@ namespace IntelOrca.Biohazard
                         i++;
                         sb.Append('@');
                         break;
-                    case NewLine:
+                    case LineBreak:
                         sb.Append('\n');
                         break;
-                    case UnknownFD:
+                    case PageBreak:
+                        sb.Append('#');
                         i++;
                         break;
                     case EndText:

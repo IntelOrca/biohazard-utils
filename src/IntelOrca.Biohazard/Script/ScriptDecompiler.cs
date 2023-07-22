@@ -118,10 +118,13 @@ namespace IntelOrca.Biohazard.Script
 
         private string GetProcedureName(int index)
         {
-            if (_kind == BioScriptKind.Init)
-                return $"init_{index:X2}";
-            else
-                return $"main_{index:X2}";
+            var prefix = _kind == BioScriptKind.Init ?
+                "init" : "main";
+            if (index == 0)
+                return prefix;
+            if (_kind == BioScriptKind.Main && index == 1)
+                return "aot";
+            return $"{prefix}_{index:X2}";
         }
 
         public override void VisitEndSubroutine(int index)
@@ -319,6 +322,21 @@ namespace IntelOrca.Biohazard.Script
                     br.ReadByte();
                     _lastReturnLine = sb.LineCount;
                     sb.WriteLine($"return;");
+                    break;
+                }
+                case OpcodeV2.EvtExec:
+                {
+                    var p0 = br.ReadByte();
+                    var p1 = br.ReadByte();
+                    if (p0 == 0xFF && p1 == 0x18)
+                    {
+                        var p2 = br.ReadByte();
+                        sb.WriteLine($"fork {GetProcedureName(p2)};");
+                    }
+                    else
+                    {
+                        return false;
+                    }
                     break;
                 }
                 case OpcodeV2.IfelCk:

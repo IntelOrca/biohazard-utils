@@ -537,25 +537,21 @@ namespace IntelOrca.Biohazard
                 var start = _offsets[index];
                 if (start == 0)
                 {
-                    start = EmbeddedModels[0].MD1;
-                    // var order = new[] { 3, 4, 7, 10, 8, 9, 6, 12, 11, 16, 17, 13, 14, 15, 18, 19, 22, 0, 5, 1, 2, 20, 21 };
-                    // var finding = false;
-                    // for (var i = 0; i < order.Length; i++)
-                    // {
-                    //     if (order[i] == index)
-                    //     {
-                    //         finding = true;
-                    //     }
-                    //     if (finding)
-                    //     {
-                    //         var o = _offsets[order[i]];
-                    //         if (o != 0)
-                    //         {
-                    //             start = o;
-                    //             break;
-                    //         }
-                    //     }
-                    // }
+                    if (index == 13 || index == 14)
+                    {
+                        if (EmbeddedModels.Length == 0)
+                        {
+                            start = _offsets[16];
+                        }
+                        else
+                        {
+                            start = EmbeddedModels[0].MD1;
+                        }
+                    }
+                    else
+                    {
+                        throw new NotSupportedException("No existing chunk to replace");
+                    }
                 }
 
                 var length = _lengths[index];

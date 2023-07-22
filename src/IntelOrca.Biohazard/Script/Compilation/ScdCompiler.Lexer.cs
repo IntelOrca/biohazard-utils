@@ -273,9 +273,17 @@ namespace IntelOrca.Biohazard.Script.Compilation
                         argument.Add(t);
                     }
                 }
-                arguments.Add(argument.ToArray());
+                if (argument.Count != 0)
+                {
+                    arguments.Add(argument.ToArray());
+                }
                 argument.Clear();
 
+                if (arguments.Count != macro.Parameters.Length)
+                {
+                    EmitError(in token, ErrorCodes.IncorrectNumberOfOperands);
+                    return new Token[0];
+                }
                 return Expand(path, macro.GetTokens(arguments.ToArray()));
             }
 

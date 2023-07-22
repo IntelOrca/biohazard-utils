@@ -182,7 +182,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
 
             // If we are parsing a keyword, we must not have a letter/digit straight after
             var nextIndex = _sIndex + s.Length;
-            if (_s.Length > nextIndex && char.IsLetter(s[0]) && char.IsLetterOrDigit(_s[nextIndex]))
+            if (_s.Length > nextIndex && char.IsLetter(s[0]) && (char.IsLetterOrDigit(_s[nextIndex]) || _s[nextIndex] == '_'))
                 return false;
 
             _sIndex += s.Length;

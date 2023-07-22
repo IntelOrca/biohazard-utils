@@ -203,6 +203,10 @@ namespace IntelOrca.Biohazard.Script
                         return "I_GOSUB";
                     break;
                 case 'p':
+                    if (value == 0)
+                        return "main";
+                    else if (value == 1)
+                        return "aot";
                     return $"main_{value:X2}";
                 case 'f':
                     return GetConstantName(g_flagGroups, value);
@@ -295,6 +299,7 @@ namespace IntelOrca.Biohazard.Script
                 case OpcodeV2.Cmp:
                 case OpcodeV2.MemberCmp:
                 case OpcodeV2.KeepItemCk:
+                case OpcodeV2.WorkCopy:
                     return true;
             }
             return false;
@@ -620,7 +625,7 @@ namespace IntelOrca.Biohazard.Script
             "nop_20",
             "ck:fuu",
             "set:fuu",
-            "cmp:uucI",
+            "cmp:uvcI",
             "save:vI",
             "copy:vv",
             "calc:uovI",

@@ -37,6 +37,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
         public byte[] OutputInit { get; private set; } = new byte[0];
         public byte[] OutputMain { get; private set; } = new byte[0];
         public string[] Messages { get; private set; } = new string[0];
+        public RdtAnimation[] Animations { get; private set; } = new RdtAnimation[0];
 
         public int Generate(IFileIncluder includer, string path)
         {

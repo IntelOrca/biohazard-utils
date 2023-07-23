@@ -656,6 +656,70 @@ namespace IntelOrca.Biohazard
             }
         }
 
+        public RdtAnimation[] Animations
+        {
+            get
+            {
+                var rbj = _offsets[22];
+                if (rbj == 0)
+                    return new RdtAnimation[0];
+
+                var ms = new MemoryStream(Data);
+                var br = new BinaryReader(ms);
+
+                ms.Position = rbj;
+                var chunkLen = br.ReadInt32();
+                var emrCount = br.ReadInt32();
+
+                ms.Position = rbj + chunkLen;
+
+                var offsets = new List<int>();
+                for (int i = 0; i < emrCount * 2; i++)
+                {
+                    offsets.Add(rbj + br.ReadInt32());
+                }
+                offsets.Add(rbj + chunkLen);
+
+                var result = new List<RdtAnimation>();
+                for (int i = 0; i < emrCount; i++)
+                {
+                    var flags = (EmrFlags)BitConverter.ToInt32(Data, offsets[i * 2 + 0]);
+                    var emrRange = new Memory<byte>(Data, offsets[i * 2 + 0] + 4, offsets[i * 2 + 1] - offsets[i * 2 + 0] - 4);
+                    var eddRange = new Memory<byte>(Data, offsets[i * 2 + 1], offsets[i * 2 + 2] - offsets[i * 2 + 1]);
+                    var emr = new Emr(Version, emrRange);
+                    var edd = new Edd(eddRange);
+                    result.Add(new RdtAnimation(flags, edd, emr));
+                }
+                return result.ToArray();
+            }
+            set
+            {
+                var ms = new MemoryStream();
+                var bw = new BinaryWriter(ms);
+                bw.Write(0);
+                bw.Write(value.Length);
+
+                var offsets = new List<int>();
+                foreach (var ani in value)
+                {
+                    offsets.Add((int)ms.Position);
+                    bw.Write((int)ani.Flags);
+                    bw.Write(ani.Emr.Data.ToArray());
+                    offsets.Add((int)ms.Position);
+                    bw.Write(ani.Edd.Data.ToArray());
+                }
+
+                var chunkLen = (int)ms.Length;
+                foreach (var offset in offsets)
+                {
+                    bw.Write(offset);
+                }
+                ms.Position = 0;
+                bw.Write(chunkLen);
+                UpdateChunk(22, ms.ToArray());
+            }
+        }
+
         public readonly struct EmbeddedModel
         {
             public int TIM { get; }

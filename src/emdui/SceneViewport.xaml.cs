@@ -26,8 +26,6 @@ namespace emdui
         private double _startCameraAngleH;
         private double _startCameraAngleV;
 
-        private GeometryModel3D _originObject;
-
         public ModelScene Scene
         {
             get => _scene;

@@ -86,6 +86,10 @@ namespace emdui
             {
                 return new TimTreeViewItem(projectFile, tim);
             }
+            else if (projectFile.Content is RdtFile)
+            {
+                return new RdtTreeViewItem(projectFile);
+            }
             return null;
         }
 
@@ -374,10 +378,23 @@ namespace emdui
 
         public override void OnDefaultAction()
         {
+            var mainWindow = MainWindow.Instance;
+            if (Model == null)
+            {
+                var rdt = ProjectFile.Content as RdtFile;
+                if (rdt != null)
+                {
+                    var mainModel = mainWindow.Project.MainModel;
+                    var relatedEmr = rdt.Animations[ChunkIndex].Emr;
+                    mainWindow.LoadMesh(mainModel.GetMesh(0));
+                    mainWindow.LoadAnimation(relatedEmr, Edd, Index);
+                }
+                return;
+            }
+
             if (Model.Version == BioVersion.Biohazard3)
                 return;
 
-            var mainWindow = MainWindow.Instance;
             var project = mainWindow.Project;
             var emrChunkIndex = GetEmrChunkIndex();
             var emr = Model.GetChunk<Emr>(emrChunkIndex);
@@ -1176,6 +1193,32 @@ namespace emdui
         {
             Parent = parent;
             GroupIndex = groupIndex;
+        }
+    }
+
+    public class RdtTreeViewItem : ProjectTreeViewItem
+    {
+        public override string Header => ProjectFile.Filename;
+        public RdtFile Rdt { get; }
+
+        public RdtTreeViewItem(ProjectFile projectFile)
+            : base(projectFile)
+        {
+            Rdt = (RdtFile)projectFile.Content;
+            CreateChildren();
+        }
+
+        private void CreateChildren()
+        {
+            var animations = Rdt.Animations;
+            Items.Clear();
+            for (var i = 0; i < animations.Length; i++)
+            {
+                var edd = animations[i].Edd;
+                var emr = animations[i].Emr;
+                Items.Add(new EddTreeViewItem(ProjectFile, i, edd));
+                Items.Add(new EmrTreeViewItem(ProjectFile, i, emr, false));
+            }
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using IntelOrca.Biohazard.Script;
+using IntelOrca.Biohazard.Script.Compilation;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -70,7 +71,7 @@ namespace IntelOrca.Biohazard.Tests
             var diassembly = rdtFile.DisassembleScd();
 
             var scdAssembler = new ScdAssembler();
-            var err = scdAssembler.Assemble(sPath, diassembly);
+            var err = scdAssembler.Generate(new StringFileIncluder(sPath, diassembly), sPath);
             var fail = false;
             if (err != 0)
             {

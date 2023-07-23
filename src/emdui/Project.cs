@@ -115,6 +115,12 @@ namespace emdui
             _projectFiles.Add(new ProjectFile(ProjectFileKind.Plw, plwFileName, plwFile));
         }
 
+        public void LoadRdt(string path)
+        {
+            var rdtFile = new RdtFile(path, BioVersion.Biohazard2);
+            _projectFiles.Add(new ProjectFile(ProjectFileKind.Rdt, Path.GetFileName(path), rdtFile));
+        }
+
         public TimFile MainTexture
         {
             get
@@ -195,5 +201,6 @@ namespace emdui
         Pld,
         Tim,
         Plw,
+        Rdt,
     }
 }

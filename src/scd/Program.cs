@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using IntelOrca.Biohazard;
 using IntelOrca.Biohazard.Script;
+using IntelOrca.Biohazard.Script.Compilation;
 
 namespace IntelOrca.Scd
 {
@@ -89,27 +90,25 @@ namespace IntelOrca.Scd
             }
             else
             {
-                if (rdtPath.EndsWith(".s", StringComparison.OrdinalIgnoreCase))
+                if (CreateGenerator(rdtPath) is IScdGenerator generator)
                 {
-                    var s = File.ReadAllText(rdtPath);
-                    var scdAssembler = new ScdAssembler();
-                    var result = scdAssembler.Assemble(rdtPath, s);
+                    var result = generator.Generate(new SimpleFileIncluder(), rdtPath);
                     if (result == 0)
                     {
-                        if (scdAssembler.OutputInit != null && scdAssembler.OutputInit.Length != 0)
+                        if (generator.OutputInit != null && generator.OutputInit.Length != 0)
                         {
                             var scdPath = Path.ChangeExtension(rdtPath, "init.scd");
-                            File.WriteAllBytes(scdPath, scdAssembler.OutputInit);
+                            File.WriteAllBytes(scdPath, generator.OutputInit);
                         }
-                        if (scdAssembler.OutputMain != null && scdAssembler.OutputMain.Length != 0)
+                        if (generator.OutputMain != null && generator.OutputMain.Length != 0)
                         {
                             var scdPath = Path.ChangeExtension(rdtPath, "main.scd");
-                            File.WriteAllBytes(scdPath, scdAssembler.OutputMain);
+                            File.WriteAllBytes(scdPath, generator.OutputMain);
                         }
                     }
                     else
                     {
-                        foreach (var error in scdAssembler.Errors.Errors)
+                        foreach (var error in generator.Errors.Errors)
                         {
                             Console.WriteLine($"{error.Path}({error.Line + 1},{error.Column + 1}): error {error.ErrorCodeString}: {error.Message}");
                         }
@@ -125,25 +124,66 @@ namespace IntelOrca.Scd
                         {
 
                         }
-                        else if (inPath.EndsWith(".s", StringComparison.OrdinalIgnoreCase))
+                        else if (CreateGenerator(inPath) is IScdGenerator generator2)
                         {
-                            var s = File.ReadAllText(inPath);
-                            var scdAssembler = new ScdAssembler();
-                            var result = scdAssembler.Assemble(inPath, s);
+                            var result = generator2.Generate(new SimpleFileIncluder(), inPath);
                             if (result == 0)
                             {
-                                if (scdAssembler.OutputInit.Length != 0)
+                                if (generator2.OutputInit.Length != 0)
                                 {
-                                    rdtFile.SetScd(BioScriptKind.Init, scdAssembler.OutputInit);
+                                    rdtFile.SetScd(BioScriptKind.Init, generator2.OutputInit);
                                 }
-                                if (scdAssembler.OutputMain.Length != 0)
+                                if (generator2.OutputMain.Length != 0)
                                 {
-                                    rdtFile.SetScd(BioScriptKind.Main, scdAssembler.OutputMain);
+                                    rdtFile.SetScd(BioScriptKind.Main, generator2.OutputMain);
+                                }
+
+                                if (generator2.Messages.Length != 0)
+                                {
+                                    var jpn = rdtFile.GetTexts(0).ToList();
+                                    var eng = rdtFile.GetTexts(1).ToList();
+                                    for (var i = 0; i < generator2.Messages.Length; i++)
+                                    {
+                                        var msg = generator2.Messages[i];
+                                        if (msg == null)
+                                            continue;
+
+                                        while (i >= jpn.Count)
+                                        {
+                                            jpn.Add(new BioString());
+                                        }
+                                        while (i >= eng.Count)
+                                        {
+                                            eng.Add(new BioString());
+                                        }
+                                        jpn[i] = new BioString(msg);
+                                        eng[i] = new BioString(msg);
+                                    }
+                                    rdtFile.SetTexts(0, jpn.ToArray());
+                                    rdtFile.SetTexts(1, eng.ToArray());
+                                }
+
+                                if (generator2.Animations.Length != 0)
+                                {
+                                    var animations = rdtFile.Animations.ToList();
+                                    for (var i = 0; i < generator2.Animations.Length; i++)
+                                    {
+                                        var animation = generator2.Animations[i];
+                                        if (animation == null)
+                                            continue;
+
+                                        while (animations.Count <= i)
+                                        {
+                                            animations.Add(null);
+                                        }
+                                        animations[i] = animation;
+                                    }
+                                    rdtFile.Animations = animations.ToArray();
                                 }
                             }
                             else
                             {
-                                foreach (var error in scdAssembler.Errors.Errors)
+                                foreach (var error in generator2.Errors.Errors)
                                 {
                                     Console.WriteLine(error);
                                 }
@@ -185,6 +225,19 @@ namespace IntelOrca.Scd
         {
             var scdReader = new ScdReader();
             return scdReader.Diassemble(scd, version, kind, listing);
+        }
+
+        private static IScdGenerator CreateGenerator(string inputPath)
+        {
+            if (inputPath.EndsWith(".s", StringComparison.OrdinalIgnoreCase))
+            {
+                return new ScdAssembler();
+            }
+            else if (inputPath.EndsWith(".bio", StringComparison.OrdinalIgnoreCase))
+            {
+                return new ScdCompiler();
+            }
+            return null;
         }
 
         private static string GetOption(string[] args, string name)

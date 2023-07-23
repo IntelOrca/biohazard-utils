@@ -46,6 +46,19 @@ namespace IntelOrca.Biohazard
             Version = version ?? DetectVersion(data);
             _offsets = ReadHeader();
             _lengths = GetChunkLengths();
+            if (Version == BioVersion.Biohazard2)
+            {
+                // We need to do AST analysis on SCD to find where the end is
+                _lengths[GetScdChunkIndex(BioScriptKind.Init)] = MeasureScript(BioScriptKind.Init);
+                _lengths[GetScdChunkIndex(BioScriptKind.Main)] = MeasureScript(BioScriptKind.Main);
+                _lengths[13] = MeasureTexts(0);
+                _lengths[14] = MeasureTexts(1);
+            }
+            else if (Version == BioVersion.Biohazard3)
+            {
+                // We need to do AST analysis on SCD to find where the end is
+                _lengths[GetScdChunkIndex(BioScriptKind.Init)] = MeasureScript(BioScriptKind.Init);
+            }
             GetNumEventScripts();
             Checksum = Data.CalculateFnv1a();
             if (version == BioVersion.Biohazard2)
@@ -73,10 +86,43 @@ namespace IntelOrca.Biohazard
 
         public int EventScriptCount => _eventScripts.Count;
 
+        private int MeasureTexts(int language)
+        {
+            var chunkIndex = language == 0 ? 13 : 14;
+            var offset = _offsets[chunkIndex];
+            if (offset == 0)
+                return 0;
+
+            var ms = new MemoryStream(Data);
+            var br = new BinaryReader(ms);
+            ms.Position = offset;
+            var firstOffset = br.ReadUInt16();
+            var numTexts = firstOffset / 2;
+            ms.Position = offset + ((numTexts - 1) * 2);
+            var lastTextOffset = br.ReadUInt16();
+            ms.Position = offset + lastTextOffset;
+            while (true)
+            {
+                var b = br.ReadByte();
+                if (b == 0xFE)
+                {
+                    b = br.ReadByte();
+                    break;
+                }
+            }
+            var len = (int)(ms.Position - offset);
+            return ((len + 3) / 4) * 4;
+        }
+
         public BioString[] GetTexts(int language)
         {
             var chunkIndex = language == 0 ? 13 : 14;
             var offset = _offsets[chunkIndex];
+            if (offset == 0)
+            {
+                return new BioString[0];
+            }
+
             var length = _lengths[chunkIndex];
             var ms = new MemoryStream(Data);
             ms.Position = offset;
@@ -91,7 +137,7 @@ namespace IntelOrca.Biohazard
                 textOffsets[i] = br.ReadUInt16();
                 textLengths[i - 1] = (ushort)(textOffsets[i] - textOffsets[i - 1]);
             }
-            textLengths[numTexts - 1] = (ushort)(length - textOffsets[0]);
+            textLengths[numTexts - 1] = (ushort)(length - textOffsets[numTexts - 1]);
 
             var result = new List<BioString>();
             for (int i = 0; i < numTexts; i++)
@@ -101,6 +147,37 @@ namespace IntelOrca.Biohazard
                 result.Add(new BioString(text));
             }
             return result.ToArray();
+        }
+
+        public void SetTexts(int language, BioString[] texts)
+        {
+            var chunkIndex = language == 0 ? 13 : 14;
+
+            var ms = new MemoryStream();
+            var bw = new BinaryWriter(ms);
+            for (var i = 0; i < texts.Length; i++)
+            {
+                bw.Write((ushort)0);
+            }
+            var offsets = new List<int>();
+            for (var i = 0; i < texts.Length; i++)
+            {
+                offsets.Add((int)ms.Position);
+                bw.Write(texts[i].Data.ToArray());
+            }
+            ms.Position = 0;
+            foreach (var offset in offsets)
+            {
+                bw.Write((ushort)offset);
+            }
+
+            ms.Position = ms.Length;
+            while (ms.Position % 4 != 0)
+            {
+                bw.Write((byte)0);
+            }
+
+            UpdateChunk(chunkIndex, ms.ToArray());
         }
 
         public byte[] GetScd(BioScriptKind kind, int scriptIndex = 0)
@@ -319,6 +396,16 @@ namespace IntelOrca.Biohazard
             }
         }
 
+        private int MeasureScript(BioScriptKind kind)
+        {
+            var chunkIndex = GetScdChunkIndex(kind);
+            var scriptOffset = _offsets[chunkIndex];
+            var scriptLength = _lengths[chunkIndex];
+            var span = new ReadOnlyMemory<byte>(Data, scriptOffset, scriptLength);
+            var scdReader = new ScdReader();
+            return scdReader.MeasureScript(span, Version, kind);
+        }
+
         private void ReadEMRs()
         {
             var rbj = _offsets[22];
@@ -448,18 +535,38 @@ namespace IntelOrca.Biohazard
             else
             {
                 var start = _offsets[index];
+                if (start == 0)
+                {
+                    if (index == 13 || index == 14)
+                    {
+                        if (EmbeddedModels.Length == 0)
+                        {
+                            start = _offsets[16];
+                        }
+                        else
+                        {
+                            start = EmbeddedModels[0].MD1;
+                        }
+                    }
+                    else
+                    {
+                        throw new NotSupportedException("No existing chunk to replace");
+                    }
+                }
+
                 var length = _lengths[index];
-                var end = _offsets[index] + length;
+                var end = start + length;
                 var lengthDelta = data.Length - length;
                 var sliceA = Data.Take(start).ToArray();
                 var sliceB = Data.Skip(end).ToArray();
                 for (int i = 0; i < _offsets.Length; i++)
                 {
-                    if (_offsets[i] != 0 && _offsets[i] > start)
+                    if (_offsets[i] != 0 && _offsets[i] >= start)
                     {
                         _offsets[i] += lengthDelta;
                     }
                 }
+                _offsets[index] = start;
                 _lengths[index] = data.Length;
                 Data = sliceA.Concat(data).Concat(sliceB).ToArray();
 
@@ -529,6 +636,100 @@ namespace IntelOrca.Biohazard
             var scriptDecompiler = new ScriptDecompiler(false, false);
             ReadScript(scriptDecompiler);
             return scriptDecompiler.GetScript();
+        }
+
+        public EmbeddedModel[] EmbeddedModels
+        {
+            get
+            {
+                var count = Data[2];
+                var result = new EmbeddedModel[count];
+                var br = new BinaryReader(new MemoryStream(Data));
+                br.BaseStream.Position = _offsets[10];
+                for (var i = 0; i < count; i++)
+                {
+                    var tim = br.ReadInt32();
+                    var md1 = br.ReadInt32();
+                    result[i] = new EmbeddedModel(tim, md1);
+                }
+                return result;
+            }
+        }
+
+        public RdtAnimation[] Animations
+        {
+            get
+            {
+                var rbj = _offsets[22];
+                if (rbj == 0)
+                    return new RdtAnimation[0];
+
+                var ms = new MemoryStream(Data);
+                var br = new BinaryReader(ms);
+
+                ms.Position = rbj;
+                var chunkLen = br.ReadInt32();
+                var emrCount = br.ReadInt32();
+
+                ms.Position = rbj + chunkLen;
+
+                var offsets = new List<int>();
+                for (int i = 0; i < emrCount * 2; i++)
+                {
+                    offsets.Add(rbj + br.ReadInt32());
+                }
+                offsets.Add(rbj + chunkLen);
+
+                var result = new List<RdtAnimation>();
+                for (int i = 0; i < emrCount; i++)
+                {
+                    var flags = (EmrFlags)BitConverter.ToInt32(Data, offsets[i * 2 + 0]);
+                    var emrRange = new Memory<byte>(Data, offsets[i * 2 + 0] + 4, offsets[i * 2 + 1] - offsets[i * 2 + 0] - 4);
+                    var eddRange = new Memory<byte>(Data, offsets[i * 2 + 1], offsets[i * 2 + 2] - offsets[i * 2 + 1]);
+                    var emr = new Emr(Version, emrRange);
+                    var edd = new Edd(eddRange);
+                    result.Add(new RdtAnimation(flags, edd, emr));
+                }
+                return result.ToArray();
+            }
+            set
+            {
+                var ms = new MemoryStream();
+                var bw = new BinaryWriter(ms);
+                bw.Write(0);
+                bw.Write(value.Length);
+
+                var offsets = new List<int>();
+                foreach (var ani in value)
+                {
+                    offsets.Add((int)ms.Position);
+                    bw.Write((int)ani.Flags);
+                    bw.Write(ani.Emr.Data.ToArray());
+                    offsets.Add((int)ms.Position);
+                    bw.Write(ani.Edd.Data.ToArray());
+                }
+
+                var chunkLen = (int)ms.Length;
+                foreach (var offset in offsets)
+                {
+                    bw.Write(offset);
+                }
+                ms.Position = 0;
+                bw.Write(chunkLen);
+                UpdateChunk(22, ms.ToArray());
+            }
+        }
+
+        public readonly struct EmbeddedModel
+        {
+            public int TIM { get; }
+            public int MD1 { get; }
+
+            public EmbeddedModel(int tim, int md1)
+            {
+                TIM = tim;
+                MD1 = md1;
+            }
         }
     }
 

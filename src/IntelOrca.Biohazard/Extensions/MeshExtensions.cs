@@ -105,6 +105,7 @@ namespace IntelOrca.Biohazard.Extensions
                     tt.u2 = modifyArgs.Points[2].U;
                     tt.v2 = modifyArgs.Points[2].V;
                     tt.page = (byte)(0x80 | (modifyArgs.Page & 0x0F));
+                    tt.clutId = (ushort)(0x7800 | modifyArgs.Page * 0x40);
 
                     part.TriangleTextures[i] = tt;
                 }
@@ -131,6 +132,7 @@ namespace IntelOrca.Biohazard.Extensions
                     qt.u3 = modifyArgs.Points[3].U;
                     qt.v3 = modifyArgs.Points[3].V;
                     qt.page = (byte)(0x80 | (modifyArgs.Page & 0x0F));
+                    qt.clutId = (ushort)(0x7800 | modifyArgs.Page * 0x40);
 
                     part.QuadTextures[i] = qt;
                 }

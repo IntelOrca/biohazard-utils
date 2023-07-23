@@ -20,6 +20,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
             public byte[] OutputInit { get; private set; } = new byte[0];
             public byte[] OutputMain { get; private set; } = new byte[0];
             public List<string?> Messages { get; } = new List<string?>();
+            public List<string?> Animations { get; } = new List<string?>();
 
             public Generator(ErrorList errors)
             {
@@ -148,6 +149,9 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     case MessageTextSyntaxNode messageTextNode:
                         VisitMessageTextNode(messageTextNode);
                         break;
+                    case AnimationSyntaxNode animationNode:
+                        VisitAnimationNode(animationNode);
+                        break;
                     case ProcedureSyntaxNode procedureNode:
                         VisitProcedureNode(procedureNode);
                         break;
@@ -214,6 +218,15 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     Messages.Add(null);
                 }
                 Messages[messageTextNode.Id] = messageTextNode.Text;
+            }
+
+            private void VisitAnimationNode(AnimationSyntaxNode animationNode)
+            {
+                while (Animations.Count <= animationNode.Id)
+                {
+                    Animations.Add(null);
+                }
+                Animations[animationNode.Id] = animationNode.Path;
             }
 
             private void VisitProcedureNode(ProcedureSyntaxNode procedureNode)

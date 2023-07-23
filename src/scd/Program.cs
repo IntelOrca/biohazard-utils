@@ -162,6 +162,24 @@ namespace IntelOrca.Scd
                                     rdtFile.SetTexts(0, jpn.ToArray());
                                     rdtFile.SetTexts(1, eng.ToArray());
                                 }
+
+                                if (generator2.Animations.Length != 0)
+                                {
+                                    var animations = rdtFile.Animations.ToList();
+                                    for (var i = 0; i < generator2.Animations.Length; i++)
+                                    {
+                                        var animation = generator2.Animations[i];
+                                        if (animation == null)
+                                            continue;
+
+                                        while (animations.Count <= i)
+                                        {
+                                            animations.Add(null);
+                                        }
+                                        animations[i] = animation;
+                                    }
+                                    rdtFile.Animations = animations.ToArray();
+                                }
                             }
                             else
                             {

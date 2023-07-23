@@ -3,7 +3,7 @@ using Xunit;
 
 namespace IntelOrca.Biohazard.Tests
 {
-    public class TestMessage
+    public class TestRdtFile
     {
         [Fact]
         public void RebuildTextChunk_102()
@@ -31,6 +31,20 @@ namespace IntelOrca.Biohazard.Tests
             var eng = rdtFile.GetTexts(1);
             rdtFile.SetTexts(0, jpn);
             rdtFile.SetTexts(1, eng);
+
+            var actualData = rdtFile.Data;
+            Assert.Equal(expectedData, actualData);
+        }
+
+        [Fact]
+        public void RebuildAnimations_112()
+        {
+            var installPath = TestInfo.GetInstallPath(1);
+            var rdtPath = Path.Combine(installPath, "data", "pl1", "rdt", "ROOM1121.RDT");
+            var rdtFile = new RdtFile(rdtPath, BioVersion.Biohazard2);
+            var expectedData = rdtFile.Data;
+
+            rdtFile.Animations = rdtFile.Animations;
 
             var actualData = rdtFile.Data;
             Assert.Equal(expectedData, actualData);

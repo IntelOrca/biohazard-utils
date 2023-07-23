@@ -1,4 +1,8 @@
-﻿using System.Linq;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using IntelOrca.Biohazard.Model;
 
 namespace IntelOrca.Biohazard.Script.Compilation
 {
@@ -8,6 +12,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
         public byte[] OutputInit { get; private set; } = new byte[0];
         public byte[] OutputMain { get; private set; } = new byte[0];
         public string?[] Messages { get; private set; } = new string[0];
+        public RdtAnimation?[] Animations { get; private set; } = new RdtAnimation[0];
 
         public int Generate(IFileIncluder includer, string path)
         {
@@ -27,6 +32,30 @@ namespace IntelOrca.Biohazard.Script.Compilation
             OutputInit = generator.OutputInit;
             OutputMain = generator.OutputMain;
             Messages = generator.Messages.ToArray();
+
+            var animations = new List<RdtAnimation?>();
+            foreach (var animation in generator.Animations)
+            {
+                if (animation == null)
+                {
+                    animations.Add(null);
+                    continue;
+                }
+
+                var eddPath = Path.Combine(Path.GetDirectoryName(path), animation);
+                try
+                {
+                    var emrPath = Path.ChangeExtension(eddPath, ".emr");
+                    var edd = new Edd(File.ReadAllBytes(eddPath));
+                    var emr = new Emr(BioVersion.Biohazard2, File.ReadAllBytes(emrPath));
+                    animations.Add(new RdtAnimation((EmrFlags)15, edd, emr));
+                }
+                catch (Exception)
+                {
+                    Errors.AddError("", 0, 0, ErrorCodes.FileNotFound, path);
+                }
+            }
+            Animations = animations.ToArray();
             return 0;
         }
     }

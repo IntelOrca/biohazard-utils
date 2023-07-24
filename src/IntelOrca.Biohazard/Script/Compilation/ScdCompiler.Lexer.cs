@@ -182,7 +182,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                         }
                         break;
                     }
-                    else if (t.Kind == TokenKind.FowardSlash)
+                    else if (t.Kind == TokenKind.BackSlash)
                     {
                         reader.Read();
                         continueLine = true;

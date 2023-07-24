@@ -399,6 +399,11 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     if (opcodeNode.Operands.Length == 0)
                     {
                         _currentProcedure.Write((byte)OpcodeV2.Gosub);
+                        var procName = opcodeNode.OpcodeToken.Text;
+                        if (!_procedureNames.Contains(procName))
+                        {
+                            EmitError(opcodeNode.OpcodeToken, ErrorCodes.UnknownProcedure, procName);
+                        }
                         _currentProcedure.WriteProcedureRef(opcodeNode.OpcodeToken);
                     }
                     else
@@ -498,6 +503,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                         ExpressionKind.Add => lhs + rhs,
                         ExpressionKind.Subtract => lhs - rhs,
                         ExpressionKind.Multiply => lhs * rhs,
+                        ExpressionKind.Divide => lhs / rhs,
                         ExpressionKind.BitwiseOr => lhs | rhs,
                         ExpressionKind.BitwiseAnd => lhs & rhs,
                         ExpressionKind.LogicalShiftLeft => lhs << rhs,

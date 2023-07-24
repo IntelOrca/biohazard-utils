@@ -22,6 +22,7 @@
         Opcode,
         Directive,
 
+        BackSlash,
         FowardSlash,
         Colon,
         Semicolon,

@@ -82,6 +82,20 @@ proc init
         }
 
         [Fact]
+        public void TestDivideOperator()
+        {
+            var expected = "02003411020001000400060001000100";
+            AssertScd(expected, @"
+#version 2
+
+proc init
+{
+    member_set(17, -3600 / -1800, 0);
+}
+");
+        }
+
+        [Fact]
         public void TestIfStatement()
         {
             var expected = "020006000A0021010400090A3200080001000400060001000100";
@@ -407,9 +421,9 @@ proc main
             var expected = "02000100040014000F060A0023001A0501000200100001000100";
             AssertScd(expected, @"
 #version 2
-#define WAIT_FOR_CUT(n)                  /
-    while (cmp(0, V_CUT, CMP_NE, n)) {  /
-        evt_next();                    /
+#define WAIT_FOR_CUT(n)                    \
+    while (cmp(0, V_CUT, CMP_NE, n / 2)) {  \
+        evt_next();                          \
     }
 
 proc main

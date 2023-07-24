@@ -14,5 +14,9 @@ namespace IntelOrca.Biohazard
             Edd = edd;
             Emr = emr;
         }
+
+        public RdtAnimation WithFlags(EmrFlags value) => new RdtAnimation(value, Edd, Emr);
+        public RdtAnimation WithEdd(Edd value) => new RdtAnimation(Flags, value, Emr);
+        public RdtAnimation WithEmr(Emr value) => new RdtAnimation(Flags, Edd, value);
     }
 }

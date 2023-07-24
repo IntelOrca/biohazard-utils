@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
+using IntelOrca.Biohazard.Extensions;
 using IntelOrca.Biohazard.Model;
 using IntelOrca.Biohazard.Script;
 
@@ -10,14 +11,10 @@ namespace IntelOrca.Biohazard
 {
     public class RdtFile
     {
-        private readonly int[] _offsets;
-        private readonly int[] _lengths;
-        private readonly List<Range> _eventScripts = new List<Range>();
-        private readonly List<Range> _emrs = new List<Range>();
-        private readonly List<Range> _edds = new List<Range>();
+        private readonly RdtFileData _data;
 
         public BioVersion Version { get; }
-        public byte[] Data { get; private set; }
+        public byte[] Data => _data.Data.ToArray();
         public ulong Checksum { get; }
 
         public RdtFile(string path)
@@ -42,29 +39,13 @@ namespace IntelOrca.Biohazard
 
         private RdtFile(BioVersion? version, byte[] data)
         {
-            Data = data;
+            _data = new RdtFileData(data);
             Version = version ?? DetectVersion(data);
-            _offsets = ReadHeader();
-            _lengths = GetChunkLengths();
-            if (Version == BioVersion.Biohazard2)
-            {
-                // We need to do AST analysis on SCD to find where the end is
-                _lengths[GetScdChunkIndex(BioScriptKind.Init)] = MeasureScript(BioScriptKind.Init);
-                _lengths[GetScdChunkIndex(BioScriptKind.Main)] = MeasureScript(BioScriptKind.Main);
-                _lengths[13] = MeasureTexts(0);
-                _lengths[14] = MeasureTexts(1);
-            }
-            else if (Version == BioVersion.Biohazard3)
-            {
-                // We need to do AST analysis on SCD to find where the end is
-                _lengths[GetScdChunkIndex(BioScriptKind.Init)] = MeasureScript(BioScriptKind.Init);
-            }
-            GetNumEventScripts();
+            ReadHeader();
+            ReadAdditionalOffsets();
+            CalculateChunkLengths();
+            GetEventScripts();
             Checksum = Data.CalculateFnv1a();
-            if (version == BioVersion.Biohazard2)
-            {
-                ReadEMRs();
-            }
         }
 
         private static BioVersion DetectVersion(byte[] data)
@@ -84,24 +65,22 @@ namespace IntelOrca.Biohazard
             return new MemoryStream(Data);
         }
 
-        public int EventScriptCount => _eventScripts.Count;
+        public int EventScriptCount => GetEventScripts().Length;
 
         private int MeasureTexts(int language)
         {
-            var chunkIndex = language == 0 ? 13 : 14;
-            var offset = _offsets[chunkIndex];
-            if (offset == 0)
+            var chunkKind = language == 0 ? RdtFileChunkKinds.MessagesJpn : RdtFileChunkKinds.MessagesEng;
+            var chunk = _data.FindChunkByKind(chunkKind);
+            if (chunk == null)
                 return 0;
 
-            var ms = new MemoryStream(Data);
-            var br = new BinaryReader(ms);
-            ms.Position = offset;
+            var br = new BinaryReader(chunk.Value.Stream);
             var firstOffset = br.ReadUInt16();
             var numTexts = firstOffset / 2;
-            ms.Position = offset + ((numTexts - 1) * 2);
+            br.BaseStream.Position = ((numTexts - 1) * 2);
             var lastTextOffset = br.ReadUInt16();
-            ms.Position = offset + lastTextOffset;
-            while (true)
+            br.BaseStream.Position = lastTextOffset;
+            while (br.BaseStream.Position < br.BaseStream.Length)
             {
                 var b = br.ReadByte();
                 if (b == 0xFE)
@@ -110,23 +89,20 @@ namespace IntelOrca.Biohazard
                     break;
                 }
             }
-            var len = (int)(ms.Position - offset);
+            var len = (int)(br.BaseStream.Position);
             return ((len + 3) / 4) * 4;
         }
 
         public BioString[] GetTexts(int language)
         {
-            var chunkIndex = language == 0 ? 13 : 14;
-            var offset = _offsets[chunkIndex];
-            if (offset == 0)
+            var chunkKind = language == 0 ? RdtFileChunkKinds.MessagesJpn : RdtFileChunkKinds.MessagesEng;
+            var chunk = _data.FindChunkByKind(chunkKind);
+            if (chunk == null)
             {
                 return new BioString[0];
             }
 
-            var length = _lengths[chunkIndex];
-            var ms = new MemoryStream(Data);
-            ms.Position = offset;
-            var br = new BinaryReader(ms);
+            var br = new BinaryReader(chunk.Value.Stream);
             var firstOffset = br.ReadUInt16();
             var numTexts = firstOffset / 2;
             var textOffsets = new ushort[numTexts];
@@ -137,12 +113,12 @@ namespace IntelOrca.Biohazard
                 textOffsets[i] = br.ReadUInt16();
                 textLengths[i - 1] = (ushort)(textOffsets[i] - textOffsets[i - 1]);
             }
-            textLengths[numTexts - 1] = (ushort)(length - textOffsets[numTexts - 1]);
+            textLengths[numTexts - 1] = (ushort)(chunk.Value.Length - textOffsets[numTexts - 1]);
 
             var result = new List<BioString>();
             for (int i = 0; i < numTexts; i++)
             {
-                ms.Position = offset + textOffsets[i];
+                br.BaseStream.Position = textOffsets[i];
                 var text = br.ReadBytes(textLengths[i]);
                 result.Add(new BioString(text));
             }
@@ -151,8 +127,6 @@ namespace IntelOrca.Biohazard
 
         public void SetTexts(int language, BioString[] texts)
         {
-            var chunkIndex = language == 0 ? 13 : 14;
-
             var ms = new MemoryStream();
             var bw = new BinaryWriter(ms);
             for (var i = 0; i < texts.Length; i++)
@@ -177,186 +151,290 @@ namespace IntelOrca.Biohazard
                 bw.Write((byte)0);
             }
 
-            UpdateChunk(chunkIndex, ms.ToArray());
+            var chunkKind = language == 0 ? RdtFileChunkKinds.MessagesJpn : RdtFileChunkKinds.MessagesEng;
+            var chunk = _data.FindChunkByKind(chunkKind);
+            if (chunk == null)
+            {
+                var beforeChunk = _data.Chunks
+                    .FirstOrDefault(x => x.Kind == RdtFileChunkKinds.EmbeddedObjectMd1);
+                if (beforeChunk.Parent == null)
+                {
+                    beforeChunk = _data.FindChunkByKind(RdtFileChunkKinds.ScdInit)!.Value;
+                }
+                _data.InsertData(chunkKind, beforeChunk.Offset, ms.ToArray());
+            }
+            else
+            {
+                _data.SetData(chunk.Value.Offset, ms.ToArray());
+            }
+            UpdateOffsets();
         }
 
         public byte[] GetScd(BioScriptKind kind, int scriptIndex = 0)
         {
-            var index = GetScdChunkIndex(kind);
-            var start = _offsets[index];
-            var length = _lengths[index];
+            var chunk = GetScdChunk(kind)!.Value;
             if (kind == BioScriptKind.Event)
             {
-                var range = _eventScripts[scriptIndex];
-                var data = new byte[range.Length];
-                Array.Copy(Data, start + range.Start, data, 0, range.Length);
-                return data;
+                var eventScripts = GetEventScripts();
+                return eventScripts[scriptIndex].Data.ToArray();
             }
             else
             {
-                var data = new byte[length];
-                Array.Copy(Data, start, data, 0, length);
-                return data;
+                return chunk.Span.ToArray();
             }
         }
 
         public void SetScd(BioScriptKind kind, byte[] data)
         {
-            var index = GetScdChunkIndex(kind);
-            UpdateChunk(index, data);
+            var chunk = GetScdChunk(kind)!.Value;
+            _data.SetData(chunk.Offset, data);
+            UpdateOffsets();
         }
 
-        private void RewriteOffset(Stream stream, int min, int delta)
+        private RdtFileData.Chunk? GetScdChunk(BioScriptKind kind)
         {
-            var br = new BinaryReader(stream);
-            var bw = new BinaryWriter(stream);
-            var offset = br.ReadInt32();
-            if (offset != 0 && offset != -1 && offset >= min)
+            var chunkKind = kind switch
             {
-                stream.Position -= 4;
-                bw.Write(offset + delta);
-            }
+                BioScriptKind.Init => RdtFileChunkKinds.ScdInit,
+                BioScriptKind.Main => RdtFileChunkKinds.ScdMain,
+                BioScriptKind.Event => RdtFileChunkKinds.ScdEvent,
+                _ => throw new ArgumentException("Invalid kind", nameof(kind))
+            };
+            return _data.FindChunkByKind(chunkKind);
         }
 
-        private int GetScdChunkIndex(BioScriptKind kind)
+        private void ReadHeader()
         {
-            switch (Version)
+            if (_data.Length <= 8)
             {
-                case BioVersion.Biohazard1:
-                    switch (kind)
-                    {
-                        case BioScriptKind.Init:
-                            return 6;
-                        case BioScriptKind.Main:
-                            return 7;
-                        case BioScriptKind.Event:
-                            return 8;
-                        default:
-                            throw new ArgumentException("Invalid kind", nameof(kind));
-                    }
-                case BioVersion.Biohazard2:
-                    switch (kind)
-                    {
-                        case BioScriptKind.Init:
-                            return 16;
-                        case BioScriptKind.Main:
-                            return 17;
-                        default:
-                            throw new ArgumentException("Invalid kind", nameof(kind));
-                    }
-                case BioVersion.Biohazard3:
-                    switch (kind)
-                    {
-                        case BioScriptKind.Init:
-                            return 16;
-                        default:
-                            throw new ArgumentException("Invalid kind", nameof(kind));
-                    }
-                default:
-                    throw new NotSupportedException();
+                _data.RegisterOffset(RdtFileChunkKinds.Header, 0);
+                return;
             }
-        }
 
-        private int[] ReadHeader()
-        {
-            if (Data.Length <= 8)
-                return new int[0];
-
-            var br = new BinaryReader(new MemoryStream(Data));
+            var offsetMap = GetHeaderOffsetMap();
+            BinaryReader br;
             if (Version == BioVersion.Biohazard1)
             {
+                var chunk = _data.RegisterChunk(RdtFileChunkKinds.Header, 0, 148);
+                br = new BinaryReader(chunk.Stream);
                 br.ReadBytes(12);
                 br.ReadBytes(20 * 3);
-
-                var offsets = new int[19];
-                for (int i = 0; i < offsets.Length; i++)
-                {
-                    offsets[i] = br.ReadInt32();
-                }
-                return offsets;
             }
             else
             {
+                var chunk = _data.RegisterChunk(RdtFileChunkKinds.Header, 0, 100);
+                br = new BinaryReader(chunk.Stream);
                 br.ReadBytes(8);
-
-                var offsets = new int[23];
-                for (int i = 0; i < offsets.Length; i++)
+            }
+            for (int i = 0; i < offsetMap.Length; i++)
+            {
+                var offset = br.ReadInt32();
+                if (offset != 0)
                 {
-                    offsets[i] = br.ReadInt32();
-                }
-                return offsets;
-            }
-        }
-
-        private void WriteOffsets()
-        {
-            var bw = new BinaryWriter(new MemoryStream(Data));
-            if (Version == BioVersion.Biohazard1)
-            {
-                bw.BaseStream.Position = 12 + (20 * 3);
-            }
-            else
-            {
-                bw.BaseStream.Position = 8;
-            }
-            for (int i = 0; i < _offsets.Length; i++)
-            {
-                bw.Write(_offsets[i]);
-            }
-        }
-
-        private int[] GetChunkLengths()
-        {
-            var lengths = new int[_offsets.Length];
-            for (int i = 0; i < _offsets.Length; i++)
-            {
-                var start = _offsets[i];
-                var end = Data.Length;
-                for (int j = 0; j < _offsets.Length; j++)
-                {
-                    var o = _offsets[j];
-                    if (o > start && o < end)
+                    var kind = offsetMap[i];
+                    var existingChunk = _data.FindChunkByOffset(offset);
+                    if (existingChunk == null || existingChunk.Value.Kind == RdtFileChunkKinds.Unknown)
                     {
-                        end = o;
+                        _data.RegisterOffset(kind, offset, overwrite: true);
+                    }
+                    else
+                    {
+                        _data.InsertData(kind, offset, new byte[0]);
                     }
                 }
-                lengths[i] = end - start;
             }
-            return lengths;
         }
 
-        private int GetNumEventScripts()
+        private void ReadAdditionalOffsets()
+        {
+            if (Version == BioVersion.Biohazard1)
+            {
+
+            }
+            else
+            {
+                var chunk = _data.FindChunkByKind(RdtFileChunkKinds.EmbeddedObjectTable);
+                if (chunk != null)
+                {
+                    var count = _data.Data[2];
+                    var br = new BinaryReader(chunk.Value.Stream);
+                    var timOffsets = new HashSet<int>();
+                    var md1Offsets = new HashSet<int>();
+                    for (var i = 0; i < count; i++)
+                    {
+                        var tim = br.ReadInt32();
+                        if (tim != 0 && timOffsets.Add(tim))
+                        {
+                            _data.RegisterOffset(RdtFileChunkKinds.EmbeddedObjectTim, tim);
+                        }
+
+                        var md1 = br.ReadInt32();
+                        if (md1 != 0 && md1Offsets.Add(md1))
+                        {
+                            _data.RegisterOffset(RdtFileChunkKinds.EmbeddedObjectMd1, md1);
+                        }
+                    }
+                }
+            }
+        }
+
+        private void CalculateChunkLengths()
         {
             if (Version != BioVersion.Biohazard1)
-                return 0;
+            {
+                // We need to do AST analysis on SCD to find where the end is
+                var initChunk = _data.FindChunkByKind(RdtFileChunkKinds.ScdInit);
+                if (initChunk != null)
+                {
+                    _data.RegisterLength(initChunk.Value.Offset, MeasureScript(BioScriptKind.Init));
+                }
+            }
+            if (Version == BioVersion.Biohazard2)
+            {
+                var mainChunk = _data.FindChunkByKind(RdtFileChunkKinds.ScdMain);
+                if (mainChunk != null)
+                {
+                    _data.RegisterLength(mainChunk.Value.Offset, MeasureScript(BioScriptKind.Main));
+                }
 
-            var chunkIndex = GetScdChunkIndex(BioScriptKind.Event);
-            var chunkOffset = _offsets[chunkIndex];
-            var endOffset = chunkOffset + _lengths[chunkIndex];
-            var ms = new MemoryStream(Data);
-            ms.Position = chunkOffset;
+                var jpnChunk = _data.FindChunkByKind(RdtFileChunkKinds.MessagesJpn);
+                if (jpnChunk != null)
+                {
+                    _data.RegisterLength(jpnChunk.Value.Offset, MeasureTexts(0));
+                }
 
+                var engChunk = _data.FindChunkByKind(RdtFileChunkKinds.MessagesEng);
+                if (engChunk != null)
+                {
+                    _data.RegisterLength(engChunk.Value.Offset, MeasureTexts(1));
+                }
+            }
+        }
+
+        private void UpdateOffsets()
+        {
+            if (_data.Length <= 8)
+                return;
+
+            UpdateHeader();
+
+            if (Version == BioVersion.Biohazard1)
+            {
+            }
+            else
+            {
+                var timChunks = _data.Chunks
+                    .Where(x => x.Kind == RdtFileChunkKinds.EmbeddedObjectTim)
+                    .Select(x => x.Offset)
+                    .ToArray();
+                var md1Chunks = _data.Chunks
+                    .Where(x => x.Kind == RdtFileChunkKinds.EmbeddedObjectMd1)
+                    .Select(x => x.Offset)
+                    .ToArray();
+
+                var chunk = _data.FindChunkByKind(RdtFileChunkKinds.EmbeddedObjectTable);
+                if (chunk != null)
+                {
+                    var ms = new MemoryStream(chunk.Value.Span.ToArray());
+                    var br = new BinaryReader(ms);
+                    var bw = new BinaryWriter(ms);
+                    var count = NumEmbeddedModels;
+                    var offsetsTim = new int[count];
+                    var offsetsMd1 = new int[count];
+                    for (var i = 0; i < count; i++)
+                    {
+                        offsetsTim[i] = br.ReadInt32();
+                        offsetsMd1[i] = br.ReadInt32();
+                    }
+                    var indicesTim = offsetsTim.OrderBy(x => x).Where(x => x != 0).Distinct().ToArray();
+                    var indicesMd1 = offsetsMd1.OrderBy(x => x).Where(x => x != 0).Distinct().ToArray();
+                    var orderTim = offsetsTim.Select(x => x == 0 ? -1 : Array.IndexOf(indicesTim, x)).ToArray();
+                    var orderMd1 = offsetsMd1.Select(x => x == 0 ? -1 : Array.IndexOf(indicesMd1, x)).ToArray();
+                    var newIndicesTim = _data.Chunks.Where(x => x.Kind == RdtFileChunkKinds.EmbeddedObjectTim).Select(x => x.Offset).ToArray();
+                    var newIndicesMd1 = _data.Chunks.Where(x => x.Kind == RdtFileChunkKinds.EmbeddedObjectMd1).Select(x => x.Offset).ToArray();
+                    var newOffsetsTim = orderTim.Select(x => x == -1 ? 0 : newIndicesTim[x]).ToArray();
+                    var newOffsetsMd1 = orderMd1.Select(x => x == -1 ? 0 : newIndicesMd1[x]).ToArray();
+
+                    ms.Position = 0;
+                    for (var i = 0; i < count; i++)
+                    {
+                        bw.Write(newOffsetsTim[i]);
+                        bw.Write(newOffsetsMd1[i]);
+                    }
+                    _data.SetData(chunk.Value.Offset, ms.ToArray());
+                }
+            }
+        }
+
+        private int NumEmbeddedModels
+        {
+            get => _data.Data[2];
+        }
+
+        private void UpdateHeader()
+        {
+            var offsetMap = GetHeaderOffsetMap();
+            var bytes = _data[0].Span.ToArray();
+            var ms = new MemoryStream(bytes);
+            var br = new BinaryReader(ms);
+            var bw = new BinaryWriter(ms);
+            if (Version == BioVersion.Biohazard1)
+            {
+                ms.Position += 12;
+                ms.Position += 20 * 3;
+            }
+            else
+            {
+                ms.Position += 8;
+            }
+            for (int i = 0; i < offsetMap.Length; i++)
+            {
+                var original = br.ReadInt32();
+                ms.Position -= 4;
+
+                var kind = offsetMap[i];
+                var chunk = _data.FindChunkByKind(kind);
+                if (chunk == null)
+                {
+                    bw.Write(0);
+                }
+                else
+                {
+                    bw.Write(chunk.Value.Offset);
+                }
+            }
+            _data.SetData(0, ms.ToArray());
+        }
+
+        private EventScript[] GetEventScripts()
+        {
+            var eventScripts = new List<EventScript>();
+            if (Version != BioVersion.Biohazard1)
+                return eventScripts.ToArray();
+
+            var chunk = GetScdChunk(BioScriptKind.Event)!.Value;
+
+            var ms = chunk.Stream;
             var br = new BinaryReader(ms);
             var offset = br.ReadInt32();
             var numScripts = offset / 4;
-            _eventScripts.Clear();
             for (int i = 0; i < numScripts; i++)
             {
-                var nextOffset = i == numScripts - 1 ? endOffset : br.ReadInt32();
+                var nextOffset = i == numScripts - 1 ? chunk.Length : br.ReadInt32();
                 if (nextOffset == 0)
                 {
-                    var length = endOffset - chunkOffset - offset;
-                    _eventScripts.Add(new Range(offset, length));
+                    var length = chunk.Length - offset;
+                    eventScripts.Add(new EventScript(chunk.Offset + offset, chunk.Memory.Slice(offset, length)));
                     break;
                 }
                 else
                 {
                     var length = nextOffset - offset;
-                    _eventScripts.Add(new Range(offset, length));
+                    eventScripts.Add(new EventScript(chunk.Offset + offset, chunk.Memory.Slice(offset, length)));
                 }
                 offset = nextOffset;
             }
-            return numScripts;
+            return eventScripts.ToArray();
         }
 
         public void ReadScript(BioScriptVisitor visitor)
@@ -371,258 +449,62 @@ namespace IntelOrca.Biohazard
 
         private void ReadScript(BioScriptKind kind, BioScriptVisitor visitor)
         {
-            var chunkIndex = GetScdChunkIndex(kind);
-            var scriptOffset = _offsets[chunkIndex];
-            if (scriptOffset == 0)
+            var chunk = GetScdChunk(kind);
+            if (chunk == null)
                 return;
 
             if (kind == BioScriptKind.Event)
             {
-                for (int i = 0; i < _eventScripts.Count; i++)
+                var eventScripts = GetEventScripts();
+                for (int i = 0; i < eventScripts.Length; i++)
                 {
-                    Range eventScript = _eventScripts[i];
-                    var eventScriptOffset = scriptOffset + eventScript.Start;
-                    var eventScriptLength = eventScript.Length;
+                    var eventScript = eventScripts[i];
                     var scdReader = new ScdReader();
-                    scdReader.BaseOffset = scriptOffset + eventScript.Start;
-                    scdReader.ReadEventScript(new ReadOnlyMemory<byte>(Data, eventScriptOffset, eventScriptLength), visitor, i);
+                    scdReader.BaseOffset = eventScript.BaseOffset;
+                    scdReader.ReadEventScript(eventScript.Data, visitor, i);
                 }
             }
             else
             {
-                var scriptLength = _lengths[chunkIndex];
                 var scdReader = new ScdReader();
-                scdReader.BaseOffset = scriptOffset;
-                scdReader.ReadScript(new ReadOnlyMemory<byte>(Data, scriptOffset, scriptLength), Version, kind, visitor);
+                scdReader.BaseOffset = chunk.Value.Offset;
+                scdReader.ReadScript(chunk.Value.Memory, Version, kind, visitor);
             }
         }
 
         private int MeasureScript(BioScriptKind kind)
         {
-            var chunkIndex = GetScdChunkIndex(kind);
-            var scriptOffset = _offsets[chunkIndex];
-            var scriptLength = _lengths[chunkIndex];
-            var span = new ReadOnlyMemory<byte>(Data, scriptOffset, scriptLength);
+            var chunk = GetScdChunk(kind)!.Value;
             var scdReader = new ScdReader();
-            return scdReader.MeasureScript(span, Version, kind);
+            return scdReader.MeasureScript(chunk.Memory, Version, kind);
         }
 
-        private void ReadEMRs()
-        {
-            var rbj = _offsets[22];
-            if (rbj == 0)
-                return;
+        internal int EmrCount => Animations.Length;
 
-            var ms = new MemoryStream(Data);
-            var br = new BinaryReader(ms);
-
-            ms.Position = rbj;
-            var chunkLen = br.ReadInt32();
-            var emrCount = br.ReadInt32();
-
-            ms.Position = rbj + chunkLen;
-
-            var offsets = new List<int>();
-            for (int i = 0; i < emrCount * 2; i++)
-            {
-                offsets.Add(rbj + br.ReadInt32());
-            }
-            offsets.Add(rbj + chunkLen);
-
-            for (int i = 0; i < emrCount; i++)
-            {
-                _emrs.Add(new Range(offsets[i * 2 + 0], offsets[i * 2 + 1] - offsets[i * 2 + 0]));
-                _edds.Add(new Range(offsets[i * 2 + 1], offsets[i * 2 + 2] - offsets[i * 2 + 1]));
-            }
-        }
-
-        internal int EmrCount => _emrs.Count;
-
-        internal EmrFlags GetEmrFlags(int index)
-        {
-            var ms = GetStream();
-            var br = new BinaryReader(ms);
-            ms.Position = _emrs[index].Start;
-            return (EmrFlags)br.ReadInt32();
-        }
+        internal EmrFlags GetEmrFlags(int index) => Animations[index].Flags;
 
         internal void SetEmrFlags(int index, EmrFlags flags)
         {
-            var ms = GetStream();
-            var bw = new BinaryWriter(ms);
-            ms.Position = _emrs[index].Start;
-            bw.Write((int)flags);
+            var animations = Animations;
+            animations[index] = animations[index].WithFlags(flags);
+            Animations = animations;
         }
 
         internal void ScaleEmrYs(int index, double yRatio)
         {
-            var ms = GetStream();
-            var br = new BinaryReader(ms);
-            var bw = new BinaryWriter(ms);
-
-            var emr = _emrs[index];
-            ms.Position = emr.Start;
-
-            var flags = (EmrFlags)br.ReadUInt32();
-            var pArmature = br.ReadUInt16();
-            var pFrames = br.ReadUInt16();
-            var nArmature = br.ReadUInt16();
-            var frameLen = br.ReadUInt16();
-            var totalFrames = (emr.Length - 12) / 80;
-            for (int i = 0; i < totalFrames; i++)
-            {
-                var xOffset = br.ReadInt16();
-                var yOffset = br.ReadInt16();
-                if (yOffset != 0)
-                {
-                    ms.Position -= 2;
-                    bw.Write((short)(yOffset * yRatio));
-                }
-                var zOffset = br.ReadInt16();
-                var xSpeed = br.ReadInt16();
-                var ySpeed = br.ReadInt16();
-                var zSpeed = br.ReadInt16();
-
-                // Rotations
-                ms.Position += 68;
-            }
+            var animations = Animations;
+            var animation = animations[index];
+            var emr = animation.Emr.Scale(yRatio);
+            animations[index] = animation.WithEmr(emr);
+            Animations = animations;
         }
 
         internal int DuplicateEmr(int index)
         {
-            var emr = _emrs[index];
-            var edd = _edds[index];
-            var emrData = Data.Skip(emr.Start).Take(emr.Length).ToArray();
-            var eddData = Data.Skip(edd.Start).Take(edd.Length).ToArray();
-
-            var rbjOffset = _offsets[22];
-            var oldChunkLength = BitConverter.ToInt32(Data, rbjOffset);
-            var chunkLength = oldChunkLength;
-            _emrs.Add(new Range(rbjOffset + chunkLength, emrData.Length));
-            chunkLength += emrData.Length;
-            _edds.Add(new Range(rbjOffset + chunkLength, eddData.Length));
-            chunkLength += eddData.Length;
-
-            var rbjData = new List<byte>();
-            rbjData.AddRange(BitConverter.GetBytes(chunkLength));
-            rbjData.AddRange(BitConverter.GetBytes(_emrs.Count));
-            rbjData.AddRange(Data.Skip(rbjOffset + 8).Take(oldChunkLength - 8));
-            rbjData.AddRange(emrData);
-            rbjData.AddRange(eddData);
-            for (int i = 0; i < _emrs.Count; i++)
-            {
-                rbjData.AddRange(BitConverter.GetBytes(_emrs[i].Start - rbjOffset));
-                rbjData.AddRange(BitConverter.GetBytes(_edds[i].Start - rbjOffset));
-            }
-            UpdateChunk(22, rbjData.ToArray());
-            return EmrCount - 1;
-        }
-
-        internal void UpdateEmrFlags(int index, EmrFlags flags)
-        {
-            var emr = _emrs[index];
-            var stream = GetStream();
-            stream.Position = emr.Start;
-            var bw = new BinaryWriter(stream);
-            bw.Write((int)flags);
-        }
-
-        private void UpdateChunk(int index, byte[] data)
-        {
-            if (_lengths[index] == data.Length)
-            {
-                Array.Copy(data, 0, Data, _offsets[index], data.Length);
-            }
-            else
-            {
-                var start = _offsets[index];
-                if (start == 0)
-                {
-                    if (index == 13 || index == 14)
-                    {
-                        if (EmbeddedModels.Length == 0)
-                        {
-                            start = _offsets[16];
-                        }
-                        else
-                        {
-                            start = EmbeddedModels[0].MD1;
-                        }
-                    }
-                    else
-                    {
-                        throw new NotSupportedException("No existing chunk to replace");
-                    }
-                }
-
-                var length = _lengths[index];
-                var end = start + length;
-                var lengthDelta = data.Length - length;
-                var sliceA = Data.Take(start).ToArray();
-                var sliceB = Data.Skip(end).ToArray();
-                for (int i = 0; i < _offsets.Length; i++)
-                {
-                    if (_offsets[i] != 0 && _offsets[i] >= start)
-                    {
-                        _offsets[i] += lengthDelta;
-                    }
-                }
-                _offsets[index] = start;
-                _lengths[index] = data.Length;
-                Data = sliceA.Concat(data).Concat(sliceB).ToArray();
-
-                if (Version == BioVersion.Biohazard1)
-                {
-                    // Re-write ESP offsets
-                    var ms = new MemoryStream(Data);
-                    var br = new BinaryReader(ms);
-                    var bw = new BinaryWriter(ms);
-                    ms.Position = _offsets[14];
-                    for (int i = 0; i < 8; i++)
-                    {
-                        var x = br.ReadInt32();
-                        bw.BaseStream.Position -= 4;
-                        if (x != -1)
-                        {
-                            var y = x + lengthDelta;
-                            bw.Write(y);
-                            bw.BaseStream.Position -= 4;
-                        }
-                        bw.BaseStream.Position -= 4;
-                    }
-
-                    // Re-write ESP offsets
-                    ms.Position = Data.Length - 4;
-                    for (int i = 0; i < 8; i++)
-                    {
-                        var x = br.ReadInt32();
-                        bw.BaseStream.Position -= 4;
-                        if (x != -1)
-                        {
-                            var y = x + lengthDelta;
-                            bw.Write(y);
-                            bw.BaseStream.Position -= 4;
-                        }
-                        bw.BaseStream.Position -= 4;
-                    }
-                }
-                else
-                {
-                    // Re-write TIM offsets
-                    var numEmbeddedTIMs = Data[2];
-                    if (numEmbeddedTIMs != 0)
-                    {
-                        var ms = new MemoryStream(Data);
-                        ms.Position = _offsets[10];
-                        for (int i = 0; i < numEmbeddedTIMs; i++)
-                        {
-                            RewriteOffset(ms, start, lengthDelta);
-                            RewriteOffset(ms, start, lengthDelta);
-                        }
-                    }
-                }
-                WriteOffsets();
-            }
+            var animations = Animations.ToList();
+            animations.Add(animations[index]);
+            Animations = animations.ToArray();
+            return animations.Count - 1;
         }
 
         public string DisassembleScd(bool listing = false)
@@ -639,54 +521,36 @@ namespace IntelOrca.Biohazard
             return scriptDecompiler.GetScript();
         }
 
-        public EmbeddedModel[] EmbeddedModels
-        {
-            get
-            {
-                var count = Data[2];
-                var result = new EmbeddedModel[count];
-                var br = new BinaryReader(new MemoryStream(Data));
-                br.BaseStream.Position = _offsets[10];
-                for (var i = 0; i < count; i++)
-                {
-                    var tim = br.ReadInt32();
-                    var md1 = br.ReadInt32();
-                    result[i] = new EmbeddedModel(tim, md1);
-                }
-                return result;
-            }
-        }
-
         public RdtAnimation[] Animations
         {
             get
             {
-                var rbj = _offsets[22];
-                if (rbj == 0)
+                var rbj = _data.FindChunkByKind(RdtFileChunkKinds.RoomAnimations);
+                if (rbj == null)
                     return new RdtAnimation[0];
 
-                var ms = new MemoryStream(Data);
+                var memory = rbj.Value.Memory;
+                var ms = rbj.Value.Stream;
                 var br = new BinaryReader(ms);
-
-                ms.Position = rbj;
                 var chunkLen = br.ReadInt32();
                 var emrCount = br.ReadInt32();
 
-                ms.Position = rbj + chunkLen;
+                ms.Position = chunkLen;
 
                 var offsets = new List<int>();
                 for (int i = 0; i < emrCount * 2; i++)
                 {
-                    offsets.Add(rbj + br.ReadInt32());
+                    offsets.Add(br.ReadInt32());
                 }
-                offsets.Add(rbj + chunkLen);
+                offsets.Add(chunkLen);
 
                 var result = new List<RdtAnimation>();
                 for (int i = 0; i < emrCount; i++)
                 {
-                    var flags = (EmrFlags)BitConverter.ToInt32(Data, offsets[i * 2 + 0]);
-                    var emrRange = new Memory<byte>(Data, offsets[i * 2 + 0] + 4, offsets[i * 2 + 1] - offsets[i * 2 + 0] - 4);
-                    var eddRange = new Memory<byte>(Data, offsets[i * 2 + 1], offsets[i * 2 + 2] - offsets[i * 2 + 1]);
+                    var flagsEmrRange = memory.Slice(offsets[i * 2 + 0], offsets[i * 2 + 1] - offsets[i * 2 + 0]);
+                    var emrRange = flagsEmrRange.Slice(4);
+                    var eddRange = memory.Slice(offsets[i * 2 + 1], offsets[i * 2 + 2] - offsets[i * 2 + 1]);
+                    var flags = MemoryMarshal.Cast<byte, EmrFlags>(flagsEmrRange.Span)[0];
                     var emr = new Emr(Version, emrRange);
                     var edd = new Edd(eddRange);
                     result.Add(new RdtAnimation(flags, edd, emr));
@@ -695,6 +559,10 @@ namespace IntelOrca.Biohazard
             }
             set
             {
+                var rbj = _data.FindChunkByKind(RdtFileChunkKinds.RoomAnimations);
+                if (rbj == null)
+                    throw new NotImplementedException();
+
                 var ms = new MemoryStream();
                 var bw = new BinaryWriter(ms);
                 bw.Write(0);
@@ -717,65 +585,91 @@ namespace IntelOrca.Biohazard
                 }
                 ms.Position = 0;
                 bw.Write(chunkLen);
-                UpdateChunk(22, ms.ToArray());
+                _data.SetData(rbj.Value.Offset, ms.ToArray());
+                UpdateOffsets();
             }
         }
 
-        public readonly struct EmbeddedModel
+        private int[] GetHeaderOffsetMap()
         {
-            public int TIM { get; }
-            public int MD1 { get; }
-
-            public EmbeddedModel(int tim, int md1)
+            return Version switch
             {
-                TIM = tim;
-                MD1 = md1;
+                BioVersion.Biohazard1 => _re1HeaderOffsetKinds,
+                BioVersion.Biohazard2 => _re2HeaderOffsetKinds,
+                BioVersion.Biohazard3 => _re3HeaderOffsetKinds,
+                _ => throw new NotImplementedException()
+            };
+        }
+
+        private static readonly int[] _re1HeaderOffsetKinds = new[]
+        {
+            RdtFileChunkKinds.SoundAttributeTable,
+        };
+
+        private static readonly int[] _re2HeaderOffsetKinds = new[]
+        {
+            RdtFileChunkKinds.SoundAttributeTable,
+            RdtFileChunkKinds.EmbeddedVH,
+            RdtFileChunkKinds.EmbeddedVB,
+            RdtFileChunkKinds.EmbeddedTrialVH,
+            RdtFileChunkKinds.EmbeddedTrialVB,
+            RdtFileChunkKinds.Ota,
+            RdtFileChunkKinds.Collisions,
+            RdtFileChunkKinds.CameraPositions,
+            RdtFileChunkKinds.CameraSwitches,
+            RdtFileChunkKinds.Lights,
+            RdtFileChunkKinds.EmbeddedObjectTable,
+            RdtFileChunkKinds.FloorAreas,
+            RdtFileChunkKinds.BlockUnknown,
+            RdtFileChunkKinds.MessagesJpn,
+            RdtFileChunkKinds.MessagesEng,
+            RdtFileChunkKinds.ScrollingTim,
+            RdtFileChunkKinds.ScdInit,
+            RdtFileChunkKinds.ScdMain,
+            RdtFileChunkKinds.Effects,
+            RdtFileChunkKinds.EffectTable,
+            RdtFileChunkKinds.EffectSprites,
+            RdtFileChunkKinds.ObjectTextures,
+            RdtFileChunkKinds.RoomAnimations,
+        };
+
+        private static readonly int[] _re3HeaderOffsetKinds = new[]
+        {
+            RdtFileChunkKinds.SoundAttributeTable,
+            RdtFileChunkKinds.EmbeddedVH,
+            RdtFileChunkKinds.EmbeddedVB,
+            RdtFileChunkKinds.EmbeddedTrialVH,
+            RdtFileChunkKinds.EmbeddedTrialVB,
+            RdtFileChunkKinds.Ota,
+            RdtFileChunkKinds.Collisions,
+            RdtFileChunkKinds.CameraPositions,
+            RdtFileChunkKinds.CameraSwitches,
+            RdtFileChunkKinds.Lights,
+            RdtFileChunkKinds.EmbeddedObjectTable,
+            RdtFileChunkKinds.FloorAreas,
+            RdtFileChunkKinds.BlockUnknown,
+            RdtFileChunkKinds.MessagesJpn,
+            RdtFileChunkKinds.MessagesEng,
+            RdtFileChunkKinds.ScrollingTim,
+            RdtFileChunkKinds.ScdInit,
+            RdtFileChunkKinds.ScdMain,
+            RdtFileChunkKinds.Effects,
+            RdtFileChunkKinds.EffectTable,
+            RdtFileChunkKinds.EffectSprites,
+            RdtFileChunkKinds.ObjectTextures,
+            RdtFileChunkKinds.RoomAnimations,
+        };
+
+        private readonly struct EventScript
+        {
+            public int BaseOffset { get; }
+            public ReadOnlyMemory<byte> Data { get; }
+
+            public EventScript(int baseOffset, ReadOnlyMemory<byte> data)
+            {
+                BaseOffset = baseOffset;
+                Data = data;
             }
-        }
-    }
-
-    [DebuggerDisplay("Start = {Start} Length = {Length}")]
-    internal struct Range : IEquatable<Range>
-    {
-        public int Start { get; }
-        public int Length { get; }
-        public int End => Start + Length;
-
-        public Range(int start, int length)
-        {
-            Start = start;
-            Length = length;
-        }
-
-        public override bool Equals(object? obj)
-        {
-            return obj is Range range && Equals(range);
-        }
-
-        public bool Equals(Range other)
-        {
-            return Start == other.Start &&
-                   Length == other.Length &&
-                   End == other.End;
-        }
-
-        public override int GetHashCode()
-        {
-            int hashCode = -1042531914;
-            hashCode = hashCode * -1521134295 + Start.GetHashCode();
-            hashCode = hashCode * -1521134295 + Length.GetHashCode();
-            hashCode = hashCode * -1521134295 + End.GetHashCode();
-            return hashCode;
-        }
-
-        public static bool operator ==(Range left, Range right)
-        {
-            return left.Equals(right);
-        }
-
-        public static bool operator !=(Range left, Range right)
-        {
-            return !(left == right);
         }
     }
 }

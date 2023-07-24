@@ -418,7 +418,7 @@ proc main
         [Fact]
         public void TestDefine_MultiLine()
         {
-            var expected = "02000100040014000F060A0023001A0501000200100001000100";
+            var expected = "02000100040014000F060A0023001A0500000200100001000100";
             AssertScd(expected, @"
 #version 2
 #define WAIT_FOR_CUT(n)                    \

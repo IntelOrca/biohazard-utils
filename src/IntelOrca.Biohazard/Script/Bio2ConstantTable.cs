@@ -320,6 +320,7 @@ namespace IntelOrca.Biohazard.Script
                 0 when index == 0x19 => "F_DIFFICULT",
                 1 when index == 0 => "F_PLAYER",
                 1 when index == 1 => "F_SCENARIO",
+                1 when index == 5 => "F_EASY",
                 1 when index == 6 => "F_BONUS",
                 1 when index == 0x1B => "F_CUTSCENE",
                 0xB when index == 0x1F => "F_QUESTION",

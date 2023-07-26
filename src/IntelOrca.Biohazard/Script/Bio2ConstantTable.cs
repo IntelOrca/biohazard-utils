@@ -5,6 +5,7 @@ namespace IntelOrca.Biohazard.Script
 {
     public class Bio2ConstantTable : IConstantTable
     {
+        private const byte SCE_MESSAGE = 4;
         private const byte SCE_EVENT = 5;
         private const byte SCE_FLAG_CHG = 6;
 
@@ -43,8 +44,30 @@ namespace IntelOrca.Biohazard.Script
                         return GetFlagName(F, f);
                     }
                 }
+                else if (opcode == (byte)OpcodeV2.WorkSet)
+                {
+                    if (pIndex == 1)
+                    {
+                        var kind = br.ReadByte();
+                        var id = br.ReadByte();
+                        if (kind == 3)
+                            return GetConstant('2', id);
+                        else if (kind == 4)
+                            return GetConstant('1', id);
+                    }
+                }
                 else if (opcode == (byte)OpcodeV2.AotReset)
                 {
+                    if (pIndex == 3)
+                    {
+                        br.BaseStream.Position++;
+                        var sce = br.ReadByte();
+                        if (sce == SCE_MESSAGE)
+                        {
+                            br.BaseStream.Position += 1;
+                            return GetConstant('3', br.ReadByte());
+                        }
+                    }
                     if (pIndex == 5)
                     {
                         br.BaseStream.Position++;
@@ -86,7 +109,18 @@ namespace IntelOrca.Biohazard.Script
                 }
                 else if (opcode == (byte)OpcodeV2.AotSet)
                 {
+                    if (pIndex == 9)
+                    {
+                        br.BaseStream.Position++;
+                        var sce = br.ReadByte();
+                        if (sce == SCE_MESSAGE)
+                        {
+                            br.BaseStream.Position += 11;
+                            return GetConstant('3', br.ReadByte());
+                        }
+                    }
                     if (pIndex == 11)
+
                     {
                         br.BaseStream.Position++;
                         var sce = br.ReadByte();
@@ -159,6 +193,14 @@ namespace IntelOrca.Biohazard.Script
         {
             switch (kind)
             {
+                case '0':
+                    return $"ID_AOT_{value}";
+                case '1':
+                    return $"ID_OBJ_{value}";
+                case '2':
+                    return $"ID_EM_{value}";
+                case '3':
+                    return $"ID_MSG_{value}";
                 case 'e':
                     return GetEnemyName((byte)value);
                 case 't':
@@ -346,8 +388,8 @@ namespace IntelOrca.Biohazard.Script
             "FG_GAME",
             "FG_STATE",
             "FG_3",
-            "FG_GENERAL_1",
-            "FG_GENERAL_2",
+            "FG_GENERAL",
+            "FG_LOCAL",
             "FG_ENEMY",
             "FG_7",
             "FG_ITEM",
@@ -634,9 +676,9 @@ namespace IntelOrca.Biohazard.Script
             "sce_rnd",
             "cut_chg",
             "cut_old",
-            "message_on",
-            "aot_set:usauuIIIIuuuuuu",
-            "obj_model_set:uuuuuUUIIIIIIIIIIIIuuuu",
+            "message_on:u3uuu",
+            "aot_set:0sauuIIIIuuuuuu",
+            "obj_model_set:1uuuuUUIIIIIIIIIIIIuuuu",
             "work_set:wu",
             "speed_set:uI",
 
@@ -651,7 +693,7 @@ namespace IntelOrca.Biohazard.Script
             "flr_set",
             "dir_ck",
             "sce_espr_on:uUUUIIII",
-            "door_aot_se:usauuIIIIIIIIuuuuuuuutu",
+            "door_aot_se:0sauuIIIIIIIIuuuuuuuutu",
             "cut_auto",
             "member_copy:vu",
             "member_cmp",
@@ -661,17 +703,17 @@ namespace IntelOrca.Biohazard.Script
             "plc_neck:uIIIuu",
             "plc_ret",
             "plc_flg:uU",
-            "sce_em_set:uueuuuuuuIIIIUU",
+            "sce_em_set:u2euuuuuuIIIIUU",
             "col_chg_set",
-            "aot_reset:usauuuuuu",
-            "aot_on",
+            "aot_reset:0sauuuuuu",
+            "aot_on:0",
             "super_set:uuuIIIIII",
             "super_reset:uIII",
             "plc_gun",
             "cut_replace",
             "sce_espr_kill",
             "",
-            "item_aot_set:usauuIIUUTUUuu",
+            "item_aot_set:0sauuIIUUTUUuu",
             "sce_key_ck:uU",
 
             "sce_trg_ck:uU",
@@ -699,8 +741,8 @@ namespace IntelOrca.Biohazard.Script
             "sce_espr_kill2",
             "plc_stop",
             "aot_set_4p:usauuIIIIIIIIuuuuuu",
-            "door_aot_set_4p:usauuIIIIIIIIIIIIuuuuuuuutu",
-            "item_aot_set_4p:usauuIIIIIIIITUUuu",
+            "door_aot_set_4p:0sauuIIIIIIIIIIIIuuuuuuuutu",
+            "item_aot_set_4p:0sauuIIIIIIIITUUuu",
             "light_pos_set:uuuI",
             "light_kido_set:uI",
             "rbj_reset",

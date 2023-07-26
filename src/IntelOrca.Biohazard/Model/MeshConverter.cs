@@ -20,20 +20,10 @@ namespace IntelOrca.Biohazard.Model
             0, 8, 9, 10, 11, 12, 13, 14, 1, 2, 3, 4, 5, 6, 7
         };
 
-        private static readonly int[] g_partRemap1to2 = Reverse(g_partRemap2to1);
-        private static readonly int[] g_partRemap2to3 = Reverse(g_partRemap3to2);
+        private static readonly int[] g_partRemap1to2 = g_partRemap2to1;
+        private static readonly int[] g_partRemap2to3 = g_partRemap3to2;
         private static readonly int[] g_partRemap3to1 = Remap(g_partRemap3to2, g_partRemap2to1);
         private static readonly int[] g_partRemap1to3 = Remap(g_partRemap1to2, g_partRemap2to3);
-
-        private static int[] Reverse(int[] map)
-        {
-            var dst = new int[map.Length];
-            for (var i = 0; i < map.Length; i++)
-            {
-                dst[map[i]] = i;
-            }
-            return dst;
-        }
 
         private static int[] Remap(int[] input, int[] map)
         {
@@ -66,6 +56,10 @@ namespace IntelOrca.Biohazard.Model
                 if (target == BioVersion.Biohazard1)
                 {
                     return g_partRemap2to1;
+                }
+                else if (target == BioVersion.Biohazard3)
+                {
+                    return g_partRemap3to2;
                 }
             }
             else if (from == BioVersion.Biohazard3)

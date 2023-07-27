@@ -451,6 +451,8 @@ namespace IntelOrca.Biohazard
             var header = br.ReadStruct<WaveHeader>();
             if (header.wBitsPerSample == 8)
             {
+                var oldDataLength = (int)header.nDataLength;
+
                 header.wBitsPerSample = 16;
                 header.nDataLength *= 2;
                 header.nAvgBytesPerSec *= 2;
@@ -458,7 +460,7 @@ namespace IntelOrca.Biohazard
                 header.nRiffLength = (uint)(header.nDataLength + sizeof(WaveHeader) - 8);
                 bw.Write(header);
 
-                var data = br.ReadBytes((int)header.nDataLength);
+                var data = br.ReadBytes(oldDataLength);
                 for (int i = 0; i < data.Length; i++)
                 {
                     bw.Write((short)((data[i] - 128) * 256));
@@ -482,11 +484,13 @@ namespace IntelOrca.Biohazard
             }
             if (header.nChannels == 1 && desiredChannels == 2)
             {
+                var oldDataLength = (int)header.nDataLength;
+
                 header.nChannels = 2;
                 header.nDataLength *= 2;
                 bw.Write(header);
 
-                var data = MemoryMarshal.Cast<byte, short>(new Span<byte>(br.ReadBytes((int)header.nDataLength)));
+                var data = MemoryMarshal.Cast<byte, short>(new Span<byte>(br.ReadBytes(oldDataLength)));
                 for (int i = 0; i < data.Length; i++)
                 {
                     bw.Write(data[i]);
@@ -495,14 +499,16 @@ namespace IntelOrca.Biohazard
             }
             else if (header.nChannels == 2 && desiredChannels == 1)
             {
+                var oldDataLength = (int)header.nDataLength;
+
                 header.nChannels = 1;
                 header.nDataLength /= 2;
                 bw.Write(header);
 
-                var data = MemoryMarshal.Cast<byte, short>(new Span<byte>(br.ReadBytes((int)header.nDataLength)));
+                var data = MemoryMarshal.Cast<byte, short>(new Span<byte>(br.ReadBytes(oldDataLength)));
                 for (int i = 0; i < data.Length; i += 2)
                 {
-                    bw.Write(data[i]);
+                    bw.Write((short)((data[i] + data[i + 1]) / 2));
                 }
             }
             else if (header.nChannels == desiredChannels)

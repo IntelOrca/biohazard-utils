@@ -428,7 +428,7 @@ proc main
 
 proc main
 {
-    WAIT_FOR_CUT(1);
+    WAIT_FOR_CUT(2);
 }
 ");
         }

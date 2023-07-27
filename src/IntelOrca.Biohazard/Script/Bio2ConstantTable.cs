@@ -1,10 +1,14 @@
-﻿using System.IO;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Text;
 
 namespace IntelOrca.Biohazard.Script
 {
     public class Bio2ConstantTable : IConstantTable
     {
+        private static readonly SortedDictionary<string, int> _constantMap = new SortedDictionary<string, int>();
+
         private const byte SCE_MESSAGE = 4;
         private const byte SCE_EVENT = 5;
         private const byte SCE_FLAG_CHG = 6;
@@ -278,45 +282,42 @@ namespace IntelOrca.Biohazard.Script
 
         public int? GetConstantValue(string symbol)
         {
-            switch (symbol)
+            if (_constantMap.Count == 0)
             {
-                case "LOCKED":
-                    return 255;
-                case "UNLOCK":
-                    return 254;
-                case "UNLOCKED":
-                    return 0;
-                case "I_GOSUB":
-                    return (byte)OpcodeV2.Gosub;
+                _constantMap.Add("I_GOSUB", (byte)OpcodeV2.Gosub);
+                var constChars = new char[]
+                {
+                    '0', '1', '2', '3', 'a', 'c', 'e', 'f', 'o', 's', 't', 'v', 'w',
+                };
+                foreach (var ch in constChars)
+                {
+                    for (var i = 0; i < 256; i++)
+                    {
+                        var name = GetConstant(ch, i);
+                        if (name != null)
+                        {
+                            if (_constantMap.TryGetValue(name, out var check) && check != i)
+                                throw new InvalidOperationException();
+                            else
+                                _constantMap[name] = i;
+                        }
+                        for (var j = 0; j < 32; j++)
+                        {
+                            var s = GetFlagName(j, i);
+                            if (s != null)
+                            {
+                                if (_constantMap.TryGetValue(s, out var check) && check != i)
+                                    throw new InvalidOperationException();
+                                else
+                                    _constantMap[s] = i;
+                            }
+                        }
+                    }
+                }
             }
-
-            if (symbol.StartsWith("ENEMY_"))
-                return FindConstantValue(symbol, 'e');
-            else if (symbol.StartsWith("ITEM_"))
-                return FindConstantValue(symbol, 't');
-            else if (symbol.StartsWith("CMP_"))
-                return FindConstantValue(symbol, 'c');
-            else if (symbol.StartsWith("OP_"))
-                return FindConstantValue(symbol, 'o');
-            else if (symbol.StartsWith("SCE_"))
-                return FindConstantValue(symbol, 's');
-            else if (symbol.StartsWith("SAT_"))
-                return FindConstantValue(symbol, 'a');
-            else if (symbol.StartsWith("WK_"))
-                return FindConstantValue(symbol, 'w');
-            else if (symbol.StartsWith("FG_"))
-                return FindConstantValue(symbol, 'f');
-            else if (symbol.StartsWith("F_"))
-            {
-                for (var i = 0; i < 32; i++)
-                    for (var j = 0; j < 256; j++)
-                        if (GetFlagName(i, j) == symbol)
-                            return j;
-            }
-            else if (symbol.StartsWith("V_"))
-                return FindConstantValue(symbol, 'v');
-
-            return null;
+            if (!_constantMap.TryGetValue(symbol, out var value))
+                return null;
+            return value;
         }
 
         public int GetInstructionSize(byte opcode, BinaryReader? br)
@@ -592,7 +593,7 @@ namespace IntelOrca.Biohazard.Script
             "KingPlug",
             "WeaponBoxKey",
             "Detonator",
-            "C4",
+            "C4Explosive",
             "C4Detonator",
             "Crank",
             "FilmA",

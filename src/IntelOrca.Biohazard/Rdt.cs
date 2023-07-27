@@ -288,7 +288,9 @@ namespace IntelOrca.Biohazard
                 }
             }
 
-            UpdateEmrs();
+            // HACK do not play around with EMRs for RE 2, 409 because it crashes the room
+            if (!(Version == BioVersion.Biohazard2 && RdtId == new RdtId(3, 9)))
+                UpdateEmrs();
             PrependOpcodes();
 
             Directory.CreateDirectory(Path.GetDirectoryName(ModifiedPath!)!);

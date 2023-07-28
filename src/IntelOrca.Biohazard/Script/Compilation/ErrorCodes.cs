@@ -41,6 +41,7 @@
         public const int ExpectedWhile = 37;
         public const int ExpectedColon = 38;
         public const int InvalidSyntax = 39;
+        public const int RecursiveMacro = 40;
 
         public static string GetMessage(int code) => _messages[code];
 
@@ -86,6 +87,7 @@
                 "while expected.",
                 ": expected",
                 "Invalid syntax",
+                "Recursive macro",
         };
     }
 }

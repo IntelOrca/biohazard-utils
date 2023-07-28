@@ -12,6 +12,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
             private readonly Dictionary<string, Macro> _macros = new Dictionary<string, Macro>();
             private readonly IFileIncluder _includer;
             private readonly ErrorList _errors;
+            private readonly HashSet<Macro> _cycleDetection = new HashSet<Macro>();
 
             public Lexer(IFileIncluder includer, ErrorList errors)
             {
@@ -227,64 +228,78 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 if (!_macros.TryGetValue(token.Text, out var macro))
                     return null;
 
-                reader.Read();
-                reader.SkipWhitespace();
-                var pToken = reader.Peek();
-                if (pToken.Kind != TokenKind.OpenParen)
+                if (!_cycleDetection.Add(macro))
                 {
-                    if (macro.Parameters.Length == 0)
-                    {
-                        return Expand(path, macro.Tokens);
-                    }
-                    else
-                    {
-                        EmitError(in pToken, ErrorCodes.ExpectedOperand);
-                        return new Token[0];
-                    }
+                    EmitError(in token, ErrorCodes.RecursiveMacro);
+                    return null;
                 }
-                reader.Read();
 
-                var nestLevel = 1;
-                var arguments = new List<Token[]>();
-                var argument = new List<Token>();
-                while (true)
+                try
                 {
-                    var t = reader.Read();
-                    if (t.Kind == TokenKind.OpenParen)
+
+                    reader.Read();
+                    reader.SkipWhitespace();
+                    var pToken = reader.Peek();
+                    if (pToken.Kind != TokenKind.OpenParen)
                     {
-                        argument.Add(t);
-                        nestLevel++;
-                    }
-                    else if (t.Kind == TokenKind.CloseParen)
-                    {
-                        nestLevel--;
-                        if (nestLevel == 0)
-                            break;
+                        if (macro.Parameters.Length == 0)
+                        {
+                            return Expand(path, macro.Tokens);
+                        }
                         else
-                            argument.Add(t);
+                        {
+                            EmitError(in pToken, ErrorCodes.ExpectedOperand);
+                            return new Token[0];
+                        }
                     }
-                    else if (t.Kind == TokenKind.Comma && nestLevel == 1)
+                    reader.Read();
+
+                    var nestLevel = 1;
+                    var arguments = new List<Token[]>();
+                    var argument = new List<Token>();
+                    while (true)
+                    {
+                        var t = reader.Read();
+                        if (t.Kind == TokenKind.OpenParen)
+                        {
+                            argument.Add(t);
+                            nestLevel++;
+                        }
+                        else if (t.Kind == TokenKind.CloseParen)
+                        {
+                            nestLevel--;
+                            if (nestLevel == 0)
+                                break;
+                            else
+                                argument.Add(t);
+                        }
+                        else if (t.Kind == TokenKind.Comma && nestLevel == 1)
+                        {
+                            arguments.Add(argument.ToArray());
+                            argument.Clear();
+                        }
+                        else
+                        {
+                            argument.Add(t);
+                        }
+                    }
+                    if (argument.Count != 0)
                     {
                         arguments.Add(argument.ToArray());
-                        argument.Clear();
                     }
-                    else
-                    {
-                        argument.Add(t);
-                    }
-                }
-                if (argument.Count != 0)
-                {
-                    arguments.Add(argument.ToArray());
-                }
-                argument.Clear();
+                    argument.Clear();
 
-                if (arguments.Count != macro.Parameters.Length)
-                {
-                    EmitError(in token, ErrorCodes.IncorrectNumberOfOperands);
-                    return new Token[0];
+                    if (arguments.Count != macro.Parameters.Length)
+                    {
+                        EmitError(in token, ErrorCodes.IncorrectNumberOfOperands);
+                        return new Token[0];
+                    }
+                    return Expand(path, macro.GetTokens(arguments.ToArray()));
                 }
-                return Expand(path, macro.GetTokens(arguments.ToArray()));
+                finally
+                {
+                    _cycleDetection.Remove(macro);
+                }
             }
 
             private IEnumerable<Token>? ProcessPassThrough(string path, TokenReader reader)

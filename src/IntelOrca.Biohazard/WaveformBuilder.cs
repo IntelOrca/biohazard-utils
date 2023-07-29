@@ -432,10 +432,9 @@ namespace IntelOrca.Biohazard
 
         private static int AlignTime(in WaveHeader header, double t)
         {
-            if (double.IsNaN(t))
-                return (int)header.nDataLength;
-
-            var precise = header.nAvgBytesPerSec * t;
+            var precise = double.IsNaN(t) ?
+                (int)header.nDataLength :
+                header.nAvgBytesPerSec * t;
             var result = ((int)precise / header.nBlockAlign) * header.nBlockAlign;
             if (result > header.nDataLength)
             {
@@ -502,13 +501,14 @@ namespace IntelOrca.Biohazard
                 var oldDataLength = (int)header.nDataLength;
 
                 header.nChannels = 1;
-                header.nDataLength /= 2;
+                header.nDataLength = (uint)((header.nDataLength / 2) & ~1);
                 bw.Write(header);
 
                 var data = MemoryMarshal.Cast<byte, short>(new Span<byte>(br.ReadBytes(oldDataLength)));
-                for (int i = 0; i < data.Length; i += 2)
+                for (int i = 0; i < header.nDataLength / 2; i++)
                 {
-                    bw.Write((short)((data[i] + data[i + 1]) / 2));
+                    var srcI = i * 2;
+                    bw.Write((short)((data[srcI] + data[srcI + 1]) / 2));
                 }
             }
             else if (header.nChannels == desiredChannels)

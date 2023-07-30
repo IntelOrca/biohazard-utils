@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 
@@ -96,6 +97,15 @@ namespace IntelOrca.Biohazard
                 .Replace("(", "")
                 .Replace(")", "")
                 .ToUpperInvariant();
+        }
+
+        public static void SetElement<T>(this List<T> list, int index, T value)
+        {
+            while (list.Count <= index)
+            {
+                list.Add(default!);
+            }
+            list[index] = value;
         }
     }
 }

@@ -95,15 +95,21 @@ namespace IntelOrca.Scd
                     var result = generator.Generate(new SimpleFileIncluder(), rdtPath);
                     if (result == 0)
                     {
-                        if (generator.OutputInit != null && generator.OutputInit.Length != 0)
+                        foreach (var op in generator.Operations)
                         {
-                            var scdPath = Path.ChangeExtension(rdtPath, "init.scd");
-                            File.WriteAllBytes(scdPath, generator.OutputInit);
-                        }
-                        if (generator.OutputMain != null && generator.OutputMain.Length != 0)
-                        {
-                            var scdPath = Path.ChangeExtension(rdtPath, "main.scd");
-                            File.WriteAllBytes(scdPath, generator.OutputMain);
+                            if (!(op is ScdRdtEditOperation scdEdit))
+                                continue;
+
+                            if (scdEdit.Kind == BioScriptKind.Init)
+                            {
+                                var scdPath = Path.ChangeExtension(rdtPath, "init.scd");
+                                File.WriteAllBytes(scdPath, scdEdit.Data);
+                            }
+                            if (scdEdit.Kind == BioScriptKind.Main)
+                            {
+                                var scdPath = Path.ChangeExtension(rdtPath, "main.scd");
+                                File.WriteAllBytes(scdPath, scdEdit.Data);
+                            }
                         }
                     }
                     else
@@ -129,56 +135,9 @@ namespace IntelOrca.Scd
                             var result = generator2.Generate(new SimpleFileIncluder(), inPath);
                             if (result == 0)
                             {
-                                if (generator2.OutputInit.Length != 0)
+                                foreach (var op in generator2.Operations)
                                 {
-                                    rdtFile.SetScd(BioScriptKind.Init, generator2.OutputInit);
-                                }
-                                if (generator2.OutputMain.Length != 0)
-                                {
-                                    rdtFile.SetScd(BioScriptKind.Main, generator2.OutputMain);
-                                }
-
-                                if (generator2.Messages.Length != 0)
-                                {
-                                    var jpn = rdtFile.GetTexts(0).ToList();
-                                    var eng = rdtFile.GetTexts(1).ToList();
-                                    for (var i = 0; i < generator2.Messages.Length; i++)
-                                    {
-                                        var msg = generator2.Messages[i];
-                                        if (msg == null)
-                                            continue;
-
-                                        while (i >= jpn.Count)
-                                        {
-                                            jpn.Add(new BioString());
-                                        }
-                                        while (i >= eng.Count)
-                                        {
-                                            eng.Add(new BioString());
-                                        }
-                                        jpn[i] = new BioString(msg);
-                                        eng[i] = new BioString(msg);
-                                    }
-                                    rdtFile.SetTexts(0, jpn.ToArray());
-                                    rdtFile.SetTexts(1, eng.ToArray());
-                                }
-
-                                if (generator2.Animations.Length != 0)
-                                {
-                                    var animations = rdtFile.Animations.ToList();
-                                    for (var i = 0; i < generator2.Animations.Length; i++)
-                                    {
-                                        var animation = generator2.Animations[i];
-                                        if (animation == null)
-                                            continue;
-
-                                        while (animations.Count <= i)
-                                        {
-                                            animations.Add(null);
-                                        }
-                                        animations[i] = animation;
-                                    }
-                                    rdtFile.Animations = animations.ToArray();
+                                    op.Perform(rdtFile);
                                 }
                             }
                             else

@@ -13,6 +13,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
         private const int OperandStateAdd = 3;
         private const int OperandStateSubtract = 4;
 
+        private readonly List<IRdtEditOperation> _editOperations = new List<IRdtEditOperation>();
         private IConstantTable _constantTable = new Bio1ConstantTable();
 
         private ParserState _state;
@@ -34,10 +35,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
         private int _operandValue;
 
         public ErrorList Errors { get; } = new ErrorList();
-        public byte[] OutputInit { get; private set; } = new byte[0];
-        public byte[] OutputMain { get; private set; } = new byte[0];
-        public string[] Messages { get; private set; } = new string[0];
-        public RdtAnimation[] Animations { get; private set; } = new RdtAnimation[0];
+        public IRdtEditOperation[] Operations => _editOperations.ToArray();
 
         public int Generate(IFileIncluder includer, string path)
         {
@@ -340,10 +338,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 }
 
                 var output = _procData.ToArray();
-                if (_currScriptKind == BioScriptKind.Main)
-                    OutputMain = output;
-                else
-                    OutputInit = output;
+                _editOperations.Add(new ScdRdtEditOperation(_currScriptKind.Value, output));
             }
         }
 

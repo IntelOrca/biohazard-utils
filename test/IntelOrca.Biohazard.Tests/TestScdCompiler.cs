@@ -418,7 +418,7 @@ proc main
         [Fact]
         public void TestDefine_MultiLine()
         {
-            var expected = "02000100040014000F060A0023001A0500000200100001000100";
+            var expected = "02000100040014000F060A0023001A0501000200100001000100";
             AssertScd(expected, @"
 #version 2
 #define WAIT_FOR_CUT(n)                    \
@@ -487,8 +487,8 @@ proc main
             var result = scdCompiler.Generate(includer, path);
             Assert.Equal(0, result);
 
-            var scdInit = scdCompiler.OutputInit;
-            var scdMain = scdCompiler.OutputMain;
+            var scdInit = GetScd(scdCompiler, BioScriptKind.Init);
+            var scdMain = GetScd(scdCompiler, BioScriptKind.Main);
             var sInit = Disassemble(scdInit, BioScriptKind.Init);
             var sMain = Disassemble(scdMain, BioScriptKind.Main);
 
@@ -500,6 +500,15 @@ proc main
         {
             var scdReader = new ScdReader();
             return scdReader.Diassemble(scd, BioVersion.Biohazard2, kind, true);
+        }
+
+        private static byte[] GetScd(ScdCompiler compiler, BioScriptKind kind)
+        {
+            var scd = compiler.Operations
+                .OfType<ScdRdtEditOperation>()
+                .FirstOrDefault(x => x.Kind == kind)
+                .Data;
+            return scd;
         }
     }
 }

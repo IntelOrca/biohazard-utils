@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using IntelOrca.Biohazard.Script;
 using IntelOrca.Biohazard.Script.Compilation;
 using Xunit;
@@ -84,7 +85,11 @@ namespace IntelOrca.Biohazard.Tests
             else
             {
                 var scdInit = rdtFile.GetScd(BioScriptKind.Init);
-                var index = CompareByteArray(scdInit, scdAssembler.OutputInit);
+                var scdDataInit = scdAssembler.Operations
+                    .OfType<ScdRdtEditOperation>()
+                    .FirstOrDefault(x => x.Kind == BioScriptKind.Init)
+                    .Data;
+                var index = CompareByteArray(scdInit, scdDataInit);
                 if (index != -1)
                 {
                     _output.WriteLine(".init differs at 0x{0:X2} for '{1}'", index, sPath);
@@ -94,7 +99,11 @@ namespace IntelOrca.Biohazard.Tests
                 if (rdtFile.Version != BioVersion.Biohazard3)
                 {
                     var scdMain = rdtFile.GetScd(BioScriptKind.Main);
-                    index = CompareByteArray(scdMain, scdAssembler.OutputMain);
+                    var scdDataMain = scdAssembler.Operations
+                        .OfType<ScdRdtEditOperation>()
+                        .FirstOrDefault(x => x.Kind == BioScriptKind.Main)
+                        .Data;
+                    index = CompareByteArray(scdMain, scdDataMain);
                     if (index != -1)
                     {
                         _output.WriteLine(".main differs at 0x{0:X2} for '{1}'", index, sPath);

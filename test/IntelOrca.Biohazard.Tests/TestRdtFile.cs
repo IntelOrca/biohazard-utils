@@ -1,4 +1,6 @@
 ﻿using System.IO;
+using IntelOrca.Biohazard.Extensions;
+using IntelOrca.Biohazard.Model;
 using IntelOrca.Biohazard.Script;
 using Xunit;
 
@@ -84,6 +86,21 @@ namespace IntelOrca.Biohazard.Tests
 
             var hash = rdtFile.Data.CalculateFnv1a();
             Assert.Equal(14551199640999392555UL, hash);
+        }
+
+        [Fact]
+        public void ChangeScd_102()
+        {
+            var installPath = TestInfo.GetInstallPath(1);
+            var rdtPath = Path.Combine(installPath, "data", "pl1", "rdt", "ROOM1021.RDT");
+            var rdtFile = new RdtFile(rdtPath, BioVersion.Biohazard2);
+            var expectedData = rdtFile.Data;
+
+            var models = rdtFile.Models;
+            rdtFile.Models = models;
+
+            var actualData = rdtFile.Data;
+            Assert.Equal(expectedData, actualData);
         }
     }
 }

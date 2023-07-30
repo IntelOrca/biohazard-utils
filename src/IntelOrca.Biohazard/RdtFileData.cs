@@ -16,7 +16,7 @@ namespace IntelOrca.Biohazard
         private Memory<byte> _data;
 
         public IReadOnlyList<Chunk> Chunks => _chunks.ToArray();
-        public ReadOnlySpan<byte> Data => _data.Span;
+        public Span<byte> Data => _data.Span;
         public int Length => _data.Length;
 
         public RdtFileData(string path)
@@ -104,6 +104,12 @@ namespace IntelOrca.Biohazard
             return index == -1 ? (Chunk?)null : _chunks[index];
         }
 
+        public Chunk? FindChunkByOffset(int kind, int offset)
+        {
+            var index = _chunks.FindIndex(x => x.Kind == kind && x.Offset == offset);
+            return index == -1 ? (Chunk?)null : _chunks[index];
+        }
+
         public int Count => _chunks.Count;
 
         public Chunk this[int index] => _chunks[index];
@@ -112,12 +118,12 @@ namespace IntelOrca.Biohazard
         {
             var position = FindInsertIndex(offset);
             _chunks.Insert(position, new Chunk(this, kind, offset, 0));
-            SetData(offset, data);
+            SetData(kind, offset, data);
         }
 
-        public void SetData(int offset, ReadOnlySpan<byte> data)
+        public void SetData(int kind, int offset, ReadOnlySpan<byte> data)
         {
-            var chunk = FindChunkByOffset(offset)!.Value;
+            var chunk = FindChunkByOffset(kind, offset)!.Value;
             var delta = data.Length - chunk.Length;
             var left = _data.Slice(0, chunk.Offset);
             var right = _data.Slice(chunk.End);
@@ -150,6 +156,16 @@ namespace IntelOrca.Biohazard
                 }
             }
             return _chunks.Count;
+        }
+
+        public void Remove(Chunk chunk)
+        {
+            var index = _chunks.IndexOf(chunk);
+            if (index != -1)
+            {
+                SetData(chunk.Kind, chunk.Offset, new byte[0]);
+                _chunks.RemoveAt(index);
+            }
         }
 
         [DebuggerDisplay("Kind = {Kind} Offset = {Offset} Length = {Length}")]

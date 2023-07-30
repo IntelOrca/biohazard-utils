@@ -165,7 +165,7 @@ namespace IntelOrca.Biohazard
             }
             else
             {
-                _data.SetData(chunk.Value.Offset, ms.ToArray());
+                _data.SetData(chunkKind, chunk.Value.Offset, ms.ToArray());
             }
             UpdateOffsets();
         }
@@ -187,7 +187,7 @@ namespace IntelOrca.Biohazard
         public void SetScd(BioScriptKind kind, byte[] data)
         {
             var chunk = GetScdChunk(kind)!.Value;
-            _data.SetData(chunk.Offset, data);
+            _data.SetData(chunk.Kind, chunk.Offset, data);
             UpdateOffsets();
         }
 
@@ -361,7 +361,7 @@ namespace IntelOrca.Biohazard
                         bw.Write(newOffsetsTim[i]);
                         bw.Write(newOffsetsMd1[i]);
                     }
-                    _data.SetData(chunk.Value.Offset, ms.ToArray());
+                    _data.SetData(chunk.Value.Kind, chunk.Value.Offset, ms.ToArray());
                 }
             }
         }
@@ -369,6 +369,7 @@ namespace IntelOrca.Biohazard
         private int NumEmbeddedModels
         {
             get => _data.Data[2];
+            set => _data.Data[2] = (byte)value;
         }
 
         private void UpdateHeader()
@@ -403,7 +404,7 @@ namespace IntelOrca.Biohazard
                     bw.Write(chunk.Value.Offset);
                 }
             }
-            _data.SetData(0, ms.ToArray());
+            _data.SetData(RdtFileChunkKinds.Header, 0, ms.ToArray());
         }
 
         private EventScript[] GetEventScripts()
@@ -521,6 +522,84 @@ namespace IntelOrca.Biohazard
             return scriptDecompiler.GetScript();
         }
 
+        public RdtModel[] Models
+        {
+            get
+            {
+                var result = new List<RdtModel>();
+                var numEmbeddedModels = NumEmbeddedModels;
+                var table = _data.FindChunkByKind(RdtFileChunkKinds.EmbeddedObjectTable);
+                if (table != null)
+                {
+                    var br = new BinaryReader(table.Value.Stream);
+                    for (var i = 0; i < numEmbeddedModels; i++)
+                    {
+                        var timAddress = br.ReadInt32();
+                        var md1Address = br.ReadInt32();
+                        var timChunk = _data.Chunks
+                            .Where(x => x.Kind == RdtFileChunkKinds.EmbeddedObjectTim)
+                            .FirstOrDefault(x => x.Offset == timAddress);
+                        var md1Chunk = _data.Chunks
+                            .Where(x => x.Kind == RdtFileChunkKinds.EmbeddedObjectMd1)
+                            .FirstOrDefault(x => x.Offset == md1Address);
+                        var tim = new TimFile(timChunk.Stream);
+                        var md1 = new Md1(md1Chunk.Memory);
+                        result.Add(new RdtModel(md1, tim));
+                    }
+                }
+                return result.ToArray();
+            }
+            set
+            {
+                var firstMd1 = _data.Chunks.FirstOrDefault(x => x.Kind == RdtFileChunkKinds.EmbeddedObjectMd1).Offset;
+                var firstTim = _data.Chunks.FirstOrDefault(x => x.Kind == RdtFileChunkKinds.EmbeddedObjectTim).Offset;
+                while (_data.Chunks.Any(x => x.Kind == RdtFileChunkKinds.EmbeddedObjectMd1))
+                {
+                    _data.Remove(_data.Chunks.FirstOrDefault(x => x.Kind == RdtFileChunkKinds.EmbeddedObjectMd1));
+                }
+                while (_data.Chunks.Any(x => x.Kind == RdtFileChunkKinds.EmbeddedObjectTim))
+                {
+                    _data.Remove(_data.Chunks.FirstOrDefault(x => x.Kind == RdtFileChunkKinds.EmbeddedObjectTim));
+                }
+
+                var newMd1Files = value.Select(x => x.Mesh.Data.ToArray()).ToArray();
+                var newTimFiles = value.Select(x => x.Texture.GetBytes()).ToArray();
+                var hashedMd1Files = newMd1Files.Select(x => x.CalculateFnv1a()).ToArray();
+                var hashedTimFiles = newTimFiles.Select(x => x.CalculateFnv1a()).ToArray();
+                var uniqMd1Files = hashedMd1Files.Distinct().ToArray();
+                var uniqTimFiles = hashedTimFiles.Distinct().ToArray();
+                var md1Indices = newMd1Files.Select(x => Array.IndexOf(uniqMd1Files, x.CalculateFnv1a())).ToArray();
+                var timIndices = newTimFiles.Select(x => Array.IndexOf(uniqTimFiles, x.CalculateFnv1a())).ToArray();
+                newTimFiles = uniqTimFiles.Select(x => newTimFiles.FirstOrDefault(y => x == y.CalculateFnv1a())).ToArray();
+                newMd1Files = uniqMd1Files.Select(x => newMd1Files.FirstOrDefault(y => x == y.CalculateFnv1a())).ToArray();
+
+                foreach (var md1 in newMd1Files.Reverse())
+                {
+                    _data.InsertData(RdtFileChunkKinds.EmbeddedObjectMd1, firstMd1, md1);
+                }
+                foreach (var tim in newTimFiles.Reverse())
+                {
+                    _data.InsertData(RdtFileChunkKinds.EmbeddedObjectTim, firstTim, tim);
+                }
+
+                NumEmbeddedModels = value.Length;
+                var table = _data.FindChunkByKind(RdtFileChunkKinds.EmbeddedObjectTable);
+                if (table != null)
+                {
+                    var bw = new BinaryWriter(new MemoryStream());
+                    for (var i = 0; i < value.Length; i++)
+                    {
+                        var timIndex = timIndices[i];
+                        var md1Index = md1Indices[i];
+                        var timOffset = _data.Chunks.Where(x => x.Kind == RdtFileChunkKinds.EmbeddedObjectTim).Skip(timIndex).First().Offset;
+                        var md1Offset = _data.Chunks.Where(x => x.Kind == RdtFileChunkKinds.EmbeddedObjectMd1).Skip(md1Index).First().Offset;
+                        bw.Write(timOffset);
+                        bw.Write(md1Offset);
+                    }
+                }
+            }
+        }
+
         public RdtAnimation[] Animations
         {
             get
@@ -585,7 +664,7 @@ namespace IntelOrca.Biohazard
                 }
                 ms.Position = 0;
                 bw.Write(chunkLen);
-                _data.SetData(rbj.Value.Offset, ms.ToArray());
+                _data.SetData(rbj.Value.Kind, rbj.Value.Offset, ms.ToArray());
                 UpdateOffsets();
             }
         }

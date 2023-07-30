@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using IntelOrca.Biohazard.Script;
 using Xunit;
 
 namespace IntelOrca.Biohazard.Tests
@@ -48,6 +49,39 @@ namespace IntelOrca.Biohazard.Tests
 
             var actualData = rdtFile.Data;
             Assert.Equal(expectedData, actualData);
+        }
+
+        [Fact]
+        public void RebuildScd_117()
+        {
+            var installPath = TestInfo.GetInstallPath(1);
+            var rdtPath = Path.Combine(installPath, "data", "pl1", "rdt", "ROOM1121.RDT");
+            var rdtFile = new RdtFile(rdtPath, BioVersion.Biohazard2);
+            var expectedData = rdtFile.Data;
+
+            var init = rdtFile.GetScd(BioScriptKind.Init);
+            var main = rdtFile.GetScd(BioScriptKind.Main);
+            rdtFile.SetScd(BioScriptKind.Init, init);
+            rdtFile.SetScd(BioScriptKind.Main, main);
+
+            var actualData = rdtFile.Data;
+            Assert.Equal(expectedData, actualData);
+        }
+
+        [Fact]
+        public void ChangeScd_117()
+        {
+            var installPath = TestInfo.GetInstallPath(1);
+            var rdtPath = Path.Combine(installPath, "data", "pl1", "rdt", "ROOM1121.RDT");
+            var rdtFile = new RdtFile(rdtPath, BioVersion.Biohazard2);
+
+            var init = new byte[] { 0x02, 0x00, 0x01, 0x00 };
+            var main = new byte[] { 0x04, 0x00, 0x06, 0x00, 0x01, 0x00, 0x01, 0x00 };
+            rdtFile.SetScd(BioScriptKind.Init, init);
+            rdtFile.SetScd(BioScriptKind.Main, main);
+
+            var hash = rdtFile.Data.CalculateFnv1a();
+            Assert.Equal(14551199640999392555UL, hash);
         }
     }
 }

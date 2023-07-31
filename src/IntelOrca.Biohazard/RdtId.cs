@@ -37,6 +37,11 @@ namespace IntelOrca.Biohazard
         public static bool operator ==(RdtId left, RdtId right) => left.Equals(right);
         public static bool operator !=(RdtId left, RdtId right) => !(left == right);
 
+        public static RdtId FromInteger(int value)
+        {
+            return new RdtId((value >> 8) - 1, value & 0xFF);
+        }
+
         public static RdtId Parse(string s)
         {
             if (!TryParse(s, out var id))

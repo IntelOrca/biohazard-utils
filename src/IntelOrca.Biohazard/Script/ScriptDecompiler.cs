@@ -302,6 +302,13 @@ namespace IntelOrca.Biohazard.Script
                     sb.WriteLine($"$${src} = {value};");
                     break;
                 }
+                case OpcodeV1.End:
+                {
+                    br.ReadByte();
+                    _lastReturnLine = sb.LineCount;
+                    sb.WriteLine($"return;");
+                    break;
+                }
             }
             return true;
         }
@@ -569,8 +576,9 @@ namespace IntelOrca.Biohazard.Script
                     break;
                 case OpcodeV3.EvtEnd:
                 {
-                    var ret = br.ReadByte();
-                    sb.WriteLine($"return {ret};");
+                    br.ReadByte();
+                    _lastReturnLine = sb.LineCount;
+                    sb.WriteLine($"return;");
                     break;
                 }
                 case OpcodeV3.IfelCk:

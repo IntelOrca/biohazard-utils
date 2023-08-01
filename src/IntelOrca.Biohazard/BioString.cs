@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.IO;
 using System.Text;
 
@@ -31,13 +32,23 @@ namespace IntelOrca.Biohazard
             var bw = new BinaryWriter(ms);
             bw.Write(StartText);
             bw.Write((byte)2);
-            foreach (var c in s)
+            for (var i = 0; i < s.Length; i++)
             {
+                var c = s[i];
                 if (c == '@')
                 {
+                    var p = 0x40;
+                    if (i < s.Length - 2)
+                    {
+                        var h = new string(new char[] { s[++i], s[++i] });
+                        if (int.TryParse(h, NumberStyles.HexNumber, null, out var result))
+                        {
+                            p = result;
+                        }
+                    }
                     bw.Write(LineBreak);
                     bw.Write(YesNoQuestion);
-                    bw.Write((byte)0x40);
+                    bw.Write((byte)p);
                 }
                 else if (c == '\n')
                 {
@@ -46,6 +57,16 @@ namespace IntelOrca.Biohazard
                 else if (c == '#')
                 {
                     bw.Write(PageBreak);
+                    bw.Write((byte)0x00);
+                }
+                else if (c == '{')
+                {
+                    bw.Write(Green);
+                    bw.Write((byte)0x01);
+                }
+                else if (c == '}')
+                {
+                    bw.Write(Green);
                     bw.Write((byte)0x00);
                 }
                 else
@@ -65,27 +86,30 @@ namespace IntelOrca.Biohazard
         public override string ToString()
         {
             var sb = new StringBuilder();
-            var isGreen = false;
             for (var i = 0; i < _data.Length; i++)
             {
                 var b = _data[i];
                 switch (b)
                 {
                     case Green:
-                        if (!isGreen)
+                    {
+                        var p = _data[++i];
+                        if (p == 1)
                             sb.Append('{');
                         else
                             sb.Append('}');
-                        isGreen = !isGreen;
-                        i++;
                         break;
+                    }
                     case StartText:
                         i++;
                         break;
                     case YesNoQuestion:
-                        i++;
+                    {
+                        var p = _data[++i];
                         sb.Append('@');
+                        sb.Append(p.ToString("X2"));
                         break;
+                    }
                     case LineBreak:
                         sb.Append('\n');
                         break;

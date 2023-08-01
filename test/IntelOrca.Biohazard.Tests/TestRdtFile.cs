@@ -1,6 +1,4 @@
 ﻿using System.IO;
-using IntelOrca.Biohazard.Extensions;
-using IntelOrca.Biohazard.Model;
 using IntelOrca.Biohazard.Script;
 using Xunit;
 
@@ -28,7 +26,7 @@ namespace IntelOrca.Biohazard.Tests
         public void RebuildTextChunk_200()
         {
             var installPath = TestInfo.GetInstallPath(1);
-            var rdtPath = Path.Combine(installPath, "data", "pl1", "rdt", "ROOM2001.RDT");
+            var rdtPath = Path.Combine(installPath, "data", "pl1", "rdt", "ROOM20B1.RDT");
             var rdtFile = new RdtFile(rdtPath, BioVersion.Biohazard2);
             var expected = rdtFile.Data.CalculateFnv1a();
 

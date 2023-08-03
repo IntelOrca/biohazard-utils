@@ -16,6 +16,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
             private HashSet<string> _procedureNames = new HashSet<string>();
             private List<ProcedureBuilder> _procedures = new List<ProcedureBuilder>();
             private ProcedureBuilder _currentProcedure = new ProcedureBuilder("");
+            private List<BlockSyntaxNode> _anonymousProcedures = new List<BlockSyntaxNode>();
 
             public byte[] OutputInit { get; private set; } = new byte[0];
             public byte[] OutputMain { get; private set; } = new byte[0];
@@ -31,6 +32,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
             {
                 _procedureNames = GetAllProcedureNames(tree);
                 Visit(tree.Root);
+                VisitAnonymousProcedures();
                 if (_errors.Count != 0)
                 {
                     return 1;
@@ -39,6 +41,15 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 OutputInit = GenerateScd("init");
                 OutputMain = GenerateScd("main", "aot");
                 return 0;
+            }
+
+            private void VisitAnonymousProcedures()
+            {
+                for (var i = 0; i < _anonymousProcedures.Count; i++)
+                {
+                    var anonymousProcedure = _anonymousProcedures[i];
+                    VisitAnonymousProcedureNode(i, anonymousProcedure);
+                }
             }
 
             private HashSet<string> GetAllProcedureNames(SyntaxTree tree)
@@ -240,13 +251,32 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 _procedures.Add(_currentProcedure);
             }
 
+            private void VisitAnonymousProcedureNode(int index, BlockSyntaxNode blockNode)
+            {
+                _currentProcedure = new ProcedureBuilder(GetAnonymousProcedureName(index));
+                VisitChildren(blockNode);
+                _currentProcedure.Align();
+                _currentProcedure.Write((byte)OpcodeV2.EvtEnd);
+                _currentProcedure.Write((byte)0);
+                _currentProcedure.FixLabels();
+                _procedures.Add(_currentProcedure);
+            }
+
             private void VisitForkNode(ForkSyntaxNode forkNode)
             {
                 _currentProcedure.Align();
                 _currentProcedure.Write((byte)OpcodeV2.EvtExec);
                 _currentProcedure.Write((byte)0xFF);
                 _currentProcedure.Write((byte)0x18);
-                _currentProcedure.WriteProcedureRef(forkNode.ProcedureToken);
+                if (forkNode.Invocation is LiteralSyntaxNode literal)
+                {
+                    _currentProcedure.WriteProcedureRef(literal.LiteralToken);
+                }
+                else if (forkNode.Invocation is BlockSyntaxNode block)
+                {
+                    _anonymousProcedures.Add(block);
+                    _currentProcedure.WriteProcedureRef(_anonymousProcedures.Count - 1);
+                }
             }
 
             private void VisitIfNode(IfSyntaxNode ifNode)
@@ -561,6 +591,11 @@ namespace IntelOrca.Biohazard.Script.Compilation
             {
                 _errors.AddWarning(token.Path, token.Line, token.Column, code, string.Format(ErrorCodes.GetMessage(code), args));
             }
+
+            internal static string GetAnonymousProcedureName(int index)
+            {
+                return $"<anon>_{index}";
+            }
         }
 
         [DebuggerDisplay("Name = {Name}")]
@@ -631,6 +666,12 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 Write((byte)0);
             }
 
+            public void WriteProcedureRef(int anonymousProcedureIndex)
+            {
+                _procedureReferences.Add(new ProcedureReference(anonymousProcedureIndex, Offset));
+                Write((byte)0);
+            }
+
             public void FixLabels()
             {
                 foreach (var reference in _labelReferences)
@@ -696,13 +737,24 @@ namespace IntelOrca.Biohazard.Script.Compilation
         [DebuggerDisplay("Name = {Name} WriteOffset = {WriteOffset}")]
         private readonly struct ProcedureReference
         {
-            public string Name => Token.Text;
-            public int WriteOffset { get; }
+            public int AnonymousProcedureIndex { get; }
             public Token Token { get; }
+            public int WriteOffset { get; }
+
+            public bool IsAnonymousProcedure => AnonymousProcedureIndex != -1;
+            public string Name => IsAnonymousProcedure ? Generator.GetAnonymousProcedureName(AnonymousProcedureIndex) : Token.Text;
 
             public ProcedureReference(Token token, int writeOffset)
             {
+                AnonymousProcedureIndex = -1;
                 Token = token;
+                WriteOffset = writeOffset;
+            }
+
+            public ProcedureReference(int anonymousProcedureIndex, int writeOffset)
+            {
+                AnonymousProcedureIndex = anonymousProcedureIndex;
+                Token = default;
                 WriteOffset = writeOffset;
             }
         }

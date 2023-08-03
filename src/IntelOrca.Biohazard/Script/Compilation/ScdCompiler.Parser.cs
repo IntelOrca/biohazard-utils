@@ -233,7 +233,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     {
                         if (node is OpcodeSyntaxNode ||
                             node is BreakSyntaxNode ||
-                            node is ForkSyntaxNode)
+                            (node is ForkSyntaxNode forkNode && !(forkNode.Invocation is BlockSyntaxNode)))
                         {
                             ParseExpected(TokenKind.Semicolon);
                         }
@@ -257,14 +257,24 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     return null;
 
                 ref readonly var token = ref PeekToken();
-                if (token.Kind != TokenKind.Symbol)
+                if (token.Kind == TokenKind.OpenBlock)
+                {
+                    var block = ParseExpectedBlock();
+                    if (block == null)
+                        return null;
+
+                    return new ForkSyntaxNode(block);
+                }
+                else if (token.Kind == TokenKind.Symbol)
+                {
+                    ReadToken();
+                    return new ForkSyntaxNode(new LiteralSyntaxNode(token));
+                }
+                else
                 {
                     EmitError(in token, ErrorCodes.ExpectedProcedureName);
                     return null;
                 }
-
-                ReadToken();
-                return new ForkSyntaxNode(token);
             }
 
             private IfSyntaxNode? ParseIfStatement()
@@ -715,11 +725,11 @@ namespace IntelOrca.Biohazard.Script.Compilation
 
         private class ForkSyntaxNode : SyntaxNode
         {
-            public Token ProcedureToken { get; }
+            public SyntaxNode Invocation { get; }
 
-            public ForkSyntaxNode(Token procedureToken)
+            public ForkSyntaxNode(SyntaxNode invocation)
             {
-                ProcedureToken = procedureToken;
+                Invocation = invocation;
             }
         }
 

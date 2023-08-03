@@ -450,6 +450,22 @@ proc main
 ");
         }
 
+        [Fact]
+        public void TestAnonymousProcedure()
+        {
+            var expected = "0200010006000C000E0004FF180201000100090A1E000100";
+            AssertScd(expected, @"
+#version 2
+
+proc main
+{
+    fork {
+        sleep(10, 30);
+    }
+}
+");
+        }
+
         private void AssertCompile(string script)
         {
             var fileName = "temp.bio";

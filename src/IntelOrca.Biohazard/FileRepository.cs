@@ -118,6 +118,22 @@ namespace IntelOrca.Biohazard
             }
         }
 
+        public void CopyDirectory(string src, string dst)
+        {
+            var diSource = new DirectoryInfo(src);
+            var diTarget = new DirectoryInfo(dst);
+            diTarget.Create();
+            CopyFilesRecursively(diSource, diTarget);
+        }
+
+        private static void CopyFilesRecursively(DirectoryInfo source, DirectoryInfo target)
+        {
+            foreach (DirectoryInfo dir in source.GetDirectories())
+                CopyFilesRecursively(dir, target.CreateSubdirectory(dir.Name));
+            foreach (FileInfo file in source.GetFiles())
+                file.CopyTo(Path.Combine(target.FullName, file.Name), true);
+        }
+
         private static string NormalizePath(string path)
         {
             var sb = new StringBuilder();

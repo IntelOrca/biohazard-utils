@@ -378,13 +378,14 @@ namespace IntelOrca.Biohazard
 
             if (kind == BioScriptKind.Event)
             {
-                foreach (var eventScript in _eventScripts)
+                for (int i = 0; i < _eventScripts.Count; i++)
                 {
+                    Range eventScript = _eventScripts[i];
                     var eventScriptOffset = scriptOffset + eventScript.Start;
                     var eventScriptLength = eventScript.Length;
                     var scdReader = new ScdReader();
                     scdReader.BaseOffset = scriptOffset + eventScript.Start;
-                    scdReader.ReadScript(new ReadOnlyMemory<byte>(Data, eventScriptOffset, eventScriptLength), Version, kind, visitor);
+                    scdReader.ReadEventScript(new ReadOnlyMemory<byte>(Data, eventScriptOffset, eventScriptLength), visitor, i);
                 }
             }
             else

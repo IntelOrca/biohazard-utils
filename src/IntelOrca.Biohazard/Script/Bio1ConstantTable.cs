@@ -5,6 +5,11 @@ namespace IntelOrca.Biohazard.Script
 {
     public class Bio1ConstantTable : IConstantTable
     {
+        private const byte SCE_MESSAGE = 2;
+        private const byte SCE_ITEMBOX = 8;
+        private const byte SCE_EVENT = 9;
+        private const byte SCE_SAVE = 10;
+
         public string GetEnemyName(byte kind) => g_enemyNames.Namify("ENEMY_", kind);
         public string GetItemName(byte kind) => g_itemNames.Namify("ITEM_", kind);
 
@@ -15,8 +20,37 @@ namespace IntelOrca.Biohazard.Script
             return "";
         }
 
-        public string? GetConstant(byte opcode, int pIndex, BinaryReader br)
+        public string? GetConstant(byte opcode, int pIndex, BinaryReader reader)
         {
+            using (var br = reader.Fork())
+            {
+                if (opcode == (byte)OpcodeV1.AotSet)
+                {
+                    if (pIndex == 9)
+                    {
+                        br.BaseStream.Position += 9;
+                        var sce = br.ReadByte();
+                        if (sce == SCE_EVENT)
+                        {
+                            br.BaseStream.Position += 3;
+                            return GetConstant('p', br.ReadByte());
+                        }
+                    }
+                }
+                else if (opcode == (byte)OpcodeV1.AotReset)
+                {
+                    if (pIndex == 5)
+                    {
+                        br.BaseStream.Position += 1;
+                        var sce = br.ReadByte();
+                        if (sce == SCE_EVENT)
+                        {
+                            br.BaseStream.Position += 3;
+                            return GetConstant('p', br.ReadByte());
+                        }
+                    }
+                }
+            }
             return null;
         }
 
@@ -35,18 +69,18 @@ namespace IntelOrca.Biohazard.Script
                         return "UNLOCKED";
                     else
                         return GetItemName((byte)value);
-                case 'v':
-                    switch (value)
-                    {
-                        case 0x02:
-                            return "NITEM_MESSAGE";
-                        case 0x08:
-                            return "NITEM_BOX";
-                        case 0x10:
-                            return "NITEM_TYPEWRITER";
-                    }
-                    break;
+                case 's':
+                    return GetConstantName(g_sceNames, value);
+                case 'p':
+                    return $"event_{value:X2}";
             }
+            return null;
+        }
+
+        private string? GetConstantName(string?[] table, int value)
+        {
+            if (value >= 0 && value < table.Length)
+                return table[value];
             return null;
         }
 
@@ -76,7 +110,7 @@ namespace IntelOrca.Biohazard.Script
                 return FindConstantValue(symbol, 'e');
             else if (symbol.StartsWith("ITEM_"))
                 return FindConstantValue(symbol, 'i');
-            else if (symbol.StartsWith("NITEM_"))
+            else if (symbol.StartsWith("SCE_"))
                 return FindConstantValue(symbol, 'v');
             else if (symbol.StartsWith("RDT_"))
             {
@@ -301,36 +335,41 @@ namespace IntelOrca.Biohazard.Script
             "cutnext:u",
             "cutcurr:u",
             "",
-            "door:uIIIIuuuuurIIIIiu",
-            "nitem:uIIIIvuuuuuuu",
+            "door_aot_set:uIIIIuuuuurIIIIiu",
+            "aot_set:uIIIIsuuuuuuu",
             "nop:u",
             "",
             "testitem:i",
             "testpickup:i",
+            "aot_reset:usuuuuuuu",
+            "aot_delete",
+            "evt_exec:uup",
+            "bgm_play:u",
+            "bgm_stop:u",
             "",
-            "",
-            "",
-            "sndvol:u",
-            "bgmvol:u",
-            "",
-            "item:uIIIIiuuuuuuuuuuuuuuu",
+            "item_aot_set:uIIIIiuuuuuuuuuuuuuuu",
             "setbyte:uuu",
-            "",
+            "item_ck",
             "enemy:euuuuuuIuuIIIuuuu",
             "",
             "",
-            "",
+            "xa_on",
             "obj:uuuIIIIuuuuuuuuuuuuuuuu",
-            "pos:uuuuuuuuuuuuu",
+            "dir_set:uuuuuuuuuuuuu",
+            "pos_set",
             "",
+            "cut_auto",
+            "aot_on",
             "",
             "",
             "",
             "",
+            "movie_on:u",
+            "effect",
             "",
+            "remove_item",
             "",
             "",
-            "sndfx:u",
             "",
             "",
             "",
@@ -523,27 +562,22 @@ namespace IntelOrca.Biohazard.Script
             "",
             "",
             "",
+            "plc_dest",
+            "plc_motion",
             "",
+            "plc_ret",
             "",
+            "plc_rotate",
             "",
             "",
             "",
+            "sleep",
             "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
+            "for",
+            "next",
+            "message_on",
+            "exec_inst",
+            "process",
             "disable:u"
         };
 
@@ -555,6 +589,20 @@ namespace IntelOrca.Biohazard.Script
             12, 4, 4, 4 + 0, 8, 4, 4, 4, 4, 2, 4, 6, 6, 12, 2, 6,
             16, 4, 4, 4, 2, 2, 44 + 0, 14, 2, 2, 2, 2, 4, 2, 4, 2,
             2
+        };
+
+        private static readonly string[] g_sceNames = new string[] {
+            "SCE_0",
+            "SCE_1",
+            "SCE_MESSAGE",
+            "SCE_3",
+            "SCE_4",
+            "SCE_5",
+            "SCE_6",
+            "SCE_7",
+            "SCE_ITEMBOX",
+            "SCE_EVENT",
+            "SCE_SAVE"
         };
     }
 }

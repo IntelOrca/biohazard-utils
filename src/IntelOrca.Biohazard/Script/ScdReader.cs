@@ -27,7 +27,7 @@ namespace IntelOrca.Biohazard.Script
             switch (version)
             {
                 case BioVersion.Biohazard1:
-                    ReadScript1(br, length, kind, visitor);
+                    ReadScript1(br, length, kind, visitor, 0);
                     break;
                 case BioVersion.Biohazard2:
                     ReadScript2(br, length, kind, visitor);
@@ -40,13 +40,19 @@ namespace IntelOrca.Biohazard.Script
             }
         }
 
-        private void ReadScript1(BinaryReader br, int length, BioScriptKind kind, IBioScriptVisitor visitor)
+        internal void ReadEventScript(ReadOnlyMemory<byte> data, IBioScriptVisitor visitor, int eventIndex)
+        {
+            var br = new BinaryReader(new SpanStream(data));
+            ReadScript1(br, data.Length, BioScriptKind.Event, visitor, eventIndex);
+        }
+
+        private void ReadScript1(BinaryReader br, int length, BioScriptKind kind, IBioScriptVisitor visitor, int eventIndex)
         {
             var scriptEnd = kind == BioScriptKind.Event ? length : br.ReadUInt16();
             var constantTable = new Bio1ConstantTable();
 
             visitor.VisitBeginScript(kind);
-            visitor.VisitBeginSubroutine(0);
+            visitor.VisitBeginSubroutine(eventIndex);
             try
             {
                 while (br.BaseStream.Position < scriptEnd)

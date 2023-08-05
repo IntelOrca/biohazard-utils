@@ -6,7 +6,8 @@
              xmlns:local="clr-namespace:emdui"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-    <Border Background="#FF9797FF"
+    <Border x:Name="border"
+            Background="#FF9797FF"
             BorderBrush="Black"
             BorderThickness="1"
             Margin="4"

@@ -55,6 +55,8 @@ namespace IntelOrca.Biohazard.Model
         private ChunkKind[] CalculateKindsRE1()
         {
             var result = new ChunkKind[NumChunks];
+            for (var i = 0; i < Math.Min(g_chunkKinds1.Length, result.Length); i++)
+                result[i] = g_chunkKinds1[i];
             result[NumChunks - 1] = ChunkKind.Mesh;
             return result;
         }

@@ -163,7 +163,9 @@ namespace emdui
             _scene = new ModelScene();
             _scene.GenerateFrom(_mesh, _emr, _tim);
             viewport0.Scene = _scene;
+            viewport0.DarkBackground = DarkBackground;
             viewport1.Scene = _scene;
+            viewport1.DarkBackground = DarkBackground;
 
             RefreshHighlightedPart();
             RefreshStatusBar();
@@ -479,6 +481,17 @@ namespace emdui
             set
             {
                 Settings.Default.ShowBones = value;
+                Settings.Save();
+                RefreshModelView();
+            }
+        }
+
+        public bool DarkBackground
+        {
+            get => Settings.Default.DarkBackground;
+            set
+            {
+                Settings.Default.DarkBackground = value;
                 Settings.Save();
                 RefreshModelView();
             }

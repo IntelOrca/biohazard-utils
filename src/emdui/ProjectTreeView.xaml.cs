@@ -408,8 +408,6 @@ namespace emdui
                 var texture = project.MainTexture;
                 if (plwFile.Version != BioVersion.Biohazard1)
                     texture = texture.WithWeaponTexture(plwFile.Tim);
-                else
-                    emr = project.MainModel.GetEmr(0);
                 var mesh = project.MainModel.GetMesh(0);
                 switch (Model.Version)
                 {
@@ -457,6 +455,7 @@ namespace emdui
             AddMenuItem("Export...", Export);
             AddSeperator();
             AddMenuItem("Copy Y to all animations", CopyYToAnimations);
+            AddMenuItem("Copy Y to all animations (inc. weapons)", CopyYToAnimationsIncWeapons);
         }
 
         public override void OnSelect()
@@ -497,28 +496,59 @@ namespace emdui
 
         private void CopyYToAnimations()
         {
-            var yPos = Emr.GetRelativePosition(0).y;
-            if (Emr.KeyFrames.Length != 0)
+            if (ProjectFile.Content is ModelFile modelFile)
             {
-                var animationY = Emr.KeyFrames[0].Offset.y;
-                var scale = (double)yPos / animationY;
+                CopyYToAnimations(modelFile);
+            }
+        }
 
-                var project = MainWindow.Instance.Project;
-                foreach (var file in project.Files)
+        private void CopyYToAnimationsIncWeapons()
+        {
+            var project = MainWindow.Instance.Project;
+            foreach (var file in project.Files)
+            {
+                if (file.Content is ModelFile modelFile)
                 {
-                    if (file.Content is ModelFile modelFile)
-                    {
-                        var numEmrs = Enumerable
-                            .Range(0, modelFile.NumChunks)
-                            .Select(i => modelFile.GetChunkKind(i))
-                            .Count(x => x == ModelFile.ChunkKind.Armature);
-                        for (var i = 0; i < numEmrs; i++)
-                        {
-                            modelFile.SetEmr(i, modelFile.GetEmr(i).Scale(scale));
-                        }
-                    }
+                    CopyYToAnimations(modelFile);
                 }
             }
+        }
+
+        private void CopyYToAnimations(ModelFile modelFile)
+        {
+            var mainY = GetMainY();
+            if (mainY == null)
+                return;
+
+            var numEmrs = Enumerable
+                .Range(0, modelFile.NumChunks)
+                .Select(i => modelFile.GetChunkKind(i))
+                .Count(x => x == ModelFile.ChunkKind.Armature);
+            if (numEmrs == 0)
+                return;
+
+            var firstEmr = modelFile.GetEmr(0);
+            if (firstEmr.KeyFrames.Length == 0)
+                return;
+
+            var firstKeyFrame = firstEmr.KeyFrames[0];
+            var animationY = firstKeyFrame.Offset.y;
+            var scale = (double)mainY.Value / animationY;
+            for (var i = 0; i < numEmrs; i++)
+            {
+                modelFile.SetEmr(i, modelFile.GetEmr(i).Scale(scale));
+            }
+        }
+
+        private int? GetMainY()
+        {
+            var project = MainWindow.Instance.Project;
+            var mainEmr = project.MainModel.GetEmr(0);
+            if (mainEmr == null)
+                return null;
+
+            var yPos = mainEmr.GetRelativePosition(0).y;
+            return yPos;
         }
     }
 

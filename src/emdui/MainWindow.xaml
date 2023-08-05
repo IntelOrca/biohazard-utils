@@ -56,6 +56,7 @@
             <MenuItem Header="View">
                 <MenuItem Header="_Show Floor" IsCheckable="True" IsChecked="{Binding ShowFloor, ElementName=mainWindow}" />
                 <MenuItem Header="_Show Bones" IsCheckable="True" IsChecked="{Binding ShowBones, ElementName=mainWindow}" />
+                <MenuItem Header="_Dark Background" IsCheckable="True" IsChecked="{Binding DarkBackground, ElementName=mainWindow}" />
             </MenuItem>
         </Menu>
         <StatusBar DockPanel.Dock="Bottom">

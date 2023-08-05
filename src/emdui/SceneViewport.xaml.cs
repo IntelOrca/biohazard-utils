@@ -26,6 +26,8 @@ namespace emdui
         private double _startCameraAngleH;
         private double _startCameraAngleV;
 
+        private bool _darkBackground;
+
         public ModelScene Scene
         {
             get => _scene;
@@ -192,6 +194,22 @@ namespace emdui
             {
                 _cameraZoom = Math.Max(1000, _cameraZoom - (e.Delta * 10));
                 UpdateCamera();
+            }
+        }
+
+        public bool DarkBackground
+        {
+            get => _darkBackground;
+            set
+            {
+                if (_darkBackground != value)
+                {
+                    _darkBackground = value;
+                    if (value)
+                        border.Background = new SolidColorBrush(Color.FromRgb(0x00, 0x08, 0x28));
+                    else
+                        border.Background = new SolidColorBrush(Color.FromRgb(0x97, 0x97, 0xFF));
+                }
             }
         }
     }

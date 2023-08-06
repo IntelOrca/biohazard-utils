@@ -7,7 +7,7 @@ namespace IntelOrca.Biohazard
     public class Program
     {
         public static Assembly CurrentAssembly => Assembly.GetEntryAssembly();
-        public static Version CurrentVersion = CurrentAssembly?.GetName().Version ?? new Version();
+        public static Version CurrentVersion = GetCurrentVersion();
         public static string CurrentVersionNumber => $"{CurrentVersion.Major}.{CurrentVersion.Minor}.{CurrentVersion.Build}";
         public static string CurrentVersionInfo => $"BioRand {CurrentVersion.Major}.{CurrentVersion.Minor}.{CurrentVersion.Build} ({GitHash})";
         public static string GitHash
@@ -29,6 +29,14 @@ namespace IntelOrca.Biohazard
                 }
                 return rev;
             }
+        }
+
+        private static Version GetCurrentVersion()
+        {
+            var version = CurrentAssembly?.GetName().Version ?? new Version();
+            if (version.Revision == -1)
+                return version;
+            return new Version(version.Major, version.Minor, version.Build);
         }
     }
 }

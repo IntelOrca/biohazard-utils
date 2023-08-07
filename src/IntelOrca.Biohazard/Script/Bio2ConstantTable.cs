@@ -16,6 +16,58 @@ namespace IntelOrca.Biohazard.Script
         public string GetEnemyName(byte kind) => g_enemyNames.Namify("ENEMY_", kind);
         public string GetItemName(byte kind) => g_itemNames.Namify("ITEM_", kind);
 
+        private string GetKeyName(byte value)
+        {
+            return value switch
+            {
+                0 => "UNLOCKED",
+                254 => "UNLOCK",
+                255 => "LOCKED",
+                _ => GetItemName(value)
+            };
+        }
+
+        private string GetProcedureName(int value)
+        {
+            return value switch
+            {
+                0 => "main",
+                1 => "aot",
+                _ => $"main_{value:X2}",
+            };
+        }
+
+        private string? GetItemFlagsName(int value)
+        {
+            if (value == 0)
+                return "IF_DEFAULT";
+
+            if ((value & 0b0000_1110) != 0)
+                return null;
+
+            var glint = value & 0b1110_0000;
+            var sz = glint switch
+            {
+                0xA0 => "IF_GLINT_GRAY",
+                0xC0 => "IF_GLINT_BLUE",
+                0xE0 => "IF_GLINT_RED",
+                _ => ""
+            };
+            if ((value & 0b0001_0000) != 0)
+                sz += $" | IF_FAST";
+            if ((value & 0b0000_0001) != 0)
+                sz += $" | IF_FLOOR";
+            if (sz.StartsWith(" | "))
+                sz = sz.Substring(3);
+            if (sz == "IF_FAST" && value != 0x10)
+                return null;
+            if (sz == "IF_FLOOR" && value != 1)
+                return null;
+            if (sz == "")
+                return null;
+            return sz;
+        }
+
         public byte? FindOpcode(string name)
         {
             for (int i = 0; i < g_instructionSignatures.Length; i++)
@@ -195,71 +247,37 @@ namespace IntelOrca.Biohazard.Script
 
         public string? GetConstant(char kind, int value)
         {
-            switch (kind)
+            return kind switch
             {
-                case '0':
-                    return $"ID_AOT_{value}";
-                case '1':
-                    return $"ID_OBJ_{value}";
-                case '2':
-                    return $"ID_EM_{value}";
-                case '3':
-                    return $"ID_MSG_{value}";
-                case 'e':
-                    return GetEnemyName((byte)value);
-                case 't':
-                case 'T':
-                    if (value == 255)
-                        return "LOCKED";
-                    else if (value == 254)
-                        return "UNLOCK";
-                    else if (value == 0)
-                        return "UNLOCKED";
-                    else
-                        return GetItemName((byte)value);
-                case 'c':
-                    return GetConstantName(g_comparators, value);
-                case 'o':
-                    return GetConstantName(g_operators, value);
-                case 's':
-                    return GetConstantName(g_sceNames, value);
-                case 'a':
-                    if (value == 0)
-                        return "SAT_AUTO";
-                    var sb = new StringBuilder();
-                    for (int i = 0; i < 8; i++)
-                    {
-                        var mask = 1 << i;
-                        if (value == mask)
-                        {
-                            return g_satNames[i];
-                        }
-                        else if ((value & (1 << i)) != 0)
-                        {
-                            sb.Append(g_satNames[i]);
-                            sb.Append(" | ");
-                        }
-                    }
-                    sb.Remove(sb.Length - 3, 3);
-                    return sb.ToString();
-                case 'w':
-                    return GetConstantName(g_workKinds, value);
-                case 'g':
-                    if (value == (byte)OpcodeV2.Gosub)
-                        return "I_GOSUB";
-                    break;
-                case 'p':
-                    if (value == 0)
-                        return "main";
-                    else if (value == 1)
-                        return "aot";
-                    return $"main_{value:X2}";
-                case 'f':
-                    return GetConstantName(g_flagGroups, value);
-                case 'v':
-                    return GetNamedVariable(value);
-            }
-            return null;
+                '0' => $"ID_AOT_{value}",
+                '1' => $"ID_OBJ_{value}",
+                '2' => $"ID_EM_{value}",
+                '3' => $"ID_MSG_{value}",
+                '4' => $"SBK_{value}",
+                '5' => $"DOR_{value}",
+                'a' => GetConstantFlags(g_satNames, value, "SAT_AUTO"),
+                // 'b'
+                'c' => GetConstantName(g_comparators, value),
+                'e' => GetEnemyName((byte)value),
+                'f' => GetConstantName(g_flagGroups, value),
+                'g' => value == (byte)OpcodeV2.Gosub ? "I_GOSUB" : null,
+                'h' => GetConstantFlags(g_aiNames, value, "AI_DEFAULT"),
+                // 'i'
+                'm' => GetConstantName(g_entityMembers, value),
+                'n' => GetItemFlagsName(value),
+                'o' => GetConstantName(g_operators, value),
+                'p' => GetProcedureName(value),
+                's' => GetConstantName(g_sceNames, value),
+                'T' => GetKeyName((byte)value),
+                't' => GetKeyName((byte)value),
+                // 'u'
+                'v' => GetNamedVariable(value),
+                'w' => GetConstantName(g_workKinds, value),
+                'x' => GetConstantName(g_bgmChannel, value),
+                'y' => GetConstantName(g_bgmOp, value),
+                'z' => GetConstantName(g_bgmType, value),
+                _ => null
+            };
         }
 
         private string? GetConstantName(string?[] table, int value)
@@ -267,6 +285,28 @@ namespace IntelOrca.Biohazard.Script
             if (value >= 0 && value < table.Length)
                 return table[value];
             return null;
+        }
+
+        private string? GetConstantFlags(string?[] table, int value, string? zeroName)
+        {
+            if (value == 0)
+                return zeroName;
+            var sb = new StringBuilder();
+            for (int i = 0; i < 8; i++)
+            {
+                var mask = 1 << i;
+                if (value == mask)
+                {
+                    return table[i];
+                }
+                else if ((value & (1 << i)) != 0)
+                {
+                    sb.Append(table[i]);
+                    sb.Append(" | ");
+                }
+            }
+            sb.Remove(sb.Length - 3, 3);
+            return sb.ToString();
         }
 
         private int? FindConstantValue(string symbol, char kind)
@@ -287,14 +327,14 @@ namespace IntelOrca.Biohazard.Script
                 _constantMap.Add("I_GOSUB", (byte)OpcodeV2.Gosub);
                 var constChars = new char[]
                 {
-                    '0', '1', '2', '3', 'a', 'c', 'e', 'f', 'o', 's', 't', 'v', 'w',
+                    '0', '1', '2', '3', '4', '5', 'a', 'c', 'e', 'f', 'g', 'h', 'm', 'n', 'o', 's', 't', 'v', 'w', 'x', 'y', 'z'
                 };
                 foreach (var ch in constChars)
                 {
                     for (var i = 0; i < 256; i++)
                     {
                         var name = GetConstant(ch, i);
-                        if (name != null)
+                        if (name != null && !name.Contains(" ") && !char.IsNumber(name[0]))
                         {
                             if (_constantMap.TryGetValue(name, out var check) && check != i)
                                 throw new InvalidOperationException();
@@ -385,37 +425,89 @@ namespace IntelOrca.Biohazard.Script
 
         private static string?[] g_flagGroups = new[]
         {
-            "FG_0",
-            "FG_GAME",
-            "FG_STATE",
-            "FG_3",
-            "FG_GENERAL",
-            "FG_LOCAL",
+            "FG_SYSTEM",
+            "FG_STATUS",
+            "FG_STOP",
+            "FG_SCENARIO",
+            "FG_COMMON",
+            "FG_ROOM",
             "FG_ENEMY",
-            "FG_7",
+            "FG_ENEMY_2",
             "FG_ITEM",
-            "FG_9",
-            "FG_A",
-            "FG_INPUT",
-            null,
-            null,
-            null,
-            null,
+            "FG_MAP",
+            "FG_USE",
+            "FG_MESSAGE",
+            "FG_ROOM_ENEMY",
+            "FG_PBF00",
+            "FG_PBF01",
+            "FG_PBF02",
+            "FG_PBF03",
+            "FG_PBF04",
+            "FG_PBF05",
+            "FG_PBF06",
+            "FG_PBF07",
+            "FG_PBF08",
+            "FG_PBF09",
+            "FG_PBF0A",
+            "FG_PBF0B",
+            "FG_PBF0C",
+            "FG_PBF0D",
+            "FG_PBF0E",
+            "FG_PBF0F",
+            "FG_ZAPPING",
+            "FG_RBJ_SET",
+            "FG_KEY",
+            "FG_MAP_C",
+            "FG_MAP_I",
+            "FG_ITEM_2",
+        };
 
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            "FG_LOCK"
+        private static string?[] g_entityMembers = new[]
+        {
+            "M_POINTER",
+            "M_BE_FLAG",
+            "M_ROUTINE0",
+            "M_ROUTINE1",
+            "M_ROUTINE2",
+            "M_ROUTINE3",
+            "M_ID",
+            "M_TYPE",
+            "M_OBJ_NO",
+            "M_SCE_NO",
+            "M_ATTRIBUTE",
+            "M_X_POS",
+            "M_Y_POS",
+            "M_Z_POS",
+            "M_X_DIR",
+            "M_Y_DIR",
+            "M_Z_DIR",
+            "M_FLOOR",
+            "M_STATUS_FLAG",
+            "M_GROUND",
+            "M_X_DEST",
+            "M_Z_DEST",
+            "M_SCE_FLAG",
+            "M_SCE_FREE0",
+            "M_SCE_FREE1",
+            "M_SCE_FREE2",
+            "M_SCE_FREE3",
+            "M_X_SPEED0",
+            "M_X_SPEED1",
+            "M_Y_SPEED",
+            "M_Z_SPEED",
+            "M_HOKAN_FLAG",
+            "M_OBJ_OFS_X",
+            "M_OBJ_OFS_Y",
+            "M_OBJ_OFS_Z",
+            "M_OBJ_W",
+            "M_OBJ_H",
+            "M_OBJ_D",
+            "M_PARTS_POS_Y",
+            "M_SCA_OLD_X",
+            "M_SCA_OLD_Z",
+            "M_FREE0",
+            "M_FREE1",
+            "M_DAMAGE_CNT",
         };
 
         private static int[] g_instructionSizes = new int[]
@@ -628,6 +720,35 @@ namespace IntelOrca.Biohazard.Script
             "UmbrellaKeyCard",
             "MasterKey",
             "PlatformKey",
+            "",
+            "",
+            "",
+            "",
+            "ChrisDiary",
+            "FederalPoliceReport",
+            "MemotoLeon",
+            "PoliceMemorandum",
+            "OperationReport1",
+            "MailToTheChief1",
+            "MailToTheChief2",
+            "SecretaryDiaryA",
+            "SecretaryDiaryB",
+            "OperationReport2",
+            "UserRegistration",
+            "DevelopedFilmA",
+            "DevelopedFilmB",
+            "DevelopedFilmC",
+            "PatrolReport",
+            "WatchmanDiary",
+            "ChiefDiary",
+            "SewerManagerDiary",
+            "SewerManagerFax",
+            "DevelopedFilmD",
+            "VaccineSynthesis",
+            "LabSecurityManual",
+            "PEpsilonReport",
+            "HintFiles1",
+            "HintFiles2",
         };
 
         private static string[] g_instructionSignatures = new string[]
@@ -687,8 +808,8 @@ namespace IntelOrca.Biohazard.Script
             "add_aspeed",
             "pos_set:uIII",
             "dir_set:uIII",
-            "member_set",
-            "member_set2:uv",
+            "member_set:mI",
+            "member_set2:mv",
             "se_on:uIIIII",
             "sca_id_set",
             "flr_set",
@@ -696,7 +817,7 @@ namespace IntelOrca.Biohazard.Script
             "sce_espr_on:uUUUIIII",
             "door_aot_se:0sauuIIIIIIIIuuuuuuuutu",
             "cut_auto",
-            "member_copy:vu",
+            "member_copy:vm",
             "member_cmp",
             "plc_motion",
 
@@ -704,7 +825,7 @@ namespace IntelOrca.Biohazard.Script
             "plc_neck:uIIIuu",
             "plc_ret",
             "plc_flg:uU",
-            "sce_em_set:u2euuuuuuIIIIUU",
+            "sce_em_set:u2euhu4uuIIIIUU",
             "col_chg_set",
             "aot_reset:0sauuuuuu",
             "aot_on:0",
@@ -714,11 +835,11 @@ namespace IntelOrca.Biohazard.Script
             "cut_replace",
             "sce_espr_kill",
             "",
-            "item_aot_set:0sauuIIUUTUUuu",
+            "item_aot_set:0sauuIIUUTUU1n",
             "sce_key_ck:uU",
 
             "sce_trg_ck:uU",
-            "sce_bgm_control",
+            "sce_bgm_control:xyzuu",
             "sce_espr_control",
             "sce_fade_set",
             "sce_espr3d_on:uUUUIIIIIII",
@@ -742,7 +863,7 @@ namespace IntelOrca.Biohazard.Script
             "sce_espr_kill2",
             "plc_stop",
             "aot_set_4p:usauuIIIIIIIIuuuuuu",
-            "door_aot_set_4p:0sauuIIIIIIIIIIIIuuuuuuuutu",
+            "door_aot_set_4p:0sauuIIIIIIIIIIIIuuu5uuuutu",
             "item_aot_set_4p:0sauuIIIIIIIITUUuu",
             "light_pos_set:uuuI",
             "light_kido_set:uI",
@@ -850,6 +971,43 @@ namespace IntelOrca.Biohazard.Script
             "WK_OBJECT",
             "WK_DOOR",
             "WK_ALL"
+        };
+
+        private static readonly string[] g_aiNames = new string[]
+        {
+            "AI_01",
+            "AI_02",
+            "AI_04",
+            "AI_08",
+            "AI_10",
+            "AI_20",
+            "AI_40",
+            "AI_INACTIVE"
+        };
+
+        private static readonly string[] g_bgmChannel = new string[]
+        {
+            "BGM_CHANNEL_MAIN",
+            "BGM_CHANNEL_SUB0",
+            "BGM_CHANNEL_SUB1",
+        };
+
+        private static readonly string[] g_bgmOp = new string[]
+        {
+            "BGM_OP_NOP",
+            "BGM_OP_START",
+            "BGM_OP_STOP",
+            "BGM_OP_RESTART",
+            "BGM_OP_PAUSE",
+            "BGM_OP_FADEOUT",
+        };
+
+        private static readonly string[] g_bgmType = new string[]
+        {
+            "BGM_TYPE_MAIN_VOL",
+            "BGM_TYPE_PROG0_VOL",
+            "BGM_TYPE_PROG1_VOL",
+            "BGM_TYPE_PROG2_VOL",
         };
     }
 }

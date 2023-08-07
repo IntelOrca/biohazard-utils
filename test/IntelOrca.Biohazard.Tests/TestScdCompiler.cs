@@ -90,7 +90,7 @@ proc init
 
 proc init
 {
-    member_set(17, -3600 / -1800, 0);
+    member_set(17, -3600 / -1800);
 }
 ");
         }

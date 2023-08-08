@@ -8,8 +8,59 @@ namespace IntelOrca.Biohazard.Room
 {
     public unsafe partial class Rdt1
     {
+        // 0x00: header.dat
+        // 0x06: light.lit
+        // 0x48: offsets
+        //     0: zone.rvd
+        //     1: collision.sca
+        //     2: embedded object model table
+        //     3: embedded item model table
+        //     4: block.blk
+        //     5: floor.flr
+        //     6: init.scd
+        //     7: main.scd
+        //     8: events.scd
+        //     9: animation.emr
+        //    10: animation.emd
+        //    11: message.msg
+        //    12: embedded item PIX table
+        //    13: ESP IDs
+        //    14: embedded ESP EFF table
+        //    15: embedded ESP TIM table
+        //    16: sound/snd.edt
+        //    17: sound/snd.vh
+        //    18: sound/snd.vb
+        // 0x94: camera.rid
+        //       embedded item model table
+        //       embedded object model table
+        //       zone.rvd
+        //       sprite.pri
+        //       camera/spriteXX.tim
+        //       collision.sca
+        //       block.blk
+        //       floor.flr
+        //       scripts/main00.scd
+        //       scripts/main01.scd
+        //       scripts/subXX.scd
+        //       scripts/animation.emr
+        //       scripts/animation.edd
+        //       message/mainXX.msg
+        //       item/itemXX.pix
+        //       ESP IDs
+        //       effect/espXX.eff
+        //       embedded ESP EFF table
+        //       sound/snd.edt
+        //       sound/snd.vh
+        //       sound/snd.vb
+        //       item/itemXX.tim
+        //       object/objectXX.tim
+        //       effect/espXX.tim
+        //       embedded ESP TIM table
+
+        private readonly RdtFileData _data;
+
         public BioVersion Version => BioVersion.Biohazard1;
-        public ReadOnlyMemory<byte> Data { get; }
+        public ReadOnlyMemory<byte> Data => _data.Data;
 
         public Rdt1(string path)
             : this(File.ReadAllBytes(path))
@@ -18,28 +69,90 @@ namespace IntelOrca.Biohazard.Room
 
         public Rdt1(ReadOnlyMemory<byte> data)
         {
-            Data = data;
+            _data = new RdtFileData(data);
+            _data.RegisterOffset(RdtFileChunkKinds.RDT1Header, 0, true);
+            _data.RegisterOffset(RdtFileChunkKinds.RDT1LIT, 0x6, true);
+            _data.RegisterOffset(RdtFileChunkKinds.RDT1Offsets, 0x48, true);
+            _data.RegisterOffset(RdtFileChunkKinds.RDT1RID, 0x94, true);
+
+            var offsets = Offsets;
+            for (var i = 0; i < offsets.Length; i++)
+            {
+                var offset = offsets[i];
+                if (offset != 0)
+                {
+                    _data.RegisterOffset(_offsetTableKinds[i], offset, true);
+                }
+            }
+
+            // Embedded stuff
+            foreach (var cam in Cameras)
+            {
+                if (cam.tim_masks_offset != 0)
+                    _data.RegisterOffset(RdtFileChunkKinds.RDT1EmbeddedCamTim, cam.tim_masks_offset, true);
+                if (cam.masks_offset != 0)
+                    _data.RegisterOffset(RdtFileChunkKinds.RDT1EmbeddedCamMask, cam.masks_offset, true);
+            }
+            foreach (var embeddedModel in EmbeddedObjectModelTable.Offsets)
+            {
+                if (embeddedModel.Model != 0)
+                    _data.RegisterOffset(RdtFileChunkKinds.RDT1EmbeddedObjectTmd, embeddedModel.Model, true);
+                if (embeddedModel.Texture != 0)
+                    _data.RegisterOffset(RdtFileChunkKinds.RDT1EmbeddedObjectTim, embeddedModel.Texture, true);
+            }
+            foreach (var embeddedModel in EmbeddedItemModelTable.Offsets)
+            {
+                if (embeddedModel.Model != 0)
+                    _data.RegisterOffset(RdtFileChunkKinds.RDT1EmbeddedItemTmd, embeddedModel.Model, true);
+                if (embeddedModel.Texture != 0)
+                    _data.RegisterOffset(RdtFileChunkKinds.RDT1EmbeddedItemTim, embeddedModel.Texture, true);
+            }
+            foreach (var embeddedEff in ESPEFF)
+            {
+                if (embeddedEff != 0)
+                    _data.RegisterOffset(RdtFileChunkKinds.RDT1EmbeddedEspEff, embeddedEff, true);
+            }
+            foreach (var embeddedTim in ESPTIM)
+            {
+                if (embeddedTim != 0)
+                    _data.RegisterOffset(RdtFileChunkKinds.RDT1EmbeddedEspTim, embeddedTim, true);
+            }
         }
 
+        private ReadOnlyMemory<byte> GetChunk(int kind) => _data.FindChunkByKind(kind)!.Value.Memory;
+
         public Rdt1Header Header => GetSpan<Rdt1Header>(0x00, 1)[0];
-        public ReadOnlySpan<byte> LIT => GetSpan<byte>(0x06, 0x42);
+        public ReadOnlySpan<byte> LIT => GetChunk(RdtFileChunkKinds.RDT1LIT).Span;
         public ReadOnlySpan<int> Offsets => GetSpan<int>(0x48, 19);
-        public ReadOnlySpan<byte> RID => GetSpan<byte>(0x94, Header.nCut * sizeof(Rdt1Camera));
-        public EmbeddedModelTable EmbeddedObjectModelTable => new EmbeddedModelTable(Data.Slice(Offsets[3], Header.nOmodel * 8));
-        public EmbeddedModelTable EmbeddedItemModelTable => new EmbeddedModelTable(Data.Slice(Offsets[4], Header.nItem * 8));
-        public ReadOnlySpan<byte> RVD => MemoryMarshal.Cast<Rdt1CameraSwitch, byte>(CameraSwitches);
-        public ReadOnlySpan<byte> SCA => GetSpan<byte>(Offsets[1], Offsets[4] - Offsets[1] - 4);
-        public ReadOnlySpan<byte> BLK => GetSpan<byte>(Offsets[4], Offsets[5] - Offsets[4] - 2);
-        public ReadOnlySpan<byte> FLR => GetSpan<byte>(Offsets[5], Offsets[6] - Offsets[5]);
-        public ScdProcedure InitSCD => ReadSCD(Offsets[6]);
-        public ScdProcedure MainSCD => ReadSCD(Offsets[7]);
-        public EventScd EventSCD => new EventScd(Data.Slice(Offsets[8], Offsets[9] - Offsets[8]));
-        public ReadOnlySpan<byte> EDD => GetSpan<byte>(Offsets[10], Offsets[11] - Offsets[10]);
-        public ReadOnlySpan<byte> EMR => GetSpan<byte>(Offsets[9], Offsets[10] - Offsets[9]);
-        public ReadOnlySpan<byte> MSG => GetSpan<byte>(Offsets[11], Offsets[12] - Offsets[11]);
-        public ReadOnlySpan<byte> SND => GetSpan<byte>(Offsets[16], Offsets[17] - Offsets[16]);
-        public ReadOnlySpan<byte> VH => GetSpan<byte>(Offsets[17], Offsets[18] - Offsets[17]);
-        public ReadOnlySpan<byte> VB => GetSpan<byte>(Offsets[18], 1024);
+        public ReadOnlySpan<byte> RID => GetChunk(RdtFileChunkKinds.RDT1RID).Span;
+        public EmbeddedModelTable EmbeddedObjectModelTable => new EmbeddedModelTable(GetChunk(RdtFileChunkKinds.RDT1EmbeddedModelTable));
+        public EmbeddedModelTable EmbeddedItemModelTable => new EmbeddedModelTable(GetChunk(RdtFileChunkKinds.RDT1EmbeddedItemTable));
+        public ReadOnlySpan<byte> RVD => GetChunk(RdtFileChunkKinds.RDT1RVD).Span.TruncateBy(4);
+        public ReadOnlySpan<byte> PRI
+        {
+            get
+            {
+                var firstMask = _data.FindChunkByKind(RdtFileChunkKinds.RDT1EmbeddedCamMask)!.Value.Offset;
+                var firstTim = _data.FindChunkByKind(RdtFileChunkKinds.RDT1EmbeddedCamTim)!.Value.Offset;
+                return Data.Slice(firstMask, firstTim - firstMask).Span;
+            }
+        }
+        public ReadOnlySpan<byte> SCA => GetChunk(RdtFileChunkKinds.RDT1SCA).Span.TruncateBy(4);
+        public ReadOnlySpan<byte> BLK => GetChunk(RdtFileChunkKinds.RDT1BLK).Span.TruncateBy(2);
+        public ReadOnlySpan<byte> FLR => GetChunk(RdtFileChunkKinds.RDT1FLR).Span;
+        public ScdProcedure InitSCD => new ScdProcedure(Version, GetChunk(RdtFileChunkKinds.RDT1InitSCD));
+        public ScdProcedure MainSCD => new ScdProcedure(Version, GetChunk(RdtFileChunkKinds.RDT1MainSCD));
+        public EventScd EventSCD => new EventScd(GetChunk(RdtFileChunkKinds.RDT1EventSCD));
+        public ReadOnlySpan<byte> EDD => GetChunk(RdtFileChunkKinds.RDT1EDD).Span;
+        public ReadOnlySpan<byte> EMR => GetChunk(RdtFileChunkKinds.RDT1EMR).Span;
+        public ReadOnlySpan<byte> MSG => GetChunk(RdtFileChunkKinds.RDT1MSG).Span;
+        public EmbeddedItemIcons RDT1EmbeddedItemIcons => new EmbeddedItemIcons(GetChunk(RdtFileChunkKinds.RDT1EmbeddedItemIcons));
+        public ReadOnlySpan<byte> ESPIDs => GetChunk(RdtFileChunkKinds.RDT1ESPIDs).Span;
+        public ReadOnlySpan<int> ESPEFF => MemoryMarshal.Cast<byte, int>(GetChunk(RdtFileChunkKinds.RDT1ESPEFFTable).Span);
+        public ReadOnlySpan<int> ESPTIM => MemoryMarshal.Cast<byte, int>(GetChunk(RdtFileChunkKinds.RDT1ESPTIMTable).Span);
+        public ReadOnlySpan<byte> EDT => GetChunk(RdtFileChunkKinds.RDT1EDT).Span;
+        public ReadOnlySpan<byte> VH => GetChunk(RdtFileChunkKinds.RDT1VH).Span;
+        public ReadOnlySpan<byte> VB => GetChunk(RdtFileChunkKinds.RDT1VB).Span;
 
         public ReadOnlySpan<Rdt1Camera> Cameras
         {
@@ -90,29 +203,51 @@ namespace IntelOrca.Biohazard.Room
         {
             var builder = new Builder();
 
-            var embeddedTmdOffsets = new OffsetTracker();
-            var embeddedTimOffsets = new OffsetTracker();
+            var embeddedObjectTmdOffsets = new OffsetTracker();
+            var embeddedObjectTimOffsets = new OffsetTracker();
             foreach (var pair in EmbeddedObjectModelTable.Offsets)
             {
-                var tmdIndex = embeddedTmdOffsets.GetOrAdd(pair.Model);
-                var timIndex = embeddedTimOffsets.GetOrAdd(pair.Texture);
+                var tmdIndex = embeddedObjectTmdOffsets.GetOrAdd(pair.Model);
+                var timIndex = embeddedObjectTimOffsets.GetOrAdd(pair.Texture);
                 builder.EmbeddedObjectModelTable.Add(new ModelTextureIndex(tmdIndex, timIndex));
             }
+            foreach (var offset in embeddedObjectTmdOffsets)
+                builder.EmbeddedObjectTmd.Add(ReadEmbeddedTmd(offset));
+            foreach (var offset in embeddedObjectTimOffsets)
+                builder.EmbeddedObjectTim.Add(ReadEmbeddedTim(offset));
+
+            var embeddedItemTmdOffsets = new OffsetTracker();
+            var embeddedItemTimOffsets = new OffsetTracker();
             foreach (var pair in EmbeddedItemModelTable.Offsets)
             {
-                var tmdIndex = embeddedTmdOffsets.GetOrAdd(pair.Model);
-                var timIndex = embeddedTimOffsets.GetOrAdd(pair.Texture);
+                var tmdIndex = embeddedItemTmdOffsets.GetOrAdd(pair.Model);
+                var timIndex = embeddedItemTimOffsets.GetOrAdd(pair.Texture);
                 builder.EmbeddedItemModelTable.Add(new ModelTextureIndex(tmdIndex, timIndex));
             }
-            foreach (var offset in embeddedTmdOffsets)
-                builder.EmbeddedObjects.Add(ReadEmbeddedTmd(offset));
-            foreach (var offset in embeddedTimOffsets)
-                builder.EmbeddedTextures.Add(ReadEmbeddedTim(offset));
+            foreach (var offset in embeddedItemTmdOffsets)
+                builder.EmbeddedItemTmd.Add(ReadEmbeddedTmd(offset));
+            foreach (var offset in embeddedItemTimOffsets)
+                builder.EmbeddedItemTim.Add(ReadEmbeddedTim(offset));
+
+            foreach (var chunk in _data.Chunks)
+            {
+                if (chunk.Kind == RdtFileChunkKinds.RDT1EmbeddedCamTim)
+                    builder.CameraTextures.Add(new TimFile(chunk.Memory));
+            }
+
+            foreach (var chunk in _data.Chunks)
+            {
+                if (chunk.Kind == RdtFileChunkKinds.RDT1EmbeddedEspEff)
+                    builder.Esps.Add(new Esp(chunk.Memory));
+                else if (chunk.Kind == RdtFileChunkKinds.RDT1EmbeddedEspTim)
+                    builder.EspTextures.Add(new TimFile(chunk.Memory));
+            }
 
             builder.Header = Header;
             builder.LIT = LIT.ToArray();
             builder.RID = RID.ToArray();
             builder.RVD = RVD.ToArray();
+            builder.PRI = PRI.ToArray();
             builder.SCA = SCA.ToArray();
             builder.BLK = BLK.ToArray();
             builder.FLR = FLR.ToArray();
@@ -122,7 +257,9 @@ namespace IntelOrca.Biohazard.Room
             builder.EDD = EDD.ToArray();
             builder.EMR = EMR.ToArray();
             builder.MSG = MSG.ToArray();
-            builder.SND = SND.ToArray();
+            builder.EmbeddedItemIcons = RDT1EmbeddedItemIcons;
+            builder.ESPIDs = ESPIDs.ToArray();
+            builder.EDT = EDT.ToArray();
             builder.VH = VH.ToArray();
             builder.VB = VB.ToArray();
             return builder;
@@ -130,8 +267,8 @@ namespace IntelOrca.Biohazard.Room
 
         private Tmd ReadEmbeddedTmd(int offset)
         {
-            var tmdLength = GetSpan<int>(offset, 1)[0];
-            return new Tmd(Data.Slice(offset, tmdLength));
+            var chunk = _data.FindChunkByOffset(offset);
+            return new Tmd(chunk.Value!.Memory);
         }
 
         private TimFile ReadEmbeddedTim(int offset)
@@ -148,6 +285,29 @@ namespace IntelOrca.Biohazard.Room
         }
 
         private ReadOnlySpan<T> GetSpan<T>(int offset, int count) where T : struct => Data.GetSafeSpan<T>(offset, count);
+
+        private static readonly int[] _offsetTableKinds = new[]
+        {
+            RdtFileChunkKinds.RDT1RVD,
+            RdtFileChunkKinds.RDT1SCA,
+            RdtFileChunkKinds.RDT1EmbeddedModelTable,
+            RdtFileChunkKinds.RDT1EmbeddedItemTable,
+            RdtFileChunkKinds.RDT1BLK,
+            RdtFileChunkKinds.RDT1FLR,
+            RdtFileChunkKinds.RDT1InitSCD,
+            RdtFileChunkKinds.RDT1MainSCD,
+            RdtFileChunkKinds.RDT1EventSCD,
+            RdtFileChunkKinds.RDT1EMR,
+            RdtFileChunkKinds.RDT1EDD,
+            RdtFileChunkKinds.RDT1MSG,
+            RdtFileChunkKinds.RDT1EmbeddedItemIcons,
+            RdtFileChunkKinds.RDT1ESPIDs,
+            RdtFileChunkKinds.RDT1ESPEFFTable,
+            RdtFileChunkKinds.RDT1ESPTIMTable,
+            RdtFileChunkKinds.RDT1EDT,
+            RdtFileChunkKinds.RDT1VH,
+            RdtFileChunkKinds.RDT1VB,
+        };
 
         [StructLayout(LayoutKind.Sequential)]
         public struct Rdt1Header

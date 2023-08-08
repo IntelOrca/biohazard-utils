@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 
-namespace IntelOrca.Biohazard
+namespace IntelOrca.Biohazard.Room
 {
     /// <summary>
     /// Represents the data in the RDT file which is a concatenated sequence
@@ -13,10 +13,10 @@ namespace IntelOrca.Biohazard
     internal class RdtFileData
     {
         private readonly List<Chunk> _chunks = new List<Chunk>();
-        private Memory<byte> _data;
+        private ReadOnlyMemory<byte> _data;
 
         public IReadOnlyList<Chunk> Chunks => _chunks.ToArray();
-        public Span<byte> Data => _data.Span;
+        public ReadOnlyMemory<byte> Data => _data;
         public int Length => _data.Length;
 
         public RdtFileData(string path)
@@ -24,7 +24,7 @@ namespace IntelOrca.Biohazard
         {
         }
 
-        public RdtFileData(byte[] data)
+        public RdtFileData(ReadOnlyMemory<byte> data)
         {
             _data = data;
         }

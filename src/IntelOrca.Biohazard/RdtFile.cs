@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using IntelOrca.Biohazard.Extensions;
 using IntelOrca.Biohazard.Model;
+using IntelOrca.Biohazard.Room;
 using IntelOrca.Biohazard.Script;
 
 namespace IntelOrca.Biohazard
@@ -256,7 +257,7 @@ namespace IntelOrca.Biohazard
                 var chunk = _data.FindChunkByKind(RdtFileChunkKinds.EmbeddedObjectTable);
                 if (chunk != null)
                 {
-                    var count = _data.Data[2];
+                    var count = _data.Data.Span[2];
                     var br = new BinaryReader(chunk.Value.Stream);
                     var timOffsets = new HashSet<int>();
                     var md1Offsets = new HashSet<int>();
@@ -368,8 +369,9 @@ namespace IntelOrca.Biohazard
 
         private int NumEmbeddedModels
         {
-            get => _data.Data[2];
-            set => _data.Data[2] = (byte)value;
+            get => _data.Data.Span[2];
+            // set => _data.Data[2] = (byte)value;
+            set => throw new NotImplementedException();
         }
 
         private void UpdateHeader()

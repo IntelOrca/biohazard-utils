@@ -5,6 +5,11 @@ namespace IntelOrca.Biohazard.Extensions
 {
     internal static class MemoryExtensions
     {
+        public unsafe static ReadOnlySpan<T> TruncateBy<T>(this ReadOnlySpan<T> span, int count) where T : struct
+        {
+            return span.Slice(0, span.Length - count);
+        }
+
         public unsafe static ReadOnlySpan<T> GetSafeSpan<T>(this ReadOnlyMemory<byte> memory, int offset, int count) where T : struct
         {
 #pragma warning disable CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type

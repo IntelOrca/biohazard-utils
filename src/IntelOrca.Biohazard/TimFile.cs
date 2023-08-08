@@ -29,6 +29,21 @@ namespace IntelOrca.Biohazard
         }
     }
 
+    public readonly struct Tim
+    {
+        public ReadOnlyMemory<byte> Data { get; }
+
+        public Tim(ReadOnlyMemory<byte> data)
+        {
+            Data = data;
+        }
+
+        public TimFile ToBuilder()
+        {
+            return new TimFile(Data);
+        }
+    }
+
     public class TimFile
     {
         private const int PaletteFormat4bpp = 8;

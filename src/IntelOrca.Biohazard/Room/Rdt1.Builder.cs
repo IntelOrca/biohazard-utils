@@ -31,14 +31,14 @@ namespace IntelOrca.Biohazard.Room
             public byte[] VH { get; set; } = new byte[0];
             public byte[] VB { get; set; } = new byte[0];
 
-            public List<TimFile> CameraTextures { get; set; } = new List<TimFile>();
+            public List<Tim> CameraTextures { get; set; } = new List<Tim>();
             public List<Tmd> EmbeddedObjectTmd { get; set; } = new List<Tmd>();
-            public List<TimFile> EmbeddedObjectTim { get; set; } = new List<TimFile>();
+            public List<Tim> EmbeddedObjectTim { get; set; } = new List<Tim>();
             public List<Tmd> EmbeddedItemTmd { get; set; } = new List<Tmd>();
-            public List<TimFile> EmbeddedItemTim { get; set; } = new List<TimFile>();
+            public List<Tim> EmbeddedItemTim { get; set; } = new List<Tim>();
             public EmbeddedItemIcons EmbeddedItemIcons { get; set; }
             public List<Esp> Esps { get; set; } = new List<Esp>();
-            public List<TimFile> EspTextures { get; set; } = new List<TimFile>();
+            public List<Tim> EspTextures { get; set; } = new List<Tim>();
 
             public Rdt1 ToRdt()
             {
@@ -85,7 +85,7 @@ namespace IntelOrca.Biohazard.Room
                 bw.Write(PRI);
 
                 foreach (var tim in CameraTextures)
-                    bw.Write(tim.GetBytes());
+                    bw.Write(tim.Data);
 
                 offsetTable[1] = (int)ms.Position;
                 bw.Write(SCA);
@@ -162,28 +162,28 @@ namespace IntelOrca.Biohazard.Room
                 for (var i = 0; i < EmbeddedItemTim.Count; i++)
                 {
                     itemTimTable[i] = (int)ms.Position;
-                    bw.Write(EmbeddedItemTim[i].GetBytes());
+                    bw.Write(EmbeddedItemTim[i].Data);
                 }
 
                 var objectTimTable = new int[EmbeddedObjectTim.Count];
                 for (var i = 0; i < EmbeddedObjectTim.Count; i++)
                 {
                     objectTimTable[i] = (int)ms.Position;
-                    bw.Write(EmbeddedObjectTim[i].GetBytes());
+                    bw.Write(EmbeddedObjectTim[i].Data);
                 }
 
                 var espTimTable = new int[EspTextures.Count];
                 for (var i = 0; i < EspTextures.Count; i++)
                 {
                     espTimTable[i] = (int)ms.Position;
-                    bw.Write(EspTextures[i].GetBytes());
+                    bw.Write(EspTextures[i].Data);
                 }
 
                 if (espTimTable.Length != 0)
                 {
-                    var undefinedEspTims = 8 - espTimTable.Length;
-                    for (var i = 0; i < undefinedEspTims; i++)
-                        bw.Write(-1);
+                    // var undefinedEspTims = 8 - espTimTable.Length;
+                    // for (var i = 0; i < undefinedEspTims; i++)
+                    //     bw.Write(-1);
 
                     offsetTable[15] = (int)ms.Position;
                     foreach (var o in espTimTable)

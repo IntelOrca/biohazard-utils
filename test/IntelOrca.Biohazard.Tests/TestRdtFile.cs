@@ -2,11 +2,19 @@
 using IntelOrca.Biohazard.Room;
 using IntelOrca.Biohazard.Script;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace IntelOrca.Biohazard.Tests
 {
     public class TestRdtFile
     {
+        private readonly ITestOutputHelper _output;
+
+        public TestRdtFile(ITestOutputHelper output)
+        {
+            _output = output;
+        }
+
         [Fact]
         public void RE1_100()
         {
@@ -49,6 +57,47 @@ namespace IntelOrca.Biohazard.Tests
             var rebuiltRdt = builder.ToRdt();
 
             Assert.Equal(rebuiltRdt.Data.ToArray(), rdt.Data.ToArray());
+        }
+
+        [Fact]
+        public void RE1_All_Rebuild()
+        {
+            var fail = false;
+            var installPath = TestInfo.GetInstallPath(0);
+            for (var stage = 1; stage <= 7; stage++)
+            {
+                var stageDirectory = Path.Combine(installPath, "JPN", $"STAGE{stage}");
+                var files = Directory.GetFiles(stageDirectory, "*.RDT");
+                foreach (var rdtPath in files)
+                {
+                    var length = new FileInfo(rdtPath).Length;
+                    if (length <= 5000)
+                        continue;
+
+                    var fileName = Path.GetFileName(rdtPath);
+                    try
+                    {
+                        var rdt = new Rdt1(rdtPath);
+                        var builder = rdt.ToBuilder();
+                        var rebuiltRdt = builder.ToRdt();
+                        try
+                        {
+                            Assert.Equal(rebuiltRdt.Data.ToArray(), rdt.Data.ToArray());
+                            // _output.WriteLine($"{fileName}: PASS");
+                        }
+                        catch
+                        {
+                            fail = true;
+                            _output.WriteLine($"{fileName}: FAIL");
+                        }
+                    }
+                    catch
+                    {
+                        _output.WriteLine($"{fileName}: CRASH");
+                    }
+                }
+            }
+            Assert.False(fail);
         }
 
         [Fact]

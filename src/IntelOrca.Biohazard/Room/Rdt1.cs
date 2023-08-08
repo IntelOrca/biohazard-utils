@@ -155,9 +155,19 @@ namespace IntelOrca.Biohazard.Room
         {
             get
             {
-                var firstMask = _data.FindChunkByKind(RdtFileChunkKinds.RDT1EmbeddedCamMask)!.Value.Offset;
-                var firstTim = _data.FindChunkByKind(RdtFileChunkKinds.RDT1EmbeddedCamTim)!.Value.Offset;
-                return Data.Slice(firstMask, firstTim - firstMask).Span;
+                var minOffset = int.MaxValue;
+                var maxOffset = int.MinValue;
+                foreach (var chunk in _data.Chunks)
+                {
+                    if (chunk.Kind == RdtFileChunkKinds.RDT1EmbeddedCamMask)
+                    {
+                        minOffset = Math.Min(minOffset, chunk.Offset);
+                        maxOffset = Math.Max(maxOffset, chunk.End);
+                    }
+                }
+                if (minOffset == int.MaxValue)
+                    return ReadOnlySpan<byte>.Empty;
+                return Data.Slice(minOffset, maxOffset - minOffset).Span;
             }
         }
         public ReadOnlySpan<byte> SCA => GetChunk(RdtFileChunkKinds.RDT1SCA).Span.TruncateBy(4);
@@ -256,7 +266,7 @@ namespace IntelOrca.Biohazard.Room
             foreach (var chunk in _data.Chunks)
             {
                 if (chunk.Kind == RdtFileChunkKinds.RDT1EmbeddedCamTim)
-                    builder.CameraTextures.Add(new TimFile(chunk.Memory));
+                    builder.CameraTextures.Add(new Tim(chunk.Memory));
             }
 
             foreach (var chunk in _data.Chunks)
@@ -264,7 +274,7 @@ namespace IntelOrca.Biohazard.Room
                 if (chunk.Kind == RdtFileChunkKinds.RDT1EmbeddedEspEff)
                     builder.Esps.Add(new Esp(chunk.Memory));
                 else if (chunk.Kind == RdtFileChunkKinds.RDT1EmbeddedEspTim)
-                    builder.EspTextures.Add(new TimFile(chunk.Memory));
+                    builder.EspTextures.Add(new Tim(chunk.Memory));
             }
 
             builder.Header = Header;
@@ -293,14 +303,13 @@ namespace IntelOrca.Biohazard.Room
         private Tmd ReadEmbeddedTmd(int offset)
         {
             var chunk = _data.FindChunkByOffset(offset);
-            return new Tmd(chunk.Value!.Memory);
+            return new Tmd(chunk!.Value.Memory);
         }
 
-        private TimFile ReadEmbeddedTim(int offset)
+        private Tim ReadEmbeddedTim(int offset)
         {
-            var timLength = TimFile.CalculateLength(new SpanStream(Data.Slice(offset)));
-            var timData = Data.Slice(offset, timLength);
-            return new TimFile(timData);
+            var chunk = _data.FindChunkByOffset(offset);
+            return new Tim(chunk!.Value.Memory);
         }
 
         private ScdProcedure ReadSCD(int offset)

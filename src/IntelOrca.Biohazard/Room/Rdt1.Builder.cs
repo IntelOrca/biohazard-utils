@@ -23,8 +23,8 @@ namespace IntelOrca.Biohazard.Room
             public ScdProcedure InitSCD { get; set; }
             public ScdProcedure MainSCD { get; set; }
             public EventScd EventSCD { get; set; }
-            public byte[] EMR { get; set; } = new byte[0];
-            public byte[] EDD { get; set; } = new byte[0];
+            public Emr? EMR { get; set; }
+            public Edd? EDD { get; set; }
             public byte[] MSG { get; set; } = new byte[0];
             public byte[] ESPIDs { get; set; } = new byte[0];
             public byte[] EDT { get; set; } = new byte[0];
@@ -103,9 +103,9 @@ namespace IntelOrca.Biohazard.Room
                 offsetTable[8] = (int)ms.Position;
                 bw.Write(EventSCD.Data.ToArray());
                 offsetTable[9] = (int)ms.Position;
-                bw.Write(EMR);
+                bw.Write(EMR!.Data);
                 offsetTable[10] = (int)ms.Position;
-                bw.Write(EDD);
+                bw.Write(EDD!.Data);
                 offsetTable[11] = (int)ms.Position;
                 bw.Write(MSG);
 

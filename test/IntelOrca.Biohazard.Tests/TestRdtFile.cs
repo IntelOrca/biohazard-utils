@@ -14,15 +14,15 @@ namespace IntelOrca.Biohazard.Tests
             var rdtPath = Path.Combine(installPath, "JPN", "STAGE1", "ROOM1000.RDT");
             var rdt = new Rdt1(rdtPath);
 
-            Assert.Equal(2432, rdt.EDD.Length);     // animation.edd
-            Assert.Equal(52804, rdt.EMR.Length);    // animation.emr
-            Assert.Equal(14, rdt.BLK.Length);       // block.blk
-            Assert.Equal(264, rdt.RID.Length);      // camera.rid
-            Assert.Equal(192, rdt.SCA.Length);      // collision.sca
-            Assert.Equal(12, rdt.FLR.Length);       // floor.flr
-            Assert.Equal(66, rdt.LIT.Length);       // light.lit
-            Assert.Equal(2076, rdt.PRI.Length);     // sprite.pri
-            Assert.Equal(280, rdt.RVD.Length);      // zone.rvd
+            Assert.Equal(2432, rdt.EDD.Data.Length);    // animation.edd
+            Assert.Equal(52804, rdt.EMR.Data.Length);   // animation.emr
+            Assert.Equal(14, rdt.BLK.Length);           // block.blk
+            Assert.Equal(264, rdt.RID.Length);          // camera.rid
+            Assert.Equal(192, rdt.SCA.Length);          // collision.sca
+            Assert.Equal(12, rdt.FLR.Length);           // floor.flr
+            Assert.Equal(66, rdt.LIT.Length);           // light.lit
+            Assert.Equal(2076, rdt.PRI.Length);         // sprite.pri
+            Assert.Equal(280, rdt.RVD.Length);          // zone.rvd
         }
 
         [Fact]

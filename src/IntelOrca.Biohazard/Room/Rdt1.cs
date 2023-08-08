@@ -167,8 +167,8 @@ namespace IntelOrca.Biohazard.Room
         public ScdProcedure InitSCD => new ScdProcedure(Version, GetChunk(RdtFileChunkKinds.RDT1InitSCD));
         public ScdProcedure MainSCD => new ScdProcedure(Version, GetChunk(RdtFileChunkKinds.RDT1MainSCD));
         public EventScd EventSCD => new EventScd(GetChunk(RdtFileChunkKinds.RDT1EventSCD));
-        public ReadOnlySpan<byte> EDD => GetChunk(RdtFileChunkKinds.RDT1EDD).Span;
-        public ReadOnlySpan<byte> EMR => GetChunk(RdtFileChunkKinds.RDT1EMR).Span;
+        public Emr EMR => new Emr(Version, GetChunk(RdtFileChunkKinds.RDT1EMR));
+        public Edd EDD => new Edd(GetChunk(RdtFileChunkKinds.RDT1EDD));
         public ReadOnlySpan<byte> MSG => GetChunk(RdtFileChunkKinds.RDT1MSG).Span;
         public EmbeddedItemIcons RDT1EmbeddedItemIcons => new EmbeddedItemIcons(GetChunk(RdtFileChunkKinds.RDT1EmbeddedItemIcons));
         public ReadOnlySpan<byte> ESPIDs => GetChunk(RdtFileChunkKinds.RDT1ESPIDs).Span;
@@ -279,8 +279,8 @@ namespace IntelOrca.Biohazard.Room
             builder.InitSCD = InitSCD;
             builder.MainSCD = MainSCD;
             builder.EventSCD = EventSCD;
-            builder.EDD = EDD.ToArray();
-            builder.EMR = EMR.ToArray();
+            builder.EDD = EDD;
+            builder.EMR = EMR;
             builder.MSG = MSG.ToArray();
             builder.EmbeddedItemIcons = RDT1EmbeddedItemIcons;
             builder.ESPIDs = ESPIDs.ToArray();

@@ -81,9 +81,26 @@ namespace IntelOrca.Biohazard.Room
                 var offset = offsets[i];
                 if (offset != 0)
                 {
-                    _data.RegisterOffset(_offsetTableKinds[i], offset, true);
+                    if (i == 2 && Header.nOmodel == 0)
+                        continue;
+                    if ((i == 3 || i == 12) && Header.nItem == 0)
+                        continue;
+
+                    _data.RegisterOffset(_offsetTableKinds[i], offset);
                 }
             }
+
+            // Things we know the length of
+            if (Header.nOmodel != 0)
+            {
+                _data.RegisterLength(offsets[2], Header.nOmodel * 8);
+            }
+            if (Header.nItem != 0)
+            {
+                _data.RegisterLength(offsets[3], Header.nItem * 8);
+                _data.RegisterLength(offsets[12], Header.nItem * EmbeddedItemIcon.Size);
+            }
+            _data.RegisterLength(offsets[13], 8);
 
             // Embedded stuff
             foreach (var cam in Cameras)
@@ -119,7 +136,13 @@ namespace IntelOrca.Biohazard.Room
             }
         }
 
-        private ReadOnlyMemory<byte> GetChunk(int kind) => _data.FindChunkByKind(kind)!.Value.Memory;
+        private ReadOnlyMemory<byte> GetChunk(int kind)
+        {
+            var chunk = _data.FindChunkByKind(kind);
+            if (chunk == null)
+                return ReadOnlyMemory<byte>.Empty;
+            return chunk.Value.Memory;
+        }
 
         public Rdt1Header Header => GetSpan<Rdt1Header>(0x00, 1)[0];
         public ReadOnlySpan<byte> LIT => GetChunk(RdtFileChunkKinds.RDT1LIT).Span;
@@ -138,6 +161,7 @@ namespace IntelOrca.Biohazard.Room
             }
         }
         public ReadOnlySpan<byte> SCA => GetChunk(RdtFileChunkKinds.RDT1SCA).Span.TruncateBy(4);
+        public int SCATerminator => MemoryMarshal.Cast<byte, int>(GetChunk(RdtFileChunkKinds.RDT1SCA).Span.TruncateStartBy(-4))[0];
         public ReadOnlySpan<byte> BLK => GetChunk(RdtFileChunkKinds.RDT1BLK).Span.TruncateBy(2);
         public ReadOnlySpan<byte> FLR => GetChunk(RdtFileChunkKinds.RDT1FLR).Span;
         public ScdProcedure InitSCD => new ScdProcedure(Version, GetChunk(RdtFileChunkKinds.RDT1InitSCD));
@@ -249,6 +273,7 @@ namespace IntelOrca.Biohazard.Room
             builder.RVD = RVD.ToArray();
             builder.PRI = PRI.ToArray();
             builder.SCA = SCA.ToArray();
+            builder.SCATerminator = SCATerminator;
             builder.BLK = BLK.ToArray();
             builder.FLR = FLR.ToArray();
             builder.InitSCD = InitSCD;

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace IntelOrca.Biohazard
@@ -32,6 +33,32 @@ namespace IntelOrca.Biohazard
             var b = br.ReadByte();
             return a | (b << 16);
         }
+
+        public static void Write(this BinaryWriter bw, byte value, int count)
+        {
+            var buffer = new byte[Math.Min(4096, count)];
+            Unsafe.InitBlock(ref buffer[0], value, (uint)buffer.Length);
+            for (var i = 0; i < count; i += buffer.Length)
+            {
+                var left = count - i;
+                var amount = Math.Min(left, buffer.Length);
+                bw.Write(buffer, 0, amount);
+            }
+        }
+
+        public static void Write(this BinaryWriter bw, ReadOnlySpan<byte> data)
+        {
+            var buffer = new byte[4096];
+            for (var i = 0; i < data.Length; i += buffer.Length)
+            {
+                var left = data.Length - i;
+                var view = data.Slice(i, Math.Min(left, buffer.Length));
+                view.CopyTo(buffer);
+                bw.Write(buffer, 0, view.Length);
+            }
+        }
+
+        public static void Write(this BinaryWriter bw, ReadOnlyMemory<byte> data) => Write(bw, data.Span);
 
         public static void WriteASCII(this BinaryWriter bw, string s)
         {

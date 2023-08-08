@@ -5,6 +5,13 @@ namespace IntelOrca.Biohazard.Extensions
 {
     internal static class MemoryExtensions
     {
+        public unsafe static ReadOnlySpan<T> TruncateStartBy<T>(this ReadOnlySpan<T> span, int count) where T : struct
+        {
+            if (count < 0)
+                return span.Slice(span.Length + count, -count);
+            return span.Slice(count, span.Length - count);
+        }
+
         public unsafe static ReadOnlySpan<T> TruncateBy<T>(this ReadOnlySpan<T> span, int count) where T : struct
         {
             return span.Slice(0, span.Length - count);

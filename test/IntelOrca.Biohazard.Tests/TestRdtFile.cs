@@ -39,6 +39,19 @@ namespace IntelOrca.Biohazard.Tests
         }
 
         [Fact]
+        public void RE1_106_Rebuild()
+        {
+            var installPath = TestInfo.GetInstallPath(0);
+            var rdtPath = Path.Combine(installPath, "JPN", "STAGE1", "ROOM1060.RDT");
+            var rdt = new Rdt1(rdtPath);
+
+            var builder = rdt.ToBuilder();
+            var rebuiltRdt = builder.ToRdt();
+
+            Assert.Equal(rebuiltRdt.Data.ToArray(), rdt.Data.ToArray());
+        }
+
+        [Fact]
         public void RebuildTextChunk_102()
         {
             var installPath = TestInfo.GetInstallPath(1);

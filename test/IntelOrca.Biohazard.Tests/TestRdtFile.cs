@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using IntelOrca.Biohazard.Room;
 using IntelOrca.Biohazard.Script;
 using Xunit;
 
@@ -6,6 +7,14 @@ namespace IntelOrca.Biohazard.Tests
 {
     public class TestRdtFile
     {
+        [Fact]
+        public void RE1_100()
+        {
+            var installPath = TestInfo.GetInstallPath(0);
+            var rdtPath = Path.Combine(installPath, "JPN", "STAGE1", "ROOM1000.RDT");
+            var rdt = new Rdt1(rdtPath);
+        }
+
         [Fact]
         public void RebuildTextChunk_102()
         {

@@ -2,10 +2,11 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using IntelOrca.Biohazard.Extensions;
+using IntelOrca.Biohazard.Model;
 
 namespace IntelOrca.Biohazard.Room
 {
-    public unsafe class Rdt1
+    public unsafe partial class Rdt1
     {
         public BioVersion Version => BioVersion.Biohazard1;
         public ReadOnlyMemory<byte> Data { get; }
@@ -20,18 +21,19 @@ namespace IntelOrca.Biohazard.Room
             Data = data;
         }
 
-        public Rdt1Header Header => GetSpan<Rdt1Header>(0, 1)[0];
-        public ReadOnlySpan<int> Offsets => GetSpan<int>(72, 19);
-
+        public Rdt1Header Header => GetSpan<Rdt1Header>(0x00, 1)[0];
         public ReadOnlySpan<byte> LIT => GetSpan<byte>(0x06, 0x42);
+        public ReadOnlySpan<int> Offsets => GetSpan<int>(0x48, 19);
         public ReadOnlySpan<byte> RID => GetSpan<byte>(0x94, Header.nCut * sizeof(Rdt1Camera));
+        public EmbeddedModelTable EmbeddedObjectModelTable => new EmbeddedModelTable(Data.Slice(Offsets[3], Header.nOmodel * 8));
+        public EmbeddedModelTable EmbeddedItemModelTable => new EmbeddedModelTable(Data.Slice(Offsets[4], Header.nItem * 8));
         public ReadOnlySpan<byte> RVD => MemoryMarshal.Cast<Rdt1CameraSwitch, byte>(CameraSwitches);
         public ReadOnlySpan<byte> SCA => GetSpan<byte>(Offsets[1], Offsets[4] - Offsets[1] - 4);
         public ReadOnlySpan<byte> BLK => GetSpan<byte>(Offsets[4], Offsets[5] - Offsets[4] - 2);
         public ReadOnlySpan<byte> FLR => GetSpan<byte>(Offsets[5], Offsets[6] - Offsets[5]);
-        public ReadOnlySpan<byte> InitSCD => ReadSCD(Offsets[6]);
-        public ReadOnlySpan<byte> MainSCD => ReadSCD(Offsets[7]);
-        public ReadOnlySpan<byte> SubSCD => GetSpan<byte>(Offsets[8], Offsets[9] - Offsets[8]);
+        public ScdProcedure InitSCD => ReadSCD(Offsets[6]);
+        public ScdProcedure MainSCD => ReadSCD(Offsets[7]);
+        public EventScd EventSCD => new EventScd(Data.Slice(Offsets[8], Offsets[9] - Offsets[8]));
         public ReadOnlySpan<byte> EDD => GetSpan<byte>(Offsets[10], Offsets[11] - Offsets[10]);
         public ReadOnlySpan<byte> EMR => GetSpan<byte>(Offsets[9], Offsets[10] - Offsets[9]);
         public ReadOnlySpan<byte> MSG => GetSpan<byte>(Offsets[11], Offsets[12] - Offsets[11]);
@@ -84,10 +86,65 @@ namespace IntelOrca.Biohazard.Room
             }
         }
 
-        private ReadOnlySpan<byte> ReadSCD(int offset)
+        public Builder ToBuilder()
+        {
+            var builder = new Builder();
+
+            var embeddedTmdOffsets = new OffsetTracker();
+            var embeddedTimOffsets = new OffsetTracker();
+            foreach (var pair in EmbeddedObjectModelTable.Offsets)
+            {
+                var tmdIndex = embeddedTmdOffsets.GetOrAdd(pair.Model);
+                var timIndex = embeddedTimOffsets.GetOrAdd(pair.Texture);
+                builder.EmbeddedObjectModelTable.Add(new ModelTextureIndex(tmdIndex, timIndex));
+            }
+            foreach (var pair in EmbeddedItemModelTable.Offsets)
+            {
+                var tmdIndex = embeddedTmdOffsets.GetOrAdd(pair.Model);
+                var timIndex = embeddedTimOffsets.GetOrAdd(pair.Texture);
+                builder.EmbeddedItemModelTable.Add(new ModelTextureIndex(tmdIndex, timIndex));
+            }
+            foreach (var offset in embeddedTmdOffsets)
+                builder.EmbeddedObjects.Add(ReadEmbeddedTmd(offset));
+            foreach (var offset in embeddedTimOffsets)
+                builder.EmbeddedTextures.Add(ReadEmbeddedTim(offset));
+
+            builder.Header = Header;
+            builder.LIT = LIT.ToArray();
+            builder.RID = RID.ToArray();
+            builder.RVD = RVD.ToArray();
+            builder.SCA = SCA.ToArray();
+            builder.BLK = BLK.ToArray();
+            builder.FLR = FLR.ToArray();
+            builder.InitSCD = InitSCD;
+            builder.MainSCD = MainSCD;
+            builder.EventSCD = EventSCD;
+            builder.EDD = EDD.ToArray();
+            builder.EMR = EMR.ToArray();
+            builder.MSG = MSG.ToArray();
+            builder.SND = SND.ToArray();
+            builder.VH = VH.ToArray();
+            builder.VB = VB.ToArray();
+            return builder;
+        }
+
+        private Tmd ReadEmbeddedTmd(int offset)
+        {
+            var tmdLength = GetSpan<int>(offset, 1)[0];
+            return new Tmd(Data.Slice(offset, tmdLength));
+        }
+
+        private TimFile ReadEmbeddedTim(int offset)
+        {
+            var timLength = TimFile.CalculateLength(new SpanStream(Data.Slice(offset)));
+            var timData = Data.Slice(offset, timLength);
+            return new TimFile(timData);
+        }
+
+        private ScdProcedure ReadSCD(int offset)
         {
             var len = GetSpan<ushort>(offset, 1)[0];
-            return GetSpan<byte>(offset + 2, len);
+            return new ScdProcedure(Version, Data.Slice(offset + 2, len));
         }
 
         private ReadOnlySpan<T> GetSpan<T>(int offset, int count) where T : struct => Data.GetSafeSpan<T>(offset, count);

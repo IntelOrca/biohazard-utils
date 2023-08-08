@@ -13,6 +13,12 @@ namespace IntelOrca.Biohazard.Tests
             var installPath = TestInfo.GetInstallPath(0);
             var rdtPath = Path.Combine(installPath, "JPN", "STAGE1", "ROOM1000.RDT");
             var rdt = new Rdt1(rdtPath);
+
+            var builder = rdt.ToBuilder();
+            var rebuiltRdt = builder.ToRdt();
+
+            var oldBytes = rdt.Data.ToArray();
+            var newBytes = rebuiltRdt.Data.ToArray();
         }
 
         [Fact]

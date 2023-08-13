@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using IntelOrca.Biohazard.Extensions;
 using IntelOrca.Biohazard.Room;
 using Xunit;
 using Xunit.Abstractions;
@@ -215,8 +216,8 @@ namespace IntelOrca.Biohazard.Tests
             }
             catch
             {
-                File.WriteAllBytes(@"M:\temp\rdt\expected.dat", expected.ToArray());
-                File.WriteAllBytes(@"M:\temp\rdt\actual.dat", actual.ToArray());
+                expected.WriteToFile(@"M:\temp\rdt\expected.dat");
+                actual.WriteToFile(@"M:\temp\rdt\actual.dat");
                 throw;
             }
         }

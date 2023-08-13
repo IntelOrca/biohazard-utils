@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using IntelOrca.Biohazard.Extensions;
 using IntelOrca.Biohazard.Model;
+using IntelOrca.Biohazard.Room;
 using IntelOrca.Biohazard.Script;
 using IntelOrca.Biohazard.Script.Opcodes;
 
@@ -10,7 +12,7 @@ namespace IntelOrca.Biohazard
 {
     public class Rdt
     {
-        private RdtFile _rdtFile;
+        private IRdt _rdtFile;
         private List<(EmrFlags, double)> _emrScales = new List<(EmrFlags, double)>();
 
         public BioVersion Version => _rdtFile.Version;
@@ -33,7 +35,7 @@ namespace IntelOrca.Biohazard
         public IEnumerable<SceItemGetOpcode> ItemGets => AllOpcodes.OfType<SceItemGetOpcode>();
         public IEnumerable<XaOnOpcode> Sounds => AllOpcodes.OfType<XaOnOpcode>();
 
-        public Rdt(RdtFile rdtFile, RdtId rdtId)
+        public Rdt(IRdt rdtFile, RdtId rdtId)
         {
             _rdtFile = rdtFile;
             RdtId = rdtId;
@@ -254,26 +256,9 @@ namespace IntelOrca.Biohazard
             return door;
         }
 
-        public int? ScaleEmrY(EmrFlags flags, double scale)
-        {
-            if (_emrScales.Any(x => x.Item1 == flags))
-                return null;
-
-            for (int i = 0; i < _rdtFile.EmrCount; i++)
-            {
-                var emrFlags = _rdtFile.GetEmrFlags(i);
-                if ((emrFlags & flags) != 0)
-                {
-                    _emrScales.Add((flags, scale));
-                    return i;
-                }
-            }
-            return null;
-        }
-
         public void Save()
         {
-            using (var ms = _rdtFile.GetStream())
+            using (var ms = new MemoryStream(_rdtFile.Data.ToArray()))
             {
                 var bw = new BinaryWriter(ms);
                 foreach (var opcode in Opcodes)
@@ -286,6 +271,10 @@ namespace IntelOrca.Biohazard
                     ms.Position = patch.Key;
                     bw.Write(patch.Value);
                 }
+                if (Version == BioVersion.Biohazard1)
+                    _rdtFile = new Rdt1(ms.ToArray());
+                else
+                    _rdtFile = new Rdt2(Version, ms.ToArray());
             }
 
             // HACK do not play around with EMRs for RE 2, 409 because it crashes the room
@@ -294,31 +283,36 @@ namespace IntelOrca.Biohazard
             PrependOpcodes();
 
             Directory.CreateDirectory(Path.GetDirectoryName(ModifiedPath!)!);
-            File.WriteAllBytes(ModifiedPath!, _rdtFile.Data);
+            File.WriteAllBytes(ModifiedPath!, _rdtFile.Data.ToArray());
         }
 
         private void UpdateEmrs()
         {
+            if (_emrScales.Count == 0)
+                return;
+
+            var rdtBuilder = ((Rdt2)_rdtFile).ToBuilder();
+            var rbjBuilder = rdtBuilder.RBJ.ToBuilder();
             foreach (var (flags, scale) in _emrScales)
             {
-                for (int i = 0; i < _rdtFile.EmrCount; i++)
+                for (int i = 0; i < rbjBuilder.Animations.Count; i++)
                 {
-                    var emrFlags = _rdtFile.GetEmrFlags(i);
+                    var animation = rbjBuilder.Animations[i];
+                    var emrFlags = animation.Flags;
                     if (emrFlags == flags)
                     {
-                        _rdtFile.ScaleEmrYs(i, scale);
-                        continue;
+                        rbjBuilder.Animations[i] = animation.WithEmr(animation.Emr.Scale(scale));
                     }
                     else if ((emrFlags & flags) != 0)
                     {
-                        var newIndex = _rdtFile.DuplicateEmr(i);
-                        _rdtFile.SetEmrFlags(i, flags);
-                        _rdtFile.SetEmrFlags(newIndex, emrFlags & ~flags);
-                        _rdtFile.ScaleEmrYs(i, scale);
-                        continue;
+                        rbjBuilder.Animations.Add(animation.WithFlags(emrFlags & ~flags));
+                        rbjBuilder.Animations[i] = animation
+                            .WithFlags(flags)
+                            .WithEmr(animation.Emr.Scale(scale));
                     }
                 }
             }
+            rdtBuilder.RBJ = rbjBuilder.ToRbj();
 
             // if (RdtId == new RdtId(5, 0x12) && _emrScales.Count != 0)
             // {
@@ -333,38 +327,17 @@ namespace IntelOrca.Biohazard
             if (AdditionalOpcodes.Count == 0)
                 return;
 
-            var initScd = _rdtFile.GetScd(BioScriptKind.Init);
-            var ms = new MemoryStream(initScd);
-            var br = new BinaryReader(ms);
-            var firstSub = br.ReadUInt16();
-            var numSubs = firstSub / 2;
-            var subPositions = new ushort[numSubs];
-            subPositions[0] = firstSub;
-            for (int i = 1; i < numSubs; i++)
-                subPositions[i] = br.ReadUInt16();
-
-            var newMs = new MemoryStream();
-
-            // Move to first sub and write new opcodes
-            newMs.Position = firstSub;
-            var bw = new BinaryWriter(newMs);
+            var rdtBuilder = ((Rdt2)_rdtFile).ToBuilder();
+            var scdBuilder = rdtBuilder.SCDINIT.ToBuilder();
+            var ms = new MemoryStream();
+            var bw = new BinaryWriter(ms);
             foreach (var opcode in AdditionalOpcodes)
             {
                 opcode.Write(bw);
             }
-            var increaseDelta = newMs.Position - firstSub;
-
-            bw.Write(initScd.Skip(firstSub).ToArray());
-
-            // Write sub offset table
-            newMs.Position = 0;
-            bw.Write(firstSub);
-            for (int i = 1; i < numSubs; i++)
-            {
-                bw.Write((ushort)(subPositions[i] + increaseDelta));
-            }
-
-            _rdtFile.SetScd(BioScriptKind.Init, newMs.ToArray());
+            bw.Write(scdBuilder.Procedures[0].Data);
+            scdBuilder.Procedures[0] = new ScdProcedure(scdBuilder.Version, ms.ToArray());
+            rdtBuilder.SCDINIT = scdBuilder.ToProcedureList();
         }
 
         public void Print()

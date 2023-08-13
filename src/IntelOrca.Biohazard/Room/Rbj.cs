@@ -18,14 +18,14 @@ namespace IntelOrca.Biohazard.Room
         }
 
         public int OffsetTableOffset => Data.GetSafeSpan<int>(0, 1)[0];
-        public int EmrCount => Data.GetSafeSpan<int>(4, 1)[0];
-        public ReadOnlySpan<int> Offsets => Data.GetSafeSpan<int>(OffsetTableOffset, EmrCount * 2);
+        public int Count => Data.GetSafeSpan<int>(4, 1)[0];
+        public ReadOnlySpan<int> Offsets => Data.GetSafeSpan<int>(OffsetTableOffset, Count * 2);
 
         public RbjAnimation this[int index]
         {
             get
             {
-                var emrCount = EmrCount;
+                var emrCount = Count;
                 if (index < 0 || index >= emrCount)
                     throw new ArgumentOutOfRangeException(nameof(index));
 
@@ -45,7 +45,7 @@ namespace IntelOrca.Biohazard.Room
         public Builder ToBuilder()
         {
             var builder = new Builder();
-            for (var i = 0; i < EmrCount; i++)
+            for (var i = 0; i < Count; i++)
             {
                 builder.Animations.Add(this[i]);
             }

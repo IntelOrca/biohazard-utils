@@ -338,7 +338,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 }
 
                 var output = _procData.ToArray();
-                _editOperations.Add(new ScdRdtEditOperation(_currScriptKind.Value, output));
+                _editOperations.Add(new ScdRdtEditOperation(_currScriptKind.Value, new Room.ScdProcedureList(_version!.Value, output)));
             }
         }
 

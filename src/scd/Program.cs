@@ -2,6 +2,8 @@
 using System.IO;
 using System.Linq;
 using IntelOrca.Biohazard;
+using IntelOrca.Biohazard.Extensions;
+using IntelOrca.Biohazard.Room;
 using IntelOrca.Biohazard.Script;
 using IntelOrca.Biohazard.Script.Compilation;
 
@@ -35,13 +37,22 @@ namespace IntelOrca.Scd
 
             if (args.Contains("-x"))
             {
-                var rdtFile = new RdtFile(rdtPath, bioVersion);
-                File.WriteAllBytes("init.scd", rdtFile.GetScd(BioScriptKind.Init));
-                if (bioVersion != BioVersion.Biohazard3)
-                    File.WriteAllBytes("main.scd", rdtFile.GetScd(BioScriptKind.Main));
-                for (int i = 0; i < rdtFile.EventScriptCount; i++)
+                var rdtFile = Biohazard.Room.Rdt.FromFile(bioVersion, rdtPath);
+                if (bioVersion == BioVersion.Biohazard1)
                 {
-                    File.WriteAllBytes($"event_{i:X2}.scd", rdtFile.GetScd(BioScriptKind.Event, i));
+                    var rdt1 = (Rdt1)rdtFile;
+                    var eventScd = rdt1.EventSCD;
+                    for (int i = 0; i < eventScd.Count; i++)
+                    {
+                        eventScd[i].WriteToFile($"event_{i:X2}.scd");
+                    }
+                }
+                else
+                {
+                    var rdt2 = (Rdt2)rdtFile;
+                    rdt2.SCDINIT.Data.WriteToFile("init.scd");
+                    if (bioVersion != BioVersion.Biohazard3)
+                        rdt2.SCDMAIN.Data.WriteToFile("main.scd");
                 }
                 return 0;
             }
@@ -49,7 +60,7 @@ namespace IntelOrca.Scd
             {
                 if (rdtPath.EndsWith(".rdt", StringComparison.OrdinalIgnoreCase))
                 {
-                    var rdtFile = new RdtFile(rdtPath, bioVersion);
+                    var rdtFile = Biohazard.Room.Rdt.FromFile(bioVersion, rdtPath);
                     foreach (var listing in new[] { false, true })
                     {
                         if (listing && !args.Contains("--list"))
@@ -63,7 +74,7 @@ namespace IntelOrca.Scd
                 else if (rdtPath.EndsWith(".scd", StringComparison.OrdinalIgnoreCase))
                 {
                     var kind = args.Contains("--main") ? BioScriptKind.Main : BioScriptKind.Init;
-                    var scd = File.ReadAllBytes(rdtPath);
+                    var scd = new ScdProcedureList(bioVersion, File.ReadAllBytes(rdtPath));
                     var s = Diassemble(bioVersion, kind, scd);
                     var sPath = Path.ChangeExtension(rdtPath, ".s");
                     File.WriteAllText(sPath, s);
@@ -77,8 +88,8 @@ namespace IntelOrca.Scd
             {
                 if (rdtPath.EndsWith(".rdt", StringComparison.OrdinalIgnoreCase))
                 {
-                    var rdtFile = new RdtFile(rdtPath, bioVersion);
-                    var script = rdtFile.DecompileScd();
+                    var rdtFile = Biohazard.Room.Rdt.FromFile(bioVersion, rdtPath);
+                    var script = IntelOrca.Biohazard.Extensions.RdtExtensions.DisassembleScd(rdtFile);
                     File.WriteAllText(Path.ChangeExtension(Path.GetFileName(rdtPath), ".bio"), script);
                     return 0;
                 }
@@ -103,12 +114,12 @@ namespace IntelOrca.Scd
                             if (scdEdit.Kind == BioScriptKind.Init)
                             {
                                 var scdPath = Path.ChangeExtension(rdtPath, "init.scd");
-                                File.WriteAllBytes(scdPath, scdEdit.Data);
+                                File.WriteAllBytes(scdPath, scdEdit.Data.Data.ToArray());
                             }
                             if (scdEdit.Kind == BioScriptKind.Main)
                             {
                                 var scdPath = Path.ChangeExtension(rdtPath, "main.scd");
-                                File.WriteAllBytes(scdPath, scdEdit.Data);
+                                File.WriteAllBytes(scdPath, scdEdit.Data.Data.ToArray());
                             }
                         }
                     }
@@ -122,7 +133,7 @@ namespace IntelOrca.Scd
                 }
                 else
                 {
-                    var rdtFile = new RdtFile(rdtPath);
+                    var rdtFile = Biohazard.Room.Rdt.FromFile(bioVersion, rdtPath).ToBuilder();
                     if (paths.Length >= 2)
                     {
                         var inPath = Path.GetFullPath(paths[1]);
@@ -156,31 +167,32 @@ namespace IntelOrca.Scd
                         var mainScdPath = GetOption(args, "--main");
                         if (initScdPath != null)
                         {
-                            var data = File.ReadAllBytes(initScdPath);
-                            rdtFile.SetScd(BioScriptKind.Init, data);
+                            var initScd = new ScdProcedureList(bioVersion, File.ReadAllBytes(initScdPath));
+                            new ScdRdtEditOperation(BioScriptKind.Init, initScd).Perform(rdtFile);
                         }
                         if (mainScdPath != null)
                         {
-                            var data = File.ReadAllBytes(mainScdPath);
-                            rdtFile.SetScd(BioScriptKind.Main, data);
+                            var mainScd = new ScdProcedureList(bioVersion, File.ReadAllBytes(mainScdPath));
+                            new ScdRdtEditOperation(BioScriptKind.Main, mainScd).Perform(rdtFile);
                         }
                     }
 
+                    var outRdt = rdtFile.ToRdt();
                     var outPath = GetOption(args, "-o");
                     if (outPath != null)
                     {
-                        rdtFile.Save(outPath);
+                        outRdt.Data.WriteToFile(outPath);
                     }
                     else
                     {
-                        rdtFile.Save(rdtPath + ".patched");
+                        outRdt.Data.WriteToFile(rdtPath + ".patched");
                     }
                 }
                 return 0;
             }
         }
 
-        private static string Diassemble(BioVersion version, BioScriptKind kind, byte[] scd, bool listing = false)
+        private static string Diassemble(BioVersion version, BioScriptKind kind, ScdProcedureList scd, bool listing = false)
         {
             var scdReader = new ScdReader();
             return scdReader.Diassemble(scd, version, kind, listing);

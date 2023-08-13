@@ -42,6 +42,8 @@ namespace IntelOrca.Biohazard.Room
             }
         }
 
+        public ReadOnlyMemory<byte> this[int index] => GetProcedure(index);
+
         public ReadOnlyMemory<byte> GetProcedure(int index)
         {
             var count = Count;

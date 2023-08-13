@@ -82,7 +82,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 return names;
             }
 
-            private byte[] GenerateScd(params string[] startProcs)
+            private ScdProcedureList GenerateScd(params string[] startProcs)
             {
                 // Make sure order is correct and create empty procedures for missing required ones
                 var procedures = _procedures.ToList();
@@ -142,7 +142,8 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     ms.Position = backupPosition;
                     bw.Write(procedures[i].ToArray());
                 }
-                return ms.ToArray();
+                var bytes = ms.ToArray();
+                return new ScdProcedureList(_version!.Value, bytes);
             }
 
             private void VisitChildren(SyntaxNode node)
@@ -227,8 +228,8 @@ namespace IntelOrca.Biohazard.Script.Compilation
 
             private void VisitMessageTextNode(MessageTextSyntaxNode messageTextNode)
             {
-                _operations.Add(new TextRdtEditOperation(0, messageTextNode.Id, new BioString(messageTextNode.Text)));
-                _operations.Add(new TextRdtEditOperation(1, messageTextNode.Id, new BioString(messageTextNode.Text)));
+                _operations.Add(new TextRdtEditOperation(MsgLanguage.Japanese, messageTextNode.Id, new Msg(_version!.Value, MsgLanguage.Japanese, messageTextNode.Text)));
+                _operations.Add(new TextRdtEditOperation(MsgLanguage.English, messageTextNode.Id, new Msg(_version!.Value, MsgLanguage.English, messageTextNode.Text)));
             }
 
             private void VisitAnimationNode(AnimationSyntaxNode animationNode)

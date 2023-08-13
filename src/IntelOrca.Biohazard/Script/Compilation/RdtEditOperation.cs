@@ -1,48 +1,83 @@
-﻿using System.Linq;
+﻿using System;
+using IntelOrca.Biohazard.Extensions;
 using IntelOrca.Biohazard.Room;
 
 namespace IntelOrca.Biohazard.Script.Compilation
 {
     public interface IRdtEditOperation
     {
-        void Perform(RdtFile target);
+        void Perform(IRdtBuilder target);
     }
 
     public class ScdRdtEditOperation : IRdtEditOperation
     {
         public BioScriptKind Kind { get; }
-        public byte[] Data { get; }
+        public ScdProcedureList Data { get; }
 
-        public ScdRdtEditOperation(BioScriptKind kind, byte[] data)
+        public ScdRdtEditOperation(BioScriptKind kind, ScdProcedureList data)
         {
             Kind = kind;
             Data = data;
         }
 
-        public void Perform(RdtFile target)
+        public void Perform(IRdtBuilder target)
         {
-            target.SetScd(Kind, Data);
+            if (target is Rdt2.Builder builder2)
+            {
+                if (Kind == BioScriptKind.Init)
+                {
+                    builder2.SCDINIT = Data;
+                }
+                else if (Kind == BioScriptKind.Main)
+                {
+                    builder2.SCDMAIN = Data;
+                }
+                else
+                {
+                    throw new NotSupportedException();
+                }
+            }
+            else
+            {
+                throw new NotSupportedException();
+            }
         }
     }
 
     public class TextRdtEditOperation : IRdtEditOperation
     {
-        public int Language { get; }
+        public MsgLanguage Language { get; }
         public int Index { get; }
-        public BioString Value { get; }
+        public Msg Value { get; }
 
-        public TextRdtEditOperation(int language, int index, BioString value)
+        public TextRdtEditOperation(MsgLanguage language, int index, Msg value)
         {
             Language = language;
             Index = index;
             Value = value;
         }
 
-        public void Perform(RdtFile target)
+        public void Perform(IRdtBuilder target)
         {
-            var texts = target.GetTexts(Language).ToList();
-            texts.SetElement(Index, Value);
-            target.SetTexts(Language, texts.ToArray());
+            if (target is Rdt2.Builder builder2)
+            {
+                if (Language == MsgLanguage.Japanese)
+                {
+                    builder2.MSGJA = builder2.MSGJA.WithMessage(Index, Value);
+                }
+                else if (Language == MsgLanguage.English)
+                {
+                    builder2.MSGEN = builder2.MSGEN.WithMessage(Index, Value);
+                }
+                else
+                {
+                    throw new NotSupportedException();
+                }
+            }
+            else
+            {
+                throw new NotSupportedException();
+            }
         }
     }
 
@@ -51,17 +86,22 @@ namespace IntelOrca.Biohazard.Script.Compilation
         public int Index { get; }
         public RbjAnimation Animation { get; }
 
-        public AnimationRdtEditOperation(int index, RbjAnimation animation)
+        public AnimationRdtEditOperation(int index, in RbjAnimation animation)
         {
             Index = index;
             Animation = animation;
         }
 
-        public void Perform(RdtFile target)
+        public void Perform(IRdtBuilder target)
         {
-            var animations = target.Animations.ToList();
-            animations.SetElement(Index, Animation);
-            target.Animations = animations.ToArray();
+            if (target is Rdt2.Builder builder2)
+            {
+                builder2.RBJ = builder2.RBJ.WithAnimation(Index, Animation);
+            }
+            else
+            {
+                throw new NotSupportedException();
+            }
         }
     }
 }

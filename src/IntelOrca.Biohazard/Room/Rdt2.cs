@@ -61,16 +61,17 @@ namespace IntelOrca.Biohazard.Room
 
         private readonly RdtFileData _data;
 
-        public BioVersion Version => BioVersion.Biohazard2;
+        public BioVersion Version { get; }
         public ReadOnlyMemory<byte> Data => _data.Data;
 
-        public Rdt2(string path)
-            : this(File.ReadAllBytes(path))
+        public Rdt2(BioVersion version, string path)
+            : this(version, File.ReadAllBytes(path))
         {
         }
 
-        public Rdt2(ReadOnlyMemory<byte> data)
+        public Rdt2(BioVersion version, ReadOnlyMemory<byte> data)
         {
+            Version = version;
             _data = new RdtFileData(data);
             _data.RegisterOffset(RdtFileChunkKinds.Header, 0, true);
             _data.RegisterOffset(RdtFileChunkKinds.OffsetTable, 8, true);
@@ -82,6 +83,10 @@ namespace IntelOrca.Biohazard.Room
                 if (offset != 0 && i != 5 && i != 19)
                 {
                     if (i == 10 && Header.nOmodel == 0)
+                        continue;
+
+                    // No RBJ in RDT3
+                    if (i == 22 && Version == BioVersion.Biohazard3)
                         continue;
 
                     _data.RegisterOffset(_offsetTableKinds[i], offset);
@@ -201,7 +206,7 @@ namespace IntelOrca.Biohazard.Room
         IRdtBuilder IRdt.ToBuilder() => ToBuilder();
         public Builder ToBuilder()
         {
-            var builder = new Builder();
+            var builder = new Builder(Version);
 
             var embeddedObjectMd1Offsets = new OffsetTracker();
             var embeddedObjectTimOffsets = new OffsetTracker();

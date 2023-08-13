@@ -9,6 +9,7 @@ namespace IntelOrca.Biohazard.Room
     {
         public class Builder : IRdtBuilder
         {
+            public BioVersion Version { get; }
             public Rdt2Header Header { get; set; }
             public byte[] RID { get; set; } = new byte[0];
             public byte[] RVD { get; set; } = new byte[0];
@@ -36,13 +37,18 @@ namespace IntelOrca.Biohazard.Room
 
             IRdt IRdtBuilder.ToRdt() => ToRdt();
 
+            public Builder(BioVersion version)
+            {
+                Version = version;
+            }
+
             public Rdt2 ToRdt()
             {
                 // Validate
                 if (EmbeddedObjectModelTable.Count != Header.nOmodel)
                     throw new InvalidOperationException("Number of embedded objects does not equal header.");
 
-                var offsetTable = new int[23];
+                var offsetTable = new int[Version == BioVersion.Biohazard3 ? 22 : 23];
 
                 var ms = new MemoryStream();
                 var bw = new BinaryWriter(ms);
@@ -91,8 +97,11 @@ namespace IntelOrca.Biohazard.Room
                 offsetTable[16] = (int)ms.Position;
                 bw.Write(SCDINIT.Data);
 
-                offsetTable[17] = (int)ms.Position;
-                bw.Write(SCDMAIN.Data);
+                if (Version != BioVersion.Biohazard3)
+                {
+                    offsetTable[17] = (int)ms.Position;
+                    bw.Write(SCDMAIN.Data);
+                }
 
                 if (!MSGJA.Data.IsEmpty)
                 {
@@ -126,13 +135,16 @@ namespace IntelOrca.Biohazard.Room
                     offsetTable[19] = (int)ms.Position - 4;
                 }
 
-                if (!RBJ.Data.IsEmpty)
+                if (Version != BioVersion.Biohazard3 && !RBJ.Data.IsEmpty)
                 {
                     offsetTable[22] = (int)ms.Position;
                     bw.Write(RBJ.Data);
                 }
 
-                offsetTable[5] = (int)ms.Position;
+                if (Version == BioVersion.Biohazard2)
+                {
+                    offsetTable[5] = (int)ms.Position;
+                }
 
                 if (EDT.Length != 0)
                 {
@@ -140,16 +152,31 @@ namespace IntelOrca.Biohazard.Room
                     bw.Write(EDT);
                 }
 
-                if (VH.Length != 0)
+                if (Version == BioVersion.Biohazard2)
                 {
-                    offsetTable[1] = (int)ms.Position;
-                    bw.Write(VH);
+                    if (VH.Length != 0)
+                    {
+                        offsetTable[1] = (int)ms.Position;
+                        bw.Write(VH);
+                    }
+                    if (VB.Length != 0)
+                    {
+                        offsetTable[2] = (int)ms.Position;
+                        bw.Write(VB);
+                    }
                 }
-
-                if (VB.Length != 0)
+                else
                 {
-                    offsetTable[2] = (int)ms.Position;
-                    bw.Write(VB);
+                    if (VB.Length != 0)
+                    {
+                        offsetTable[2] = (int)ms.Position;
+                        bw.Write(VB);
+                    }
+                    if (VH.Length != 0)
+                    {
+                        offsetTable[1] = (int)ms.Position;
+                        bw.Write(VH);
+                    }
                 }
 
                 if (!ESPTIM.Data.IsEmpty)
@@ -189,9 +216,7 @@ namespace IntelOrca.Biohazard.Room
                 }
 
                 var bytes = ms.ToArray();
-                // File.WriteAllBytes(@"M:\temp\rdt\rebuilt.rdt", bytes);
-
-                return new Rdt2(bytes);
+                return new Rdt2(Version, bytes);
             }
         }
     }

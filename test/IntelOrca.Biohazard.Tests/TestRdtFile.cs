@@ -44,9 +44,7 @@ namespace IntelOrca.Biohazard.Tests
         [Fact]
         public void RE2_200()
         {
-            var installPath = TestInfo.GetInstallPath(1);
-            var rdtPath = Path.Combine(installPath, "data", "pl0", "rdt", "ROOM2000.RDT");
-            var rdt = new Rdt2(rdtPath);
+            var rdt = (Rdt2)GetRdt(BioVersion.Biohazard2, "ROOM2000.RDT");
 
             Assert.Equal(840, rdt.RVD.Length);                  // animation/anim.rbj
             Assert.Equal(112, rdt.BLK.Length);                  // block.blk
@@ -177,6 +175,12 @@ namespace IntelOrca.Biohazard.Tests
             Assert.Equal(6902255125174090017UL, hash);
         }
 
+        [Fact]
+        public void RE3_100()
+        {
+            AssertRebuild(BioVersion.Biohazard3, "R100.RDT");
+        }
+
         private void AssertRebuildAll(BioVersion version)
         {
             var fail = false;
@@ -249,9 +253,20 @@ namespace IntelOrca.Biohazard.Tests
                     var installPath = TestInfo.GetInstallPath(1);
                     var player = int.Parse(fileName.Substring(7, 1));
                     var rdtPath = Path.Combine(installPath, "data", $"pl{player}", "rdt", fileName);
-                    return new Rdt2(rdtPath);
+                    return new Rdt2(BioVersion.Biohazard2, rdtPath);
                 }
                 case BioVersion.Biohazard3:
+                {
+                    var installPath = TestInfo.GetInstallPath(2);
+                    var rofsFiles = Directory.GetFiles(installPath, "rofs*.dat");
+                    var repo = new FileRepository(installPath);
+                    foreach (var file in rofsFiles)
+                        repo.AddRE3Archive(file);
+
+                    var rdtPath = Path.Combine(installPath, "data_j", "rdt", fileName);
+                    var rdtBytes = repo.GetBytes(rdtPath);
+                    return new Rdt2(BioVersion.Biohazard3, rdtBytes);
+                }
                 default:
                     throw new NotImplementedException();
             }

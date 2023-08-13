@@ -126,7 +126,7 @@ namespace IntelOrca.Biohazard.Script
                     var remainingSize = functionEnd - instructionPosition;
                     if (isEnd)
                     {
-                        // visitor.VisitTrailingData(BaseOffset + instructionPosition, br.ReadBytes(remainingSize));
+                        visitor.VisitTrailingData(BaseOffset + instructionPosition, br.ReadBytes(remainingSize));
                         break;
                     }
 

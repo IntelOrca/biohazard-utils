@@ -118,16 +118,20 @@ namespace IntelOrca.Biohazard.Script
 
         private string GetProcedureName(int index)
         {
-            var prefix = _kind switch
+            var kind = _kind;
+            if (Version == BioVersion.Biohazard3)
+                kind = BioScriptKind.Main;
+
+            var prefix = kind switch
             {
                 BioScriptKind.Init => "init",
                 BioScriptKind.Main => "main",
                 BioScriptKind.Event => "event",
                 _ => "unknown"
             };
-            if (index == 0 && _kind != BioScriptKind.Event)
+            if (index == 0 && kind != BioScriptKind.Event)
                 return prefix;
-            if (_kind == BioScriptKind.Main && index == 1)
+            if (kind == BioScriptKind.Main && index == 1)
                 return "aot";
             return $"{prefix}_{index:X2}";
         }

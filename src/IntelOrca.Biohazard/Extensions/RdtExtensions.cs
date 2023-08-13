@@ -84,14 +84,14 @@ namespace IntelOrca.Biohazard.Extensions
                 {
                     var scd = rdt2.SCDINIT;
                     var scdReader = new ScdReader();
-                    scdReader.BaseOffset = rdt2.Offsets[6];
+                    scdReader.BaseOffset = rdt2.Offsets[16];
                     scdReader.ReadScript(scd.Data, rdt.Version, kind, visitor);
                 }
                 else if (kind == BioScriptKind.Main)
                 {
                     var scd = rdt2.SCDMAIN;
                     var scdReader = new ScdReader();
-                    scdReader.BaseOffset = rdt2.Offsets[7];
+                    scdReader.BaseOffset = rdt2.Offsets[17];
                     scdReader.ReadScript(scd.Data, rdt.Version, kind, visitor);
                 }
                 else

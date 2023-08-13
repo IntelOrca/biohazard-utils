@@ -177,6 +177,21 @@ namespace IntelOrca.Biohazard.Tests
         }
 
         [Fact]
+        public void RE2_101_SCD()
+        {
+            var rdt = (Rdt2)GetRdt(BioVersion.Biohazard2, "ROOM1010.RDT");
+            var rdtBuilder = rdt.ToBuilder();
+
+            rdtBuilder.SCDINIT = rdtBuilder.SCDINIT.ToBuilder().ToProcedureList();
+            rdtBuilder.SCDMAIN = rdtBuilder.SCDMAIN.ToBuilder().ToProcedureList();
+            var rebuiltRdt = rdtBuilder.ToRdt();
+
+            AssertMemory(rdt.SCDINIT.Data, rdtBuilder.SCDINIT.Data);
+            AssertMemory(rdt.SCDMAIN.Data, rdtBuilder.SCDMAIN.Data);
+            AssertMemory(rdt.Data, rebuiltRdt.Data);
+        }
+
+        [Fact]
         public void RE3_100()
         {
             AssertRebuild(BioVersion.Biohazard3, "R100.RDT");

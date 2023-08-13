@@ -37,7 +37,7 @@ namespace IntelOrca.Biohazard.Room
             public List<Tmd> EmbeddedItemTmd { get; set; } = new List<Tmd>();
             public List<Tim> EmbeddedItemTim { get; set; } = new List<Tim>();
             public EmbeddedItemIcons EmbeddedItemIcons { get; set; }
-            public List<Esp> Esps { get; set; } = new List<Esp>();
+            public List<Eff> Esps { get; set; } = new List<Eff>();
             public List<Tim> EspTextures { get; set; } = new List<Tim>();
 
             public Rdt1 ToRdt()

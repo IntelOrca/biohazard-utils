@@ -3,17 +3,30 @@ using System.Runtime.InteropServices;
 
 namespace IntelOrca.Biohazard.Room
 {
-    public readonly struct EmbeddedModelTable
+    public readonly struct EmbeddedModelTable1
     {
         public ReadOnlyMemory<byte> Data { get; }
 
-        public EmbeddedModelTable(ReadOnlyMemory<byte> data)
+        public EmbeddedModelTable1(ReadOnlyMemory<byte> data)
         {
             Data = data;
         }
 
         public int Count => Data.Length / 8;
         public ReadOnlySpan<ModelTextureOffset> Offsets => MemoryMarshal.Cast<byte, ModelTextureOffset>(Data.Span);
+    }
+
+    public readonly struct EmbeddedModelTable2
+    {
+        public ReadOnlyMemory<byte> Data { get; }
+
+        public EmbeddedModelTable2(ReadOnlyMemory<byte> data)
+        {
+            Data = data;
+        }
+
+        public int Count => Data.Length / 8;
+        public ReadOnlySpan<TextureModelOffset> Offsets => MemoryMarshal.Cast<byte, TextureModelOffset>(Data.Span);
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -29,6 +42,22 @@ namespace IntelOrca.Biohazard.Room
         {
             _model = model;
             _texture = texture;
+        }
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public readonly struct TextureModelOffset
+    {
+        private readonly int _texture;
+        private readonly int _model;
+
+        public int Texture => _texture;
+        public int Model => _model;
+
+        public TextureModelOffset(int texture, int model)
+        {
+            _texture = texture;
+            _model = model;
         }
     }
 

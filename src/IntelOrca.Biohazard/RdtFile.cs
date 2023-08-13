@@ -70,7 +70,7 @@ namespace IntelOrca.Biohazard
 
         private int MeasureTexts(int language)
         {
-            var chunkKind = language == 0 ? RdtFileChunkKinds.MessagesJpn : RdtFileChunkKinds.MessagesEng;
+            var chunkKind = language == 0 ? RdtFileChunkKinds.RDT2MSGJA : RdtFileChunkKinds.RDT2MSGEN;
             var chunk = _data.FindChunkByKind(chunkKind);
             if (chunk == null)
                 return 0;
@@ -96,7 +96,7 @@ namespace IntelOrca.Biohazard
 
         public BioString[] GetTexts(int language)
         {
-            var chunkKind = language == 0 ? RdtFileChunkKinds.MessagesJpn : RdtFileChunkKinds.MessagesEng;
+            var chunkKind = language == 0 ? RdtFileChunkKinds.RDT2MSGJA : RdtFileChunkKinds.RDT2MSGEN;
             var chunk = _data.FindChunkByKind(chunkKind);
             if (chunk == null)
             {
@@ -152,15 +152,15 @@ namespace IntelOrca.Biohazard
                 bw.Write((byte)0);
             }
 
-            var chunkKind = language == 0 ? RdtFileChunkKinds.MessagesJpn : RdtFileChunkKinds.MessagesEng;
+            var chunkKind = language == 0 ? RdtFileChunkKinds.RDT2MSGJA : RdtFileChunkKinds.RDT2MSGEN;
             var chunk = _data.FindChunkByKind(chunkKind);
             if (chunk == null)
             {
                 var beforeChunk = _data.Chunks
-                    .FirstOrDefault(x => x.Kind == RdtFileChunkKinds.EmbeddedObjectMd1);
+                    .FirstOrDefault(x => x.Kind == RdtFileChunkKinds.RDT2MD1OBJECT);
                 if (beforeChunk.Parent == null)
                 {
-                    beforeChunk = _data.FindChunkByKind(RdtFileChunkKinds.ScdInit)!.Value;
+                    beforeChunk = _data.FindChunkByKind(RdtFileChunkKinds.RDT2SCDINIT)!.Value;
                 }
                 _data.InsertData(chunkKind, beforeChunk.Offset, ms.ToArray());
             }
@@ -196,8 +196,8 @@ namespace IntelOrca.Biohazard
         {
             var chunkKind = kind switch
             {
-                BioScriptKind.Init => RdtFileChunkKinds.ScdInit,
-                BioScriptKind.Main => RdtFileChunkKinds.ScdMain,
+                BioScriptKind.Init => RdtFileChunkKinds.RDT2SCDINIT,
+                BioScriptKind.Main => RdtFileChunkKinds.RDT2SCDMAIN,
                 BioScriptKind.Event => RdtFileChunkKinds.ScdEvent,
                 _ => throw new ArgumentException("Invalid kind", nameof(kind))
             };
@@ -254,7 +254,7 @@ namespace IntelOrca.Biohazard
             }
             else
             {
-                var chunk = _data.FindChunkByKind(RdtFileChunkKinds.EmbeddedObjectTable);
+                var chunk = _data.FindChunkByKind(RdtFileChunkKinds.RDT2EmbeddedObjectTable);
                 if (chunk != null)
                 {
                     var count = _data.Data.Span[2];
@@ -266,13 +266,13 @@ namespace IntelOrca.Biohazard
                         var tim = br.ReadInt32();
                         if (tim != 0 && timOffsets.Add(tim))
                         {
-                            _data.RegisterOffset(RdtFileChunkKinds.EmbeddedObjectTim, tim);
+                            _data.RegisterOffset(RdtFileChunkKinds.MD2TIMOBJECT, tim);
                         }
 
                         var md1 = br.ReadInt32();
                         if (md1 != 0 && md1Offsets.Add(md1))
                         {
-                            _data.RegisterOffset(RdtFileChunkKinds.EmbeddedObjectMd1, md1);
+                            _data.RegisterOffset(RdtFileChunkKinds.RDT2MD1OBJECT, md1);
                         }
                     }
                 }
@@ -284,7 +284,7 @@ namespace IntelOrca.Biohazard
             if (Version != BioVersion.Biohazard1)
             {
                 // We need to do AST analysis on SCD to find where the end is
-                var initChunk = _data.FindChunkByKind(RdtFileChunkKinds.ScdInit);
+                var initChunk = _data.FindChunkByKind(RdtFileChunkKinds.RDT2SCDINIT);
                 if (initChunk != null)
                 {
                     _data.RegisterLength(initChunk.Value.Offset, MeasureScript(BioScriptKind.Init));
@@ -292,19 +292,19 @@ namespace IntelOrca.Biohazard
             }
             if (Version == BioVersion.Biohazard2)
             {
-                var mainChunk = _data.FindChunkByKind(RdtFileChunkKinds.ScdMain);
+                var mainChunk = _data.FindChunkByKind(RdtFileChunkKinds.RDT2SCDMAIN);
                 if (mainChunk != null)
                 {
                     _data.RegisterLength(mainChunk.Value.Offset, MeasureScript(BioScriptKind.Main));
                 }
 
-                var jpnChunk = _data.FindChunkByKind(RdtFileChunkKinds.MessagesJpn);
+                var jpnChunk = _data.FindChunkByKind(RdtFileChunkKinds.RDT2MSGJA);
                 if (jpnChunk != null)
                 {
                     _data.RegisterLength(jpnChunk.Value.Offset, MeasureTexts(0));
                 }
 
-                var engChunk = _data.FindChunkByKind(RdtFileChunkKinds.MessagesEng);
+                var engChunk = _data.FindChunkByKind(RdtFileChunkKinds.RDT2MSGEN);
                 if (engChunk != null)
                 {
                     _data.RegisterLength(engChunk.Value.Offset, MeasureTexts(1));
@@ -325,15 +325,15 @@ namespace IntelOrca.Biohazard
             else
             {
                 var timChunks = _data.Chunks
-                    .Where(x => x.Kind == RdtFileChunkKinds.EmbeddedObjectTim)
+                    .Where(x => x.Kind == RdtFileChunkKinds.MD2TIMOBJECT)
                     .Select(x => x.Offset)
                     .ToArray();
                 var md1Chunks = _data.Chunks
-                    .Where(x => x.Kind == RdtFileChunkKinds.EmbeddedObjectMd1)
+                    .Where(x => x.Kind == RdtFileChunkKinds.RDT2MD1OBJECT)
                     .Select(x => x.Offset)
                     .ToArray();
 
-                var chunk = _data.FindChunkByKind(RdtFileChunkKinds.EmbeddedObjectTable);
+                var chunk = _data.FindChunkByKind(RdtFileChunkKinds.RDT2EmbeddedObjectTable);
                 if (chunk != null)
                 {
                     var ms = new MemoryStream(chunk.Value.Span.ToArray());
@@ -351,8 +351,8 @@ namespace IntelOrca.Biohazard
                     var indicesMd1 = offsetsMd1.OrderBy(x => x).Where(x => x != 0).Distinct().ToArray();
                     var orderTim = offsetsTim.Select(x => x == 0 ? -1 : Array.IndexOf(indicesTim, x)).ToArray();
                     var orderMd1 = offsetsMd1.Select(x => x == 0 ? -1 : Array.IndexOf(indicesMd1, x)).ToArray();
-                    var newIndicesTim = _data.Chunks.Where(x => x.Kind == RdtFileChunkKinds.EmbeddedObjectTim).Select(x => x.Offset).ToArray();
-                    var newIndicesMd1 = _data.Chunks.Where(x => x.Kind == RdtFileChunkKinds.EmbeddedObjectMd1).Select(x => x.Offset).ToArray();
+                    var newIndicesTim = _data.Chunks.Where(x => x.Kind == RdtFileChunkKinds.MD2TIMOBJECT).Select(x => x.Offset).ToArray();
+                    var newIndicesMd1 = _data.Chunks.Where(x => x.Kind == RdtFileChunkKinds.RDT2MD1OBJECT).Select(x => x.Offset).ToArray();
                     var newOffsetsTim = orderTim.Select(x => x == -1 ? 0 : newIndicesTim[x]).ToArray();
                     var newOffsetsMd1 = orderMd1.Select(x => x == -1 ? 0 : newIndicesMd1[x]).ToArray();
 
@@ -530,7 +530,7 @@ namespace IntelOrca.Biohazard
             {
                 var result = new List<RdtModel>();
                 var numEmbeddedModels = NumEmbeddedModels;
-                var table = _data.FindChunkByKind(RdtFileChunkKinds.EmbeddedObjectTable);
+                var table = _data.FindChunkByKind(RdtFileChunkKinds.RDT2EmbeddedObjectTable);
                 if (table != null)
                 {
                     var br = new BinaryReader(table.Value.Stream);
@@ -539,10 +539,10 @@ namespace IntelOrca.Biohazard
                         var timAddress = br.ReadInt32();
                         var md1Address = br.ReadInt32();
                         var timChunk = _data.Chunks
-                            .Where(x => x.Kind == RdtFileChunkKinds.EmbeddedObjectTim)
+                            .Where(x => x.Kind == RdtFileChunkKinds.MD2TIMOBJECT)
                             .FirstOrDefault(x => x.Offset == timAddress);
                         var md1Chunk = _data.Chunks
-                            .Where(x => x.Kind == RdtFileChunkKinds.EmbeddedObjectMd1)
+                            .Where(x => x.Kind == RdtFileChunkKinds.RDT2MD1OBJECT)
                             .FirstOrDefault(x => x.Offset == md1Address);
                         var tim = new TimFile(timChunk.Stream);
                         var md1 = new Md1(md1Chunk.Memory);
@@ -553,15 +553,15 @@ namespace IntelOrca.Biohazard
             }
             set
             {
-                var firstMd1 = _data.Chunks.FirstOrDefault(x => x.Kind == RdtFileChunkKinds.EmbeddedObjectMd1).Offset;
-                var firstTim = _data.Chunks.FirstOrDefault(x => x.Kind == RdtFileChunkKinds.EmbeddedObjectTim).Offset;
-                while (_data.Chunks.Any(x => x.Kind == RdtFileChunkKinds.EmbeddedObjectMd1))
+                var firstMd1 = _data.Chunks.FirstOrDefault(x => x.Kind == RdtFileChunkKinds.RDT2MD1OBJECT).Offset;
+                var firstTim = _data.Chunks.FirstOrDefault(x => x.Kind == RdtFileChunkKinds.MD2TIMOBJECT).Offset;
+                while (_data.Chunks.Any(x => x.Kind == RdtFileChunkKinds.RDT2MD1OBJECT))
                 {
-                    _data.Remove(_data.Chunks.FirstOrDefault(x => x.Kind == RdtFileChunkKinds.EmbeddedObjectMd1));
+                    _data.Remove(_data.Chunks.FirstOrDefault(x => x.Kind == RdtFileChunkKinds.RDT2MD1OBJECT));
                 }
-                while (_data.Chunks.Any(x => x.Kind == RdtFileChunkKinds.EmbeddedObjectTim))
+                while (_data.Chunks.Any(x => x.Kind == RdtFileChunkKinds.MD2TIMOBJECT))
                 {
-                    _data.Remove(_data.Chunks.FirstOrDefault(x => x.Kind == RdtFileChunkKinds.EmbeddedObjectTim));
+                    _data.Remove(_data.Chunks.FirstOrDefault(x => x.Kind == RdtFileChunkKinds.MD2TIMOBJECT));
                 }
 
                 var newMd1Files = value.Select(x => x.Mesh.Data.ToArray()).ToArray();
@@ -577,15 +577,15 @@ namespace IntelOrca.Biohazard
 
                 foreach (var md1 in newMd1Files.Reverse())
                 {
-                    _data.InsertData(RdtFileChunkKinds.EmbeddedObjectMd1, firstMd1, md1);
+                    _data.InsertData(RdtFileChunkKinds.RDT2MD1OBJECT, firstMd1, md1);
                 }
                 foreach (var tim in newTimFiles.Reverse())
                 {
-                    _data.InsertData(RdtFileChunkKinds.EmbeddedObjectTim, firstTim, tim);
+                    _data.InsertData(RdtFileChunkKinds.MD2TIMOBJECT, firstTim, tim);
                 }
 
                 NumEmbeddedModels = value.Length;
-                var table = _data.FindChunkByKind(RdtFileChunkKinds.EmbeddedObjectTable);
+                var table = _data.FindChunkByKind(RdtFileChunkKinds.RDT2EmbeddedObjectTable);
                 if (table != null)
                 {
                     var bw = new BinaryWriter(new MemoryStream());
@@ -593,8 +593,8 @@ namespace IntelOrca.Biohazard
                     {
                         var timIndex = timIndices[i];
                         var md1Index = md1Indices[i];
-                        var timOffset = _data.Chunks.Where(x => x.Kind == RdtFileChunkKinds.EmbeddedObjectTim).Skip(timIndex).First().Offset;
-                        var md1Offset = _data.Chunks.Where(x => x.Kind == RdtFileChunkKinds.EmbeddedObjectMd1).Skip(md1Index).First().Offset;
+                        var timOffset = _data.Chunks.Where(x => x.Kind == RdtFileChunkKinds.MD2TIMOBJECT).Skip(timIndex).First().Offset;
+                        var md1Offset = _data.Chunks.Where(x => x.Kind == RdtFileChunkKinds.RDT2MD1OBJECT).Skip(md1Index).First().Offset;
                         bw.Write(timOffset);
                         bw.Write(md1Offset);
                     }
@@ -606,7 +606,7 @@ namespace IntelOrca.Biohazard
         {
             get
             {
-                var rbj = _data.FindChunkByKind(RdtFileChunkKinds.RoomAnimations);
+                var rbj = _data.FindChunkByKind(RdtFileChunkKinds.RDT2RBJ);
                 if (rbj == null)
                     return new RdtAnimation[0];
 
@@ -640,7 +640,7 @@ namespace IntelOrca.Biohazard
             }
             set
             {
-                var rbj = _data.FindChunkByKind(RdtFileChunkKinds.RoomAnimations);
+                var rbj = _data.FindChunkByKind(RdtFileChunkKinds.RDT2RBJ);
                 if (rbj == null)
                     throw new NotImplementedException();
 
@@ -684,61 +684,61 @@ namespace IntelOrca.Biohazard
 
         private static readonly int[] _re1HeaderOffsetKinds = new[]
         {
-            RdtFileChunkKinds.SoundAttributeTable,
+            RdtFileChunkKinds.RDT2EDT,
         };
 
         private static readonly int[] _re2HeaderOffsetKinds = new[]
         {
-            RdtFileChunkKinds.SoundAttributeTable,
-            RdtFileChunkKinds.EmbeddedVH,
-            RdtFileChunkKinds.EmbeddedVB,
+            RdtFileChunkKinds.RDT2EDT,
+            RdtFileChunkKinds.RDT2VH,
+            RdtFileChunkKinds.RDT2VB,
             RdtFileChunkKinds.EmbeddedTrialVH,
             RdtFileChunkKinds.EmbeddedTrialVB,
-            RdtFileChunkKinds.Ota,
-            RdtFileChunkKinds.Collisions,
-            RdtFileChunkKinds.CameraPositions,
-            RdtFileChunkKinds.CameraSwitches,
-            RdtFileChunkKinds.Lights,
-            RdtFileChunkKinds.EmbeddedObjectTable,
-            RdtFileChunkKinds.FloorAreas,
-            RdtFileChunkKinds.BlockUnknown,
-            RdtFileChunkKinds.MessagesJpn,
-            RdtFileChunkKinds.MessagesEng,
-            RdtFileChunkKinds.ScrollingTim,
-            RdtFileChunkKinds.ScdInit,
-            RdtFileChunkKinds.ScdMain,
-            RdtFileChunkKinds.Effects,
-            RdtFileChunkKinds.EffectTable,
-            RdtFileChunkKinds.EffectSprites,
+            RdtFileChunkKinds.RDT2OVA,
+            RdtFileChunkKinds.RDT2SCA,
+            RdtFileChunkKinds.RDT2RID,
+            RdtFileChunkKinds.RDT2RVD,
+            RdtFileChunkKinds.RDT2LIT,
+            RdtFileChunkKinds.RDT2EmbeddedObjectTable,
+            RdtFileChunkKinds.RDT2FLR,
+            RdtFileChunkKinds.RDT2BLK,
+            RdtFileChunkKinds.RDT2MSGJA,
+            RdtFileChunkKinds.RDT2MSGEN,
+            RdtFileChunkKinds.RDT2TIMSCROLL,
+            RdtFileChunkKinds.RDT2SCDINIT,
+            RdtFileChunkKinds.RDT2SCDMAIN,
+            RdtFileChunkKinds.RDT2ESPID,
+            RdtFileChunkKinds.RDT2EspEffTable,
+            RdtFileChunkKinds.RDT2TIMESP,
             RdtFileChunkKinds.ObjectTextures,
-            RdtFileChunkKinds.RoomAnimations,
+            RdtFileChunkKinds.RDT2RBJ,
         };
 
         private static readonly int[] _re3HeaderOffsetKinds = new[]
         {
-            RdtFileChunkKinds.SoundAttributeTable,
-            RdtFileChunkKinds.EmbeddedVH,
-            RdtFileChunkKinds.EmbeddedVB,
+            RdtFileChunkKinds.RDT2EDT,
+            RdtFileChunkKinds.RDT2VH,
+            RdtFileChunkKinds.RDT2VB,
             RdtFileChunkKinds.EmbeddedTrialVH,
             RdtFileChunkKinds.EmbeddedTrialVB,
-            RdtFileChunkKinds.Ota,
-            RdtFileChunkKinds.Collisions,
-            RdtFileChunkKinds.CameraPositions,
-            RdtFileChunkKinds.CameraSwitches,
-            RdtFileChunkKinds.Lights,
-            RdtFileChunkKinds.EmbeddedObjectTable,
-            RdtFileChunkKinds.FloorAreas,
-            RdtFileChunkKinds.BlockUnknown,
-            RdtFileChunkKinds.MessagesJpn,
-            RdtFileChunkKinds.MessagesEng,
-            RdtFileChunkKinds.ScrollingTim,
-            RdtFileChunkKinds.ScdInit,
-            RdtFileChunkKinds.ScdMain,
-            RdtFileChunkKinds.Effects,
-            RdtFileChunkKinds.EffectTable,
-            RdtFileChunkKinds.EffectSprites,
+            RdtFileChunkKinds.RDT2OVA,
+            RdtFileChunkKinds.RDT2SCA,
+            RdtFileChunkKinds.RDT2RID,
+            RdtFileChunkKinds.RDT2RVD,
+            RdtFileChunkKinds.RDT2LIT,
+            RdtFileChunkKinds.RDT2EmbeddedObjectTable,
+            RdtFileChunkKinds.RDT2FLR,
+            RdtFileChunkKinds.RDT2BLK,
+            RdtFileChunkKinds.RDT2MSGJA,
+            RdtFileChunkKinds.RDT2MSGEN,
+            RdtFileChunkKinds.RDT2TIMSCROLL,
+            RdtFileChunkKinds.RDT2SCDINIT,
+            RdtFileChunkKinds.RDT2SCDMAIN,
+            RdtFileChunkKinds.RDT2ESPID,
+            RdtFileChunkKinds.RDT2EspEffTable,
+            RdtFileChunkKinds.RDT2TIMESP,
             RdtFileChunkKinds.ObjectTextures,
-            RdtFileChunkKinds.RoomAnimations,
+            RdtFileChunkKinds.RDT2RBJ,
         };
 
         private readonly struct EventScript

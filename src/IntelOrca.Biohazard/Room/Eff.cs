@@ -2,11 +2,11 @@
 
 namespace IntelOrca.Biohazard.Room
 {
-    public readonly struct Esp
+    public readonly struct Eff
     {
         public ReadOnlyMemory<byte> Data { get; }
 
-        public Esp(ReadOnlyMemory<byte> data)
+        public Eff(ReadOnlyMemory<byte> data)
         {
             Data = data;
         }

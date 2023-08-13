@@ -101,6 +101,41 @@ namespace IntelOrca.Biohazard.Tests
         }
 
         [Fact]
+        public void RE2_200()
+        {
+            var installPath = TestInfo.GetInstallPath(1);
+            var rdtPath = Path.Combine(installPath, "data", "pl0", "rdt", "ROOM2000.RDT");
+            var rdt = new Rdt2(rdtPath);
+
+            Assert.Equal(840, rdt.RVD.Length);                  // animation/anim.rbj
+            Assert.Equal(112, rdt.BLK.Length);                  // block.blk
+            Assert.Equal(512, rdt.RID.Length);                  // camera.rid
+            Assert.Equal(832, rdt.SCA.Length);                  // collision.sca
+            Assert.Equal(50, rdt.FLR.Length);                   // floor.flr
+            Assert.Equal(640, rdt.LIT.Length);                  // light.lit
+            Assert.Equal(153600, rdt.TIMSCROLL.Data.Length);    // scroll.tim
+            Assert.Equal(6340, rdt.PRI.Length);                 // sprite.pri
+            Assert.Equal(10744, rdt.RBJ.Data.Length);           // zone.rvd
+
+            Assert.Equal(8, rdt.ESPID.Length);
+            // Assert.Equal(8, rdt.ESPEFF.Length);
+            Assert.Equal(4256, rdt.ESPTIM.Data.Length);
+        }
+
+        [Fact]
+        public void RE2_200_Rebuild()
+        {
+            var installPath = TestInfo.GetInstallPath(1);
+            var rdtPath = Path.Combine(installPath, "data", "pl0", "rdt", "ROOM2000.RDT");
+            var rdt = new Rdt2(rdtPath);
+
+            var builder = rdt.ToBuilder();
+            var rebuiltRdt = builder.ToRdt();
+
+            Assert.Equal(rebuiltRdt.Data.ToArray(), rdt.Data.ToArray());
+        }
+
+        [Fact]
         public void RebuildTextChunk_102()
         {
             var installPath = TestInfo.GetInstallPath(1);

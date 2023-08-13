@@ -148,8 +148,8 @@ namespace IntelOrca.Biohazard.Room
         public ReadOnlySpan<byte> LIT => GetChunk(RdtFileChunkKinds.RDT1LIT).Span;
         public ReadOnlySpan<int> Offsets => GetSpan<int>(0x48, 19);
         public ReadOnlySpan<byte> RID => GetChunk(RdtFileChunkKinds.RDT1RID).Span;
-        public EmbeddedModelTable EmbeddedObjectModelTable => new EmbeddedModelTable(GetChunk(RdtFileChunkKinds.RDT1EmbeddedModelTable));
-        public EmbeddedModelTable EmbeddedItemModelTable => new EmbeddedModelTable(GetChunk(RdtFileChunkKinds.RDT1EmbeddedItemTable));
+        public EmbeddedModelTable1 EmbeddedObjectModelTable => new EmbeddedModelTable1(GetChunk(RdtFileChunkKinds.RDT1EmbeddedModelTable));
+        public EmbeddedModelTable1 EmbeddedItemModelTable => new EmbeddedModelTable1(GetChunk(RdtFileChunkKinds.RDT1EmbeddedItemTable));
         public ReadOnlySpan<byte> RVD => GetChunk(RdtFileChunkKinds.RDT1RVD).Span.TruncateBy(4);
         public ReadOnlySpan<byte> PRI
         {
@@ -196,6 +196,7 @@ namespace IntelOrca.Biohazard.Room
                 return GetSpan<Rdt1Camera>(0x94, numCameras);
             }
         }
+
         public ReadOnlySpan<Rdt1CameraSwitch> CameraSwitches
         {
             get
@@ -272,7 +273,7 @@ namespace IntelOrca.Biohazard.Room
             foreach (var chunk in _data.Chunks)
             {
                 if (chunk.Kind == RdtFileChunkKinds.RDT1EmbeddedEspEff)
-                    builder.Esps.Add(new Esp(chunk.Memory));
+                    builder.Esps.Add(new Eff(chunk.Memory));
                 else if (chunk.Kind == RdtFileChunkKinds.RDT1EmbeddedEspTim)
                     builder.EspTextures.Add(new Tim(chunk.Memory));
             }
@@ -310,12 +311,6 @@ namespace IntelOrca.Biohazard.Room
         {
             var chunk = _data.FindChunkByOffset(offset);
             return new Tim(chunk!.Value.Memory);
-        }
-
-        private ScdProcedure ReadSCD(int offset)
-        {
-            var len = GetSpan<ushort>(offset, 1)[0];
-            return new ScdProcedure(Version, Data.Slice(offset + 2, len));
         }
 
         private ReadOnlySpan<T> GetSpan<T>(int offset, int count) where T : struct => Data.GetSafeSpan<T>(offset, count);

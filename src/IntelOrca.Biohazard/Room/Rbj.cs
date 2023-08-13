@@ -21,7 +21,7 @@ namespace IntelOrca.Biohazard.Room
         public int EmrCount => Data.GetSafeSpan<int>(4, 1)[0];
         public ReadOnlySpan<int> Offsets => Data.GetSafeSpan<int>(OffsetTableOffset, EmrCount * 2);
 
-        public RdtAnimation this[int index]
+        public RbjAnimation this[int index]
         {
             get
             {
@@ -38,7 +38,7 @@ namespace IntelOrca.Biohazard.Room
                 var flags = (EmrFlags)Data.GetSafeSpan<uint>(flagsOffset, 1)[0];
                 var emr = Data.Slice(emrOffset, eddOffset - emrOffset);
                 var edd = Data.Slice(eddOffset, endOffset - eddOffset);
-                return new RdtAnimation(flags, new Edd(edd), new Emr(Version, emr));
+                return new RbjAnimation(flags, new Edd(edd), new Emr(Version, emr));
             }
         }
 
@@ -54,7 +54,7 @@ namespace IntelOrca.Biohazard.Room
 
         public class Builder
         {
-            public List<RdtAnimation> Animations { get; } = new List<RdtAnimation>();
+            public List<RbjAnimation> Animations { get; } = new List<RbjAnimation>();
 
             public Rbj ToRbj()
             {

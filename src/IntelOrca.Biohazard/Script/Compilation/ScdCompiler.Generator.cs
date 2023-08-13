@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using IntelOrca.Biohazard.Model;
+using IntelOrca.Biohazard.Room;
 
 namespace IntelOrca.Biohazard.Script.Compilation
 {
@@ -239,7 +240,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     var edd = new Edd(File.ReadAllBytes(eddPath));
                     var emr = new Emr(BioVersion.Biohazard2, File.ReadAllBytes(emrPath));
                     _operations.Add(new AnimationRdtEditOperation(
-                        animationNode.Id, new RdtAnimation(animationNode.Flags, edd, emr)));
+                        animationNode.Id, new RbjAnimation(animationNode.Flags, edd, emr)));
                 }
                 catch (Exception)
                 {

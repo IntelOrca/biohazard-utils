@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using IntelOrca.Biohazard.Room;
 
 namespace IntelOrca.Biohazard.Script.Compilation
 {
@@ -48,9 +49,9 @@ namespace IntelOrca.Biohazard.Script.Compilation
     public class AnimationRdtEditOperation : IRdtEditOperation
     {
         public int Index { get; }
-        public RdtAnimation Animation { get; }
+        public RbjAnimation Animation { get; }
 
-        public AnimationRdtEditOperation(int index, RdtAnimation animation)
+        public AnimationRdtEditOperation(int index, RbjAnimation animation)
         {
             Index = index;
             Animation = animation;

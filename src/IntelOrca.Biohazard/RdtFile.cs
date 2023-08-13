@@ -602,13 +602,13 @@ namespace IntelOrca.Biohazard
             }
         }
 
-        public RdtAnimation[] Animations
+        public RbjAnimation[] Animations
         {
             get
             {
                 var rbj = _data.FindChunkByKind(RdtFileChunkKinds.RDT2RBJ);
                 if (rbj == null)
-                    return new RdtAnimation[0];
+                    return new RbjAnimation[0];
 
                 var memory = rbj.Value.Memory;
                 var ms = rbj.Value.Stream;
@@ -625,7 +625,7 @@ namespace IntelOrca.Biohazard
                 }
                 offsets.Add(chunkLen);
 
-                var result = new List<RdtAnimation>();
+                var result = new List<RbjAnimation>();
                 for (int i = 0; i < emrCount; i++)
                 {
                     var flagsEmrRange = memory.Slice(offsets[i * 2 + 0], offsets[i * 2 + 1] - offsets[i * 2 + 0]);
@@ -634,7 +634,7 @@ namespace IntelOrca.Biohazard
                     var flags = MemoryMarshal.Cast<byte, EmrFlags>(flagsEmrRange.Span)[0];
                     var emr = new Emr(Version, emrRange);
                     var edd = new Edd(eddRange);
-                    result.Add(new RdtAnimation(flags, edd, emr));
+                    result.Add(new RbjAnimation(flags, edd, emr));
                 }
                 return result.ToArray();
             }

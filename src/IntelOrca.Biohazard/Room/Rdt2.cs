@@ -79,18 +79,18 @@ namespace IntelOrca.Biohazard.Room
             for (var i = 0; i < offsets.Length; i++)
             {
                 var offset = offsets[i];
-                if (offset != 0 && i != 5)
+                if (offset != 0 && i != 5 && i != 19)
                 {
+                    if (i == 10 && Header.nOmodel == 0)
+                        continue;
+
                     _data.RegisterOffset(_offsetTableKinds[i], offset);
                 }
             }
 
             // Things we know the length of
             if (Header.nOmodel != 0)
-            {
                 _data.RegisterLength(offsets[10], Header.nOmodel * 8);
-            }
-            _data.RegisterLength(offsets[18], 8);
 
             // Embedded stuff
             foreach (var camera in Cameras)
@@ -153,8 +153,7 @@ namespace IntelOrca.Biohazard.Room
         public Tim TIMSCROLL => new Tim(GetChunk(RdtFileChunkKinds.RDT2TIMSCROLL));
         public ScdProcedureList SCDINIT => new ScdProcedureList(Version, GetChunk(RdtFileChunkKinds.RDT2SCDINIT));
         public ScdProcedureList SCDMAIN => new ScdProcedureList(Version, GetChunk(RdtFileChunkKinds.RDT2SCDMAIN));
-        public ReadOnlySpan<byte> ESPID => GetChunk(RdtFileChunkKinds.RDT2ESPID).Span;
-        public ReadOnlySpan<int> EspEffTable => MemoryMarshal.Cast<byte, int>(GetChunk(RdtFileChunkKinds.RDT2EspEffTable).Span);
+        public EspTable EspTable => new EspTable(GetChunk(RdtFileChunkKinds.RDT2ESPID));
         public Tim ESPTIM => new Tim(GetChunk(RdtFileChunkKinds.RDT2TIMESP));
         public ReadOnlySpan<int> TIMOBJ => MemoryMarshal.Cast<byte, int>(GetChunk(RdtFileChunkKinds.ObjectTextures).Span);
         public Rbj RBJ => new Rbj(Version, GetChunk(RdtFileChunkKinds.RDT2RBJ));
@@ -179,17 +178,6 @@ namespace IntelOrca.Biohazard.Room
             }
         }
 
-        public EspTable EspTable
-        {
-            get
-            {
-                var idOffset = Offsets[18];
-                var tableOffset = Offsets[19];
-                var end = tableOffset + (EspCount * 4);
-                return new EspTable(Data.Slice(idOffset, end - idOffset));
-            }
-        }
-
         public ReadOnlySpan<Rdt2Camera> Cameras
         {
             get
@@ -206,23 +194,6 @@ namespace IntelOrca.Biohazard.Room
                 var offset = Offsets[10];
                 var count = Header.nOmodel;
                 return GetSpan<Rdt2EmbeddedModel>(offset, count);
-            }
-        }
-
-        public int EspCount
-        {
-            get
-            {
-                var count = 0;
-                var span = ESPID;
-                for (var i = 0; i < span.Length; i++)
-                {
-                    if (span[i] != 0xFF)
-                    {
-                        count++;
-                    }
-                }
-                return count;
             }
         }
 

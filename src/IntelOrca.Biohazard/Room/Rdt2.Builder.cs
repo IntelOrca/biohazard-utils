@@ -89,14 +89,23 @@ namespace IntelOrca.Biohazard.Room
                 offsetTable[17] = (int)ms.Position;
                 bw.Write(SCDMAIN.Data);
 
-                offsetTable[13] = (int)ms.Position;
-                bw.Write(MSGJA.Data);
+                if (!MSGJA.Data.IsEmpty)
+                {
+                    offsetTable[13] = (int)ms.Position;
+                    bw.Write(MSGJA.Data);
+                }
 
-                offsetTable[14] = (int)ms.Position;
-                bw.Write(MSGEN.Data);
+                if (!MSGEN.Data.IsEmpty)
+                {
+                    offsetTable[14] = (int)ms.Position;
+                    bw.Write(MSGEN.Data);
+                }
 
-                offsetTable[15] = (int)ms.Position;
-                bw.Write(TIMSCROLL.Data);
+                if (!TIMSCROLL.Data.IsEmpty)
+                {
+                    offsetTable[15] = (int)ms.Position;
+                    bw.Write(TIMSCROLL.Data);
+                }
 
                 var objectMd1Table = new int[EmbeddedObjectMd1.Count];
                 for (var i = 0; i < EmbeddedObjectMd1.Count; i++)
@@ -107,10 +116,13 @@ namespace IntelOrca.Biohazard.Room
 
                 offsetTable[18] = (int)ms.Position;
                 bw.Write(EspTable.Data);
-                offsetTable[19] = (int)ms.Position - (EspTable.Count * 4);
+                offsetTable[19] = (int)ms.Position - 4;
 
-                offsetTable[22] = (int)ms.Position;
-                bw.Write(RBJ.Data);
+                if (!RBJ.Data.IsEmpty)
+                {
+                    offsetTable[22] = (int)ms.Position;
+                    bw.Write(RBJ.Data);
+                }
 
                 offsetTable[5] = (int)ms.Position;
 

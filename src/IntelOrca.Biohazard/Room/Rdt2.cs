@@ -147,6 +147,7 @@ namespace IntelOrca.Biohazard.Room
         public ReadOnlySpan<byte> LIT => GetChunk(RdtFileChunkKinds.RDT2LIT).Span;
         public EmbeddedModelTable2 EmbeddedObjectModelTable => new EmbeddedModelTable2(GetChunk(RdtFileChunkKinds.RDT2EmbeddedObjectTable));
         public ReadOnlySpan<byte> FLR => GetChunk(RdtFileChunkKinds.RDT2FLR).Span.TruncateBy(2);
+        public ushort FLRTerminator => MemoryMarshal.Cast<byte, ushort>(GetChunk(RdtFileChunkKinds.RDT2FLR).Span.TruncateStartBy(-2))[0];
         public ReadOnlySpan<byte> BLK => GetChunk(RdtFileChunkKinds.RDT2BLK).Span;
         public MsgList MSGJA => new MsgList(Version, MsgLanguage.Japanese, GetChunk(RdtFileChunkKinds.RDT2MSGJA));
         public MsgList MSGEN => new MsgList(Version, MsgLanguage.English, GetChunk(RdtFileChunkKinds.RDT2MSGEN));
@@ -222,6 +223,7 @@ namespace IntelOrca.Biohazard.Room
             builder.SCA = SCA.ToArray();
             builder.BLK = BLK.ToArray();
             builder.FLR = FLR.ToArray();
+            builder.FLRTerminator = FLRTerminator;
             builder.SCDINIT = SCDINIT;
             builder.SCDMAIN = SCDMAIN;
             builder.MSGJA = MSGJA;

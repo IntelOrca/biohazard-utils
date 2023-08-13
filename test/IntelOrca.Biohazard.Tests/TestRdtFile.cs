@@ -123,35 +123,24 @@ namespace IntelOrca.Biohazard.Tests
         }
 
         [Fact]
-        public void RE2_200_Rebuild()
-        {
-            var installPath = TestInfo.GetInstallPath(1);
-            var rdtPath = Path.Combine(installPath, "data", "pl0", "rdt", "ROOM2000.RDT");
-            var rdt = new Rdt2(rdtPath);
-
-            var builder = rdt.ToBuilder();
-            var rebuiltRdt = builder.ToRdt();
-
-            // File.WriteAllBytes(@"M:\temp\rdt\original.rdt", rdt.Data.ToArray());
-            // File.WriteAllBytes(@"M:\temp\rdt\rebuilt.rdt", rebuiltRdt.Data.ToArray());
-
-            Assert.Equal(rebuiltRdt.Data.ToArray(), rdt.Data.ToArray());
-        }
-
-        [Fact]
         public void RE2_100_Rebuild()
         {
             var installPath = TestInfo.GetInstallPath(1);
             var rdtPath = Path.Combine(installPath, "data", "pl0", "rdt", "ROOM1000.RDT");
             var rdt = new Rdt2(rdtPath);
-
-            File.WriteAllBytes(@"M:\temp\rdt\original.rdt", rdt.Data.ToArray());
-
             var builder = rdt.ToBuilder();
             var rebuiltRdt = builder.ToRdt();
+            Assert.Equal(rebuiltRdt.Data.ToArray(), rdt.Data.ToArray());
+        }
 
-            // File.WriteAllBytes(@"M:\temp\rdt\rebuilt.rdt", rebuiltRdt.Data.ToArray());
-
+        [Fact]
+        public void RE2_200_Rebuild()
+        {
+            var installPath = TestInfo.GetInstallPath(1);
+            var rdtPath = Path.Combine(installPath, "data", "pl0", "rdt", "ROOM2000.RDT");
+            var rdt = new Rdt2(rdtPath);
+            var builder = rdt.ToBuilder();
+            var rebuiltRdt = builder.ToRdt();
             Assert.Equal(rebuiltRdt.Data.ToArray(), rdt.Data.ToArray());
         }
 

@@ -7,7 +7,7 @@ namespace IntelOrca.Biohazard.Room
 {
     public sealed partial class Rdt2
     {
-        public class Builder
+        public class Builder : IRdtBuilder
         {
             public Rdt2Header Header { get; set; }
             public byte[] RID { get; set; } = new byte[0];
@@ -34,6 +34,7 @@ namespace IntelOrca.Biohazard.Room
             public List<Md1> EmbeddedObjectMd1 { get; set; } = new List<Md1>();
             public List<Tim> EmbeddedObjectTim { get; set; } = new List<Tim>();
 
+            IRdt IRdtBuilder.ToRdt() => ToRdt();
 
             public Rdt2 ToRdt()
             {

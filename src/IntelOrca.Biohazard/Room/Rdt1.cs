@@ -6,7 +6,7 @@ using IntelOrca.Biohazard.Model;
 
 namespace IntelOrca.Biohazard.Room
 {
-    public unsafe partial class Rdt1
+    public unsafe partial class Rdt1 : IRdt
     {
         // 0x00: header.dat
         // 0x06: light.lit
@@ -234,6 +234,7 @@ namespace IntelOrca.Biohazard.Room
             }
         }
 
+        IRdtBuilder IRdt.ToBuilder() => ToBuilder();
         public Builder ToBuilder()
         {
             var builder = new Builder();

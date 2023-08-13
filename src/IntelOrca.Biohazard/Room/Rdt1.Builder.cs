@@ -7,7 +7,7 @@ namespace IntelOrca.Biohazard.Room
 {
     public unsafe partial class Rdt1
     {
-        public class Builder
+        public class Builder : IRdtBuilder
         {
             public Rdt1Header Header { get; set; }
             public byte[] LIT { get; set; } = new byte[0];
@@ -40,6 +40,7 @@ namespace IntelOrca.Biohazard.Room
             public List<Eff> Esps { get; set; } = new List<Eff>();
             public List<Tim> EspTextures { get; set; } = new List<Tim>();
 
+            IRdt IRdtBuilder.ToRdt() => ToRdt();
             public Rdt1 ToRdt()
             {
                 // Validate

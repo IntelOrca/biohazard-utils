@@ -4,6 +4,7 @@ namespace IntelOrca.Biohazard
 {
     public sealed class RdtAnimation
     {
+        public BioVersion Version => Emr.Version;
         public EmrFlags Flags { get; }
         public Edd Edd { get; }
         public Emr Emr { get; }

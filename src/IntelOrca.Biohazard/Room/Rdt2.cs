@@ -61,7 +61,7 @@ namespace IntelOrca.Biohazard.Room
 
         private readonly RdtFileData _data;
 
-        public BioVersion Version => BioVersion.Biohazard1;
+        public BioVersion Version => BioVersion.Biohazard2;
         public ReadOnlyMemory<byte> Data => _data.Data;
 
         public Rdt2(string path)

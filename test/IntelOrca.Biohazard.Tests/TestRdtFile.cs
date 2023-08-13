@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using IntelOrca.Biohazard.Room;
-using IntelOrca.Biohazard.Script;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -74,98 +73,108 @@ namespace IntelOrca.Biohazard.Tests
         public void RE2_All_Rebuild() => AssertRebuildAll(BioVersion.Biohazard2);
 
         [Fact]
-        public void RebuildTextChunk_102()
+        public void RE2_102_MSG()
         {
-            var installPath = TestInfo.GetInstallPath(1);
-            var rdtPath = Path.Combine(installPath, "data", "pl0", "rdt", "ROOM1020.RDT");
-            var rdtFile = new RdtFile(rdtPath, BioVersion.Biohazard2);
+            var rdt = (Rdt2)GetRdt(BioVersion.Biohazard2, "ROOM1020.RDT");
 
-            var jpn = new BioString[] { new BioString("This is a test.") };
-            var eng = new BioString[] { new BioString("This is a test.") };
-            rdtFile.SetTexts(0, jpn);
-            rdtFile.SetTexts(1, eng);
+            Assert.Equal(MsgLanguage.Japanese, rdt.MSGJA.Language);
+            Assert.Equal(BioVersion.Biohazard2, rdt.MSGJA.Version);
 
-            var actual = rdtFile.Data.CalculateFnv1a();
-            Assert.Equal(1416122343111777090UL, actual);
+            Assert.Equal(MsgLanguage.English, rdt.MSGEN.Language);
+            Assert.Equal(BioVersion.Biohazard2, rdt.MSGEN.Version);
+
+            var jaBuilder = new MsgList.Builder();
+            jaBuilder.Messages.Add(new Msg(BioVersion.Biohazard2, MsgLanguage.Japanese, "This is a test."));
+
+            var enBuilder = new MsgList.Builder();
+            enBuilder.Messages.Add(new Msg(BioVersion.Biohazard2, MsgLanguage.English, "This is a test."));
+
+            var rdtBuilder = rdt.ToBuilder();
+            rdtBuilder.MSGJA = jaBuilder.ToMsgList();
+            rdtBuilder.MSGEN = enBuilder.ToMsgList();
+            var rebuiltRdt = rdtBuilder.ToRdt();
+
+            var actual = rebuiltRdt.Data.CalculateFnv1a();
+            Assert.Equal(14281979433154599006UL, actual);
         }
 
         [Fact]
-        public void RebuildTextChunk_200()
+        public void RE2_201_MSG()
         {
-            var installPath = TestInfo.GetInstallPath(1);
-            var rdtPath = Path.Combine(installPath, "data", "pl1", "rdt", "ROOM20B1.RDT");
-            var rdtFile = new RdtFile(rdtPath, BioVersion.Biohazard2);
-            var expected = rdtFile.Data.CalculateFnv1a();
+            var rdt = (Rdt2)GetRdt(BioVersion.Biohazard2, "ROOM2010.RDT");
 
-            var jpn = rdtFile.GetTexts(0);
-            var eng = rdtFile.GetTexts(1);
-            rdtFile.SetTexts(0, jpn);
-            rdtFile.SetTexts(1, eng);
+            Assert.Equal(MsgLanguage.Japanese, rdt.MSGJA.Language);
+            Assert.Equal(BioVersion.Biohazard2, rdt.MSGJA.Version);
 
-            var actual = rdtFile.Data.CalculateFnv1a();
-            Assert.Equal(expected, actual);
+            Assert.Equal(MsgLanguage.English, rdt.MSGEN.Language);
+            Assert.Equal(BioVersion.Biohazard2, rdt.MSGEN.Version);
+
+            Assert.Equal(8, rdt.MSGJA.Count);
+            Assert.Equal(8, rdt.MSGEN.Count);
+
+            var rdtBuilder = rdt.ToBuilder();
+            rdtBuilder.MSGJA = rdt.MSGJA.ToBuilder().ToMsgList();
+            rdtBuilder.MSGEN = rdt.MSGEN.ToBuilder().ToMsgList();
+            var rebuilt = rdtBuilder.ToRdt();
+
+            AssertMemory(rdt.Data, rebuilt.Data);
         }
 
         [Fact]
-        public void RebuildAnimations_112()
+        public void RE2_20B_MSG()
         {
-            var installPath = TestInfo.GetInstallPath(1);
-            var rdtPath = Path.Combine(installPath, "data", "pl1", "rdt", "ROOM1121.RDT");
-            var rdtFile = new RdtFile(rdtPath, BioVersion.Biohazard2);
-            var expected = rdtFile.Data.CalculateFnv1a();
+            var rdt = (Rdt2)GetRdt(BioVersion.Biohazard2, "ROOM20B1.RDT");
 
-            rdtFile.Animations = rdtFile.Animations;
+            Assert.Equal(MsgLanguage.Japanese, rdt.MSGJA.Language);
+            Assert.Equal(BioVersion.Biohazard2, rdt.MSGJA.Version);
 
-            var actual = rdtFile.Data.CalculateFnv1a();
-            Assert.Equal(expected, actual);
+            Assert.Equal(MsgLanguage.English, rdt.MSGEN.Language);
+            Assert.Equal(BioVersion.Biohazard2, rdt.MSGEN.Version);
+
+            Assert.Equal(19, rdt.MSGJA.Count);
+            Assert.Equal(19, rdt.MSGEN.Count);
+
+            Assert.Equal("A {police station map}.\nWill you take it?@00", rdt.MSGEN[0].ToString());
+            Assert.Equal("\nThe door won't open!\n", rdt.MSGEN[18].ToString());
+
+            var rdtBuilder = rdt.ToBuilder();
+            rdtBuilder.MSGJA = rdt.MSGJA.ToBuilder().ToMsgList();
+            rdtBuilder.MSGEN = rdt.MSGEN.ToBuilder().ToMsgList();
+
+            AssertMemory(rdt.MSGEN.Data, rdtBuilder.MSGEN.Data);
+            AssertMemory(rdt.MSGJA.Data, rdtBuilder.MSGJA.Data);
+
+            var rebuilt = rdtBuilder.ToRdt();
+            AssertMemory(rdt.Data, rebuilt.Data);
         }
 
         [Fact]
-        public void RebuildScd_117()
+        public void RE2_112_RBJ()
         {
-            var installPath = TestInfo.GetInstallPath(1);
-            var rdtPath = Path.Combine(installPath, "data", "pl1", "rdt", "ROOM1121.RDT");
-            var rdtFile = new RdtFile(rdtPath, BioVersion.Biohazard2);
-            var expectedData = rdtFile.Data;
+            var rdt = (Rdt2)GetRdt(BioVersion.Biohazard2, "ROOM1121.RDT");
+            var rdtBuilder = rdt.ToBuilder();
 
-            var init = rdtFile.GetScd(BioScriptKind.Init);
-            var main = rdtFile.GetScd(BioScriptKind.Main);
-            rdtFile.SetScd(BioScriptKind.Init, init);
-            rdtFile.SetScd(BioScriptKind.Main, main);
+            var rbj = rdt.RBJ;
+            var rbjBuilder = rbj.ToBuilder();
+            rdtBuilder.RBJ = rbjBuilder.ToRbj();
+            var rebuiltRdt = rdtBuilder.ToRdt();
 
-            var actualData = rdtFile.Data;
-            Assert.Equal(expectedData, actualData);
+            AssertMemory(rdt.RBJ.Data, rdtBuilder.RBJ.Data);
+            AssertMemory(rdt.Data, rebuiltRdt.Data);
         }
 
         [Fact]
-        public void ChangeScd_117()
+        public void RE2_112_SCD()
         {
-            var installPath = TestInfo.GetInstallPath(1);
-            var rdtPath = Path.Combine(installPath, "data", "pl1", "rdt", "ROOM1121.RDT");
-            var rdtFile = new RdtFile(rdtPath, BioVersion.Biohazard2);
+            var rdt = (Rdt2)GetRdt(BioVersion.Biohazard2, "ROOM1121.RDT");
+            var builder = rdt.ToBuilder();
 
-            var init = new byte[] { 0x02, 0x00, 0x01, 0x00 };
-            var main = new byte[] { 0x04, 0x00, 0x06, 0x00, 0x01, 0x00, 0x01, 0x00 };
-            rdtFile.SetScd(BioScriptKind.Init, init);
-            rdtFile.SetScd(BioScriptKind.Main, main);
+            builder.SCDINIT = new ScdProcedureList(BioVersion.Biohazard2, new byte[] { 0x02, 0x00, 0x01, 0x00 });
+            builder.SCDMAIN = new ScdProcedureList(BioVersion.Biohazard2, new byte[] { 0x04, 0x00, 0x06, 0x00, 0x01, 0x00, 0x01, 0x00 });
+            var rebuilt = builder.ToRdt();
 
-            var hash = rdtFile.Data.CalculateFnv1a();
-            Assert.Equal(14551199640999392555UL, hash);
-        }
-
-        [Fact]
-        public void ChangeScd_102()
-        {
-            var installPath = TestInfo.GetInstallPath(1);
-            var rdtPath = Path.Combine(installPath, "data", "pl1", "rdt", "ROOM1021.RDT");
-            var rdtFile = new RdtFile(rdtPath, BioVersion.Biohazard2);
-            var expectedData = rdtFile.Data;
-
-            var models = rdtFile.Models;
-            rdtFile.Models = models;
-
-            var actualData = rdtFile.Data;
-            Assert.Equal(expectedData, actualData);
+            var hash = rebuilt.Data.CalculateFnv1a();
+            Assert.Equal(6902255125174090017UL, hash);
         }
 
         private void AssertRebuildAll(BioVersion version)
@@ -192,6 +201,20 @@ namespace IntelOrca.Biohazard.Tests
             var rdt = GetRdt(version, fileName);
             var rebuiltRdt = rdt.ToBuilder().ToRdt();
             AssertMemory(rdt.Data, rebuiltRdt.Data);
+        }
+
+        private static void AssertAndCompareMemory(ReadOnlyMemory<byte> expected, ReadOnlyMemory<byte> actual)
+        {
+            try
+            {
+                AssertMemory(expected, actual);
+            }
+            catch
+            {
+                File.WriteAllBytes(@"M:\temp\rdt\expected.dat", expected.ToArray());
+                File.WriteAllBytes(@"M:\temp\rdt\actual.dat", actual.ToArray());
+                throw;
+            }
         }
 
         private static void AssertMemory(ReadOnlyMemory<byte> expected, ReadOnlyMemory<byte> actual)

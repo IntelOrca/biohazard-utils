@@ -34,7 +34,7 @@ namespace IntelOrca.Biohazard.Extensions
             return scriptDecompiler.GetScript();
         }
 
-        private static void ReadScript(this IRdt rdt, BioScriptVisitor visitor)
+        public static void ReadScript(this IRdt rdt, BioScriptVisitor visitor)
         {
             visitor.VisitVersion(rdt.Version);
             ReadScript(rdt, BioScriptKind.Init, visitor);
@@ -65,11 +65,12 @@ namespace IntelOrca.Biohazard.Extensions
                 else if (kind == BioScriptKind.Event)
                 {
                     var scd = rdt1.EventSCD;
+                    var baseOffset = rdt1.Offsets[8];
                     for (int i = 0; i < scd.Count; i++)
                     {
                         var proc = scd[i];
                         var scdReader = new ScdReader();
-                        scdReader.BaseOffset = rdt1.Offsets[8];
+                        scdReader.BaseOffset = baseOffset + scd.GetProcedureOffset(i);
                         scdReader.ReadEventScript(proc, visitor, i);
                     }
                 }

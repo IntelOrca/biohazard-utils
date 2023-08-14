@@ -4,7 +4,7 @@ using System.IO;
 namespace IntelOrca.Biohazard.Script.Opcodes
 {
     [DebuggerDisplay("cmp")]
-    internal class CmpOpcode : OpcodeBase
+    public class CmpOpcode : OpcodeBase
     {
         public byte Unknown1 { get; set; }
         public byte Flag { get; set; }

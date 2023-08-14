@@ -1,6 +1,6 @@
 ﻿namespace IntelOrca.Biohazard.Script.Opcodes
 {
-    internal interface IAotSetOpcode
+    public interface IAotSetOpcode
     {
         int Offset { get; }
         byte Opcode { get; }

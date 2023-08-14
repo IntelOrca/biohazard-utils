@@ -55,7 +55,7 @@ namespace IntelOrca.Biohazard.Room
             return Data.Slice(offset, length);
         }
 
-        private int GetProcedureOffset(int index)
+        public int GetProcedureOffset(int index)
         {
             var offsets = MemoryMarshal.Cast<byte, int>(Data.Span);
             return offsets[index];

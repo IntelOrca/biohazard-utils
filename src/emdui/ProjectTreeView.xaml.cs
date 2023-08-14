@@ -12,6 +12,7 @@ using emdui.Extensions;
 using IntelOrca.Biohazard;
 using IntelOrca.Biohazard.Extensions;
 using IntelOrca.Biohazard.Model;
+using IntelOrca.Biohazard.Room;
 
 namespace emdui
 {
@@ -86,7 +87,7 @@ namespace emdui
             {
                 return new TimTreeViewItem(projectFile, tim);
             }
-            else if (projectFile.Content is RdtFile)
+            else if (projectFile.Content is IRdt)
             {
                 return new RdtTreeViewItem(projectFile);
             }
@@ -381,11 +382,11 @@ namespace emdui
             var mainWindow = MainWindow.Instance;
             if (Model == null)
             {
-                var rdt = ProjectFile.Content as RdtFile;
+                var rdt = ProjectFile.Content as IRdt;
                 if (rdt != null)
                 {
                     var mainModel = mainWindow.Project.MainModel;
-                    var relatedEmr = rdt.Animations[ChunkIndex].Emr;
+                    var relatedEmr = ((Rdt2)rdt).RBJ[ChunkIndex].Emr;
                     mainWindow.LoadMesh(mainModel.GetMesh(0));
                     mainWindow.LoadAnimation(relatedEmr, Edd, Index);
                 }
@@ -1229,23 +1230,23 @@ namespace emdui
     public class RdtTreeViewItem : ProjectTreeViewItem
     {
         public override string Header => ProjectFile.Filename;
-        public RdtFile Rdt { get; }
+        public IRdt Rdt { get; }
 
         public RdtTreeViewItem(ProjectFile projectFile)
             : base(projectFile)
         {
-            Rdt = (RdtFile)projectFile.Content;
+            Rdt = (IRdt)projectFile.Content;
             CreateChildren();
         }
 
         private void CreateChildren()
         {
-            var animations = Rdt.Animations;
+            var rbj = ((Rdt2)Rdt).RBJ;
             Items.Clear();
-            for (var i = 0; i < animations.Length; i++)
+            for (var i = 0; i < rbj.Count; i++)
             {
-                var edd = animations[i].Edd;
-                var emr = animations[i].Emr;
+                var edd = rbj[i].Edd;
+                var emr = rbj[i].Emr;
                 Items.Add(new EddTreeViewItem(ProjectFile, i, edd));
                 Items.Add(new EmrTreeViewItem(ProjectFile, i, emr, false));
             }

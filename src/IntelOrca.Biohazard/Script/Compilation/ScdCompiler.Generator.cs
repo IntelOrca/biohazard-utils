@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using IntelOrca.Biohazard.Model;
+using IntelOrca.Biohazard.Room;
 
 namespace IntelOrca.Biohazard.Script.Compilation
 {
@@ -11,6 +13,9 @@ namespace IntelOrca.Biohazard.Script.Compilation
         private class Generator
         {
             private readonly ErrorList _errors;
+            private readonly string _path;
+            private readonly List<IRdtEditOperation> _operations = new List<IRdtEditOperation>();
+
             private BioVersion? _version;
             private IConstantTable _constantTable = new Bio1ConstantTable();
             private HashSet<string> _procedureNames = new HashSet<string>();
@@ -18,14 +23,12 @@ namespace IntelOrca.Biohazard.Script.Compilation
             private ProcedureBuilder _currentProcedure = new ProcedureBuilder("");
             private List<BlockSyntaxNode> _anonymousProcedures = new List<BlockSyntaxNode>();
 
-            public byte[] OutputInit { get; private set; } = new byte[0];
-            public byte[] OutputMain { get; private set; } = new byte[0];
-            public List<string?> Messages { get; } = new List<string?>();
-            public List<string?> Animations { get; } = new List<string?>();
+            public IRdtEditOperation[] Operations => _operations.ToArray();
 
-            public Generator(ErrorList errors)
+            public Generator(ErrorList errors, string path)
             {
                 _errors = errors;
+                _path = path;
             }
 
             public int Generate(SyntaxTree tree)
@@ -38,8 +41,8 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     return 1;
                 }
 
-                OutputInit = GenerateScd("init");
-                OutputMain = GenerateScd("main", "aot");
+                _operations.Add(new ScdRdtEditOperation(BioScriptKind.Init, GenerateScd("init")));
+                _operations.Add(new ScdRdtEditOperation(BioScriptKind.Main, GenerateScd("main", "aot")));
                 return 0;
             }
 
@@ -79,7 +82,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 return names;
             }
 
-            private byte[] GenerateScd(params string[] startProcs)
+            private ScdProcedureList GenerateScd(params string[] startProcs)
             {
                 // Make sure order is correct and create empty procedures for missing required ones
                 var procedures = _procedures.ToList();
@@ -139,7 +142,8 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     ms.Position = backupPosition;
                     bw.Write(procedures[i].ToArray());
                 }
-                return ms.ToArray();
+                var bytes = ms.ToArray();
+                return new ScdProcedureList(_version!.Value, bytes);
             }
 
             private void VisitChildren(SyntaxNode node)
@@ -224,20 +228,25 @@ namespace IntelOrca.Biohazard.Script.Compilation
 
             private void VisitMessageTextNode(MessageTextSyntaxNode messageTextNode)
             {
-                while (Messages.Count <= messageTextNode.Id)
-                {
-                    Messages.Add(null);
-                }
-                Messages[messageTextNode.Id] = messageTextNode.Text;
+                _operations.Add(new TextRdtEditOperation(MsgLanguage.Japanese, messageTextNode.Id, new Msg(_version!.Value, MsgLanguage.Japanese, messageTextNode.Text)));
+                _operations.Add(new TextRdtEditOperation(MsgLanguage.English, messageTextNode.Id, new Msg(_version!.Value, MsgLanguage.English, messageTextNode.Text)));
             }
 
             private void VisitAnimationNode(AnimationSyntaxNode animationNode)
             {
-                while (Animations.Count <= animationNode.Id)
+                var eddPath = Path.Combine(Path.GetDirectoryName(_path), animationNode.Path);
+                try
                 {
-                    Animations.Add(null);
+                    var emrPath = Path.ChangeExtension(eddPath, ".emr");
+                    var edd = new Edd(File.ReadAllBytes(eddPath));
+                    var emr = new Emr(BioVersion.Biohazard2, File.ReadAllBytes(emrPath));
+                    _operations.Add(new AnimationRdtEditOperation(
+                        animationNode.Id, new RbjAnimation(animationNode.Flags, edd, emr)));
                 }
-                Animations[animationNode.Id] = animationNode.Path;
+                catch (Exception)
+                {
+                    _errors.AddError(_path, 0, 0, ErrorCodes.FileNotFound, eddPath);
+                }
             }
 
             private void VisitProcedureNode(ProcedureSyntaxNode procedureNode)

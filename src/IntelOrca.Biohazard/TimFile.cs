@@ -29,6 +29,21 @@ namespace IntelOrca.Biohazard
         }
     }
 
+    public readonly struct Tim
+    {
+        public ReadOnlyMemory<byte> Data { get; }
+
+        public Tim(ReadOnlyMemory<byte> data)
+        {
+            Data = data;
+        }
+
+        public TimFile ToBuilder()
+        {
+            return new TimFile(Data);
+        }
+    }
+
     public class TimFile
     {
         private const int PaletteFormat4bpp = 8;
@@ -122,6 +137,44 @@ namespace IntelOrca.Biohazard
             var ms = new MemoryStream();
             Save(ms);
             return ms.ToArray();
+        }
+
+        public static int CalculateLength(Stream stream)
+        {
+            var initialPosition = stream.Position;
+            var br = new BinaryReader(stream);
+            var magic = br.ReadUInt32();
+            if (magic != 16)
+            {
+                throw new Exception("Invalid TIM file");
+            }
+
+            var pixelFormat = br.ReadUInt32();
+            if (pixelFormat != PaletteFormat4bpp &&
+                pixelFormat != PaletteFormat8bpp &&
+                pixelFormat != PaletteFormat16bpp)
+            {
+                throw new NotSupportedException("Unsupported TIM pixel format");
+            }
+
+            if (pixelFormat != PaletteFormat16bpp)
+            {
+                var clutSize = br.ReadUInt32();
+                br.ReadUInt16();
+                br.ReadUInt16();
+                br.ReadUInt16();
+                br.ReadUInt16();
+                stream.Position += (int)clutSize - 12;
+            }
+
+            var imageSize = br.ReadUInt32();
+            br.ReadUInt16();
+            br.ReadUInt16();
+            br.ReadUInt16();
+            br.ReadUInt16();
+
+            stream.Position += (int)imageSize - 12;
+            return (int)(stream.Position - initialPosition);
         }
 
         private void Read(Stream stream)

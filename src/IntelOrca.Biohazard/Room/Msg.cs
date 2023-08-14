@@ -3,9 +3,9 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 
-namespace IntelOrca.Biohazard
+namespace IntelOrca.Biohazard.Room
 {
-    public sealed class BioString
+    public readonly struct Msg
     {
         private const string EnTable = " .___()__“”_0123456789:_,\"!?_ABCDEFGHIJKLMNOPQRSTUVWXYZ[/]'-_abcdefghijklmnopqrstuvwxyz_________";
         private const byte Green = 0xF9;
@@ -15,18 +15,25 @@ namespace IntelOrca.Biohazard
         private const byte PageBreak = 0xFD;
         private const byte EndText = 0xFE;
 
-        private readonly byte[] _data;
+        public BioVersion Version { get; }
+        public MsgLanguage Language { get; }
+        public ReadOnlyMemory<byte> Data { get; }
 
-        public ReadOnlySpan<byte> Data => _data;
-
-        public BioString() : this("") { }
-
-        public BioString(ReadOnlySpan<byte> data)
+        public Msg(BioVersion version, MsgLanguage language, ReadOnlyMemory<byte> data)
         {
-            _data = data.ToArray();
+            Version = version;
+            Language = language;
+            Data = data;
         }
 
-        public BioString(string s)
+        public Msg(BioVersion version, MsgLanguage language, string s)
+        {
+            Version = version;
+            Language = language;
+            Data = Create(s);
+        }
+
+        private static ReadOnlyMemory<byte> Create(string s)
         {
             var ms = new MemoryStream();
             var bw = new BinaryWriter(ms);
@@ -80,20 +87,21 @@ namespace IntelOrca.Biohazard
             }
             bw.Write(EndText);
             bw.Write((byte)0);
-            _data = ms.ToArray();
+            return ms.ToArray();
         }
 
         public override string ToString()
         {
             var sb = new StringBuilder();
-            for (var i = 0; i < _data.Length; i++)
+            var span = Data.Span;
+            for (var i = 0; i < span.Length; i++)
             {
-                var b = _data[i];
+                var b = span[i];
                 switch (b)
                 {
                     case Green:
                     {
-                        var p = _data[++i];
+                        var p = span[++i];
                         if (p == 1)
                             sb.Append('{');
                         else
@@ -105,7 +113,7 @@ namespace IntelOrca.Biohazard
                         break;
                     case YesNoQuestion:
                     {
-                        var p = _data[++i];
+                        var p = span[++i];
                         sb.Append('@');
                         sb.Append(p.ToString("X2"));
                         break;
@@ -118,7 +126,7 @@ namespace IntelOrca.Biohazard
                         i++;
                         break;
                     case EndText:
-                        i = _data.Length - 1;
+                        i = span.Length - 1;
                         break;
                     default:
                         if (b < EnTable.Length)

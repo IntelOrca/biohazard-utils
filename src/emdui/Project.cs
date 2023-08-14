@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using IntelOrca.Biohazard;
 using IntelOrca.Biohazard.Model;
+using IntelOrca.Biohazard.Room;
 
 namespace emdui
 {
@@ -117,7 +118,7 @@ namespace emdui
 
         public void LoadRdt(string path)
         {
-            var rdtFile = new RdtFile(path, BioVersion.Biohazard2);
+            var rdtFile = new Rdt2(BioVersion.Biohazard2, path);
             _projectFiles.Add(new ProjectFile(ProjectFileKind.Rdt, Path.GetFileName(path), rdtFile));
         }
 

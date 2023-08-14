@@ -249,11 +249,21 @@ namespace IntelOrca.Biohazard.Script
                         return "I_GOSUB";
                     break;
                 case 'p':
-                    return $"init_{value:X2}";
+                    return GetProcedureName(value);
                 case 'v':
                     return GetNamedVariable(value);
             }
             return null;
+        }
+
+        private string GetProcedureName(int value)
+        {
+            return value switch
+            {
+                0 => "main",
+                1 => "aot",
+                _ => $"main_{value:X2}",
+            };
         }
 
         private int? FindConstantValue(string symbol, char kind)

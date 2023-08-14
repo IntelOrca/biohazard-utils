@@ -1,5 +1,7 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
+using IntelOrca.Biohazard.Room;
 using IntelOrca.Biohazard.Script;
 using IntelOrca.Biohazard.Script.Compilation;
 using Xunit;
@@ -19,13 +21,13 @@ namespace IntelOrca.Biohazard.Tests
         [Fact]
         public void RE2_Leon()
         {
-            CheckRDTs(Path.Combine(TestInfo.GetInstallPath(1), @"data\pl0\rdt"));
+            CheckRDTs(BioVersion.Biohazard2, Path.Combine(TestInfo.GetInstallPath(1), @"data\pl0\rdt"));
         }
 
         [Fact]
         public void RE2_Claire()
         {
-            CheckRDTs(Path.Combine(TestInfo.GetInstallPath(1), @"data\pl1\rdt"));
+            CheckRDTs(BioVersion.Biohazard2, Path.Combine(TestInfo.GetInstallPath(1), @"data\pl1\rdt"));
         }
 
         [Fact]
@@ -38,14 +40,14 @@ namespace IntelOrca.Biohazard.Tests
             {
                 var fileName = Path.GetFileName(file);
                 var rdt = rofs.GetFileContents(file);
-                var rdtFile = new RdtFile(rdt, BioVersion.Biohazard3);
+                var rdtFile = new Rdt2(BioVersion.Biohazard3, rdt);
                 var sPath = Path.ChangeExtension(fileName, ".s");
-                fail |= AssertReassembleRdt(rdtFile, sPath);
+                fail |= AssertReassembleRdt(BioVersion.Biohazard3, rdtFile, sPath);
             }
             Assert.False(fail);
         }
 
-        private void CheckRDTs(string rdtPath)
+        private void CheckRDTs(BioVersion version, string rdtPath)
         {
             var rdts = Directory.GetFiles(rdtPath, "*.rdt");
             var fail = false;
@@ -59,19 +61,18 @@ namespace IntelOrca.Biohazard.Tests
                 if (rdtId.Stage > 6)
                     continue;
 
-                var rdtFile = new RdtFile(rdt);
+                var rdtFile = new Rdt2(version, rdt);
                 var sPath = Path.ChangeExtension(rdt, ".s");
-                fail |= AssertReassembleRdt(rdtFile, sPath);
+                fail |= AssertReassembleRdt(version, rdtFile, sPath);
             }
             Assert.False(fail);
         }
 
-        private bool AssertReassembleRdt(RdtFile rdtFile, string sPath)
+        private bool AssertReassembleRdt(BioVersion version, Rdt2 rdtFile, string sPath)
         {
-            var diassembly = rdtFile.DisassembleScd();
-
+            var disassembly = IntelOrca.Biohazard.Extensions.RdtExtensions.DisassembleScd(rdtFile);
             var scdAssembler = new ScdAssembler();
-            var err = scdAssembler.Generate(new StringFileIncluder(sPath, diassembly), sPath);
+            var err = scdAssembler.Generate(new StringFileIncluder(sPath, disassembly), sPath);
             var fail = false;
             if (err != 0)
             {
@@ -83,8 +84,12 @@ namespace IntelOrca.Biohazard.Tests
             }
             else
             {
-                var scdInit = rdtFile.GetScd(BioScriptKind.Init);
-                var index = CompareByteArray(scdInit, scdAssembler.OutputInit);
+                var scdInit = rdtFile.SCDINIT;
+                var scdDataInit = scdAssembler.Operations
+                    .OfType<ScdRdtEditOperation>()
+                    .FirstOrDefault(x => x.Kind == BioScriptKind.Init)
+                    .Data;
+                var index = CompareByteArray(scdInit.Data, scdDataInit.Data);
                 if (index != -1)
                 {
                     _output.WriteLine(".init differs at 0x{0:X2} for '{1}'", index, sPath);
@@ -93,8 +98,12 @@ namespace IntelOrca.Biohazard.Tests
 
                 if (rdtFile.Version != BioVersion.Biohazard3)
                 {
-                    var scdMain = rdtFile.GetScd(BioScriptKind.Main);
-                    index = CompareByteArray(scdMain, scdAssembler.OutputMain);
+                    var scdMain = rdtFile.SCDMAIN;
+                    var scdDataMain = scdAssembler.Operations
+                        .OfType<ScdRdtEditOperation>()
+                        .FirstOrDefault(x => x.Kind == BioScriptKind.Main)
+                        .Data;
+                    index = CompareByteArray(scdMain.Data, scdDataMain.Data);
                     if (index != -1)
                     {
                         _output.WriteLine(".main differs at 0x{0:X2} for '{1}'", index, sPath);
@@ -105,7 +114,8 @@ namespace IntelOrca.Biohazard.Tests
             return fail;
         }
 
-        private static int CompareByteArray(byte[] a, byte[] b)
+        private static int CompareByteArray(ReadOnlyMemory<byte> a, ReadOnlyMemory<byte> b) => CompareByteArray(a.Span, b.Span);
+        private static int CompareByteArray(ReadOnlySpan<byte> a, ReadOnlySpan<byte> b)
         {
             var minLen = Math.Min(a.Length, b.Length);
             for (int i = 0; i < minLen; i++)

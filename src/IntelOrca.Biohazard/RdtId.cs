@@ -3,7 +3,7 @@ using System.Globalization;
 
 namespace IntelOrca.Biohazard
 {
-    public struct RdtId : IEquatable<RdtId>, IComparable<RdtId>
+    public readonly struct RdtId : IEquatable<RdtId>, IComparable<RdtId>
     {
         public int Stage { get; }
         public int Room { get; }

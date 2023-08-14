@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using IntelOrca.Biohazard.Model;
 
 namespace IntelOrca.Biohazard.Script.Compilation
 {
@@ -127,13 +128,21 @@ namespace IntelOrca.Biohazard.Script.Compilation
                         return null;
                     }
                     var id = int.Parse(LastToken.Text);
+
+                    if (!ParseToken(TokenKind.Number))
+                    {
+                        EmitError(in lastToken, ErrorCodes.ExpectedOperand);
+                        return null;
+                    }
+                    var flags = (EmrFlags)int.Parse(LastToken.Text);
+
                     if (!ParseToken(TokenKind.String))
                     {
                         EmitError(in lastToken, ErrorCodes.ExpectedOperand);
                         return null;
                     }
                     var text = ConvertStringToken(in LastToken);
-                    return new AnimationSyntaxNode(id, text);
+                    return new AnimationSyntaxNode(id, flags, text);
                 }
                 else
                 {
@@ -681,11 +690,13 @@ namespace IntelOrca.Biohazard.Script.Compilation
         private class AnimationSyntaxNode : SyntaxNode
         {
             public int Id { get; }
+            public EmrFlags Flags { get; }
             public string Path { get; }
 
-            public AnimationSyntaxNode(int id, string path)
+            public AnimationSyntaxNode(int id, EmrFlags flags, string path)
             {
                 Id = id;
+                Flags = flags;
                 Path = path;
             }
         }

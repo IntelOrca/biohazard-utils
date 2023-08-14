@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using IntelOrca.Biohazard.Room;
 using IntelOrca.Biohazard.Script;
 using IntelOrca.Biohazard.Script.Compilation;
 using Xunit;
@@ -487,19 +488,32 @@ proc main
             var result = scdCompiler.Generate(includer, path);
             Assert.Equal(0, result);
 
-            var scdInit = scdCompiler.OutputInit;
-            var scdMain = scdCompiler.OutputMain;
+            var scdInit = GetScd(scdCompiler, BioScriptKind.Init);
+            var scdMain = GetScd(scdCompiler, BioScriptKind.Main);
             var sInit = Disassemble(scdInit, BioScriptKind.Init);
             var sMain = Disassemble(scdMain, BioScriptKind.Main);
 
-            var actual = string.Concat(scdInit.Concat(scdMain).Select(x => x.ToString("X2")).ToArray());
+            var actual = string.Concat(scdInit.Data
+                .ToArray()
+                .Concat(scdMain.Data.ToArray())
+                .Select(x => x.ToString("X2"))
+                .ToArray());
             Assert.Equal(expected, actual);
         }
 
-        private string Disassemble(byte[] scd, BioScriptKind kind)
+        private string Disassemble(ScdProcedureList scd, BioScriptKind kind)
         {
             var scdReader = new ScdReader();
             return scdReader.Diassemble(scd, BioVersion.Biohazard2, kind, true);
+        }
+
+        private static ScdProcedureList GetScd(ScdCompiler compiler, BioScriptKind kind)
+        {
+            var scd = compiler.Operations
+                .OfType<ScdRdtEditOperation>()
+                .FirstOrDefault(x => x.Kind == kind)
+                .Data;
+            return scd;
         }
     }
 }

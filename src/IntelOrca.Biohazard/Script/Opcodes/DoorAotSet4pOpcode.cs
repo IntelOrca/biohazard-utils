@@ -4,7 +4,7 @@ using System.IO;
 namespace IntelOrca.Biohazard.Script.Opcodes
 {
     [DebuggerDisplay("door_aot_set_4p")]
-    internal class DoorAotSet4pOpcode : OpcodeBase, IDoorAotSetOpcode
+    public class DoorAotSet4pOpcode : OpcodeBase, IDoorAotSetOpcode
     {
         public byte Id { get; set; }
         public byte SCE { get; set; }

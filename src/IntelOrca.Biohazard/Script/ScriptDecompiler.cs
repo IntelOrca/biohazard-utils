@@ -915,6 +915,9 @@ namespace IntelOrca.Biohazard.Script
 
         public override void VisitTrailingData(int offset, Span<byte> data)
         {
+            if (!AssemblyFormat)
+                return;
+
             var sb = new StringBuilder();
             for (int i = 0; i < data.Length; i += 16)
             {

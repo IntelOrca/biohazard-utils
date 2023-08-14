@@ -21,6 +21,7 @@ namespace IntelOrca.Biohazard.Room
             public ushort? FLRTerminator { get; set; }
             public ScdProcedureList SCDINIT { get; set; }
             public ScdProcedureList SCDMAIN { get; set; }
+            public byte[] UNK { get; set; } = new byte[0];
             public MsgList MSGJA { get; set; }
             public MsgList MSGEN { get; set; }
             public Tim TIMSCROLL { get; set; }
@@ -30,6 +31,7 @@ namespace IntelOrca.Biohazard.Room
             public byte[] VH { get; set; } = new byte[0];
             public byte[] VB { get; set; } = new byte[0];
             public Tim ESPTIM { get; set; }
+            public int? VBOFFSET { get; set; }
 
             public List<ModelTextureIndex> EmbeddedObjectModelTable { get; set; } = new List<ModelTextureIndex>();
             public List<Md1> EmbeddedObjectMd1 { get; set; } = new List<Md1>();
@@ -130,9 +132,18 @@ namespace IntelOrca.Biohazard.Room
 
                 if (!EspTable.Data.IsEmpty)
                 {
-                    offsetTable[18] = (int)ms.Position;
-                    bw.Write(EspTable.Data);
-                    offsetTable[19] = (int)ms.Position - 4;
+                    if (Version == BioVersion.Biohazard2)
+                    {
+                        offsetTable[18] = (int)ms.Position;
+                        bw.Write(EspTable.Data);
+                        offsetTable[19] = (int)ms.Position - 4;
+                    }
+                    else
+                    {
+                        offsetTable[17] = (int)ms.Position;
+                        bw.Write(EspTable.Data);
+                        offsetTable[18] = (int)ms.Position - 4;
+                    }
                 }
 
                 if (Version != BioVersion.Biohazard3 && !RBJ.Data.IsEmpty)
@@ -167,16 +178,19 @@ namespace IntelOrca.Biohazard.Room
                 }
                 else
                 {
-                    if (VB.Length != 0)
-                    {
-                        offsetTable[2] = (int)ms.Position;
-                        bw.Write(VB);
-                    }
                     if (VH.Length != 0)
                     {
                         offsetTable[1] = (int)ms.Position;
                         bw.Write(VH);
                     }
+                    offsetTable[2] = VBOFFSET ?? offsetTable[1] + 1;
+                }
+
+                if (Version == BioVersion.Biohazard3 && UNK.Length != 0)
+                {
+                    offsetTable[19] = (int)ms.Position;
+                    bw.Write(UNK);
+                    offsetTable[20] = (int)ms.Position;
                 }
 
                 if (!ESPTIM.Data.IsEmpty)

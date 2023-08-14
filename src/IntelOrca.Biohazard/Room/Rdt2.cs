@@ -28,12 +28,12 @@ namespace IntelOrca.Biohazard.Room
         //    14: message/subXX.msg
         //    15: scroll.tim
         //    16: scripts/main00.scd
-        //    17: scripts/subXX.scd
-        //    18: ESP IDs
-        //    19: embedded ESP EFF table
+        //    17: scripts/subXX.scd (RE 2) | ESP IDs (RE 3)
+        //    18: ESP IDs (RE 2) | embedded ESP EFF table (RE 3)
+        //    19: embedded ESP EFF table (RE 2) | unknown (RE 3)
         //    20: effect/espXX.tim
         //    21: object/objectXX.tim
-        //    22: animation/anim.rbj
+        //    22: animation/anim.rbj (RE 2)
         // 0x64: camera.rid
         //       embedded object model table
         //       zone.rvd
@@ -76,20 +76,28 @@ namespace IntelOrca.Biohazard.Room
             _data.RegisterOffset(RdtFileChunkKinds.Header, 0, true);
             _data.RegisterOffset(RdtFileChunkKinds.OffsetTable, 8, true);
 
+            var offsetKinds = Version == BioVersion.Biohazard2 ? _offsetTableKinds2 : _offsetTableKinds3;
             var offsets = Offsets;
             for (var i = 0; i < offsets.Length; i++)
             {
                 var offset = offsets[i];
-                if (offset != 0 && i != 5 && i != 19)
+                if (offset != 0 && i != 5)
                 {
+                    // Ignore EFF tables (assumed to be at end of ESP ID block)
+                    if (Version == BioVersion.Biohazard2 && i == 19)
+                        continue;
+                    if (Version == BioVersion.Biohazard3 && i == 18)
+                        continue;
+
+                    // In RE 3, 4 RDTs have a garbage number in offset 2, the rest always have (offset 1) + 1 in it.
+                    if (Version == BioVersion.Biohazard3 && i == 2)
+                        continue;
+
+                    // Ignore object table if no objects
                     if (i == 10 && Header.nOmodel == 0)
                         continue;
 
-                    // No RBJ in RDT3
-                    if (i == 22 && Version == BioVersion.Biohazard3)
-                        continue;
-
-                    _data.RegisterOffset(_offsetTableKinds[i], offset);
+                    _data.RegisterOffset(offsetKinds[i], offset);
                 }
             }
 
@@ -139,7 +147,10 @@ namespace IntelOrca.Biohazard.Room
         }
 
         public Rdt2Header Header => GetSpan<Rdt2Header>(0x00, 1)[0];
-        public ReadOnlySpan<int> Offsets => GetSpan<int>(0x08, 23);
+        public ReadOnlySpan<int> Offsets =>
+            Version == BioVersion.Biohazard2 ?
+                GetSpan<int>(0x08, _offsetTableKinds2.Length) :
+                GetSpan<int>(0x08, _offsetTableKinds3.Length);
         public ReadOnlySpan<byte> EDT => GetChunk(RdtFileChunkKinds.RDT2EDT).Span;
         public ReadOnlySpan<byte> VH => GetChunk(RdtFileChunkKinds.RDT2VH).Span;
         public ReadOnlySpan<byte> VB => GetChunk(RdtFileChunkKinds.RDT2VB).Span;
@@ -158,7 +169,12 @@ namespace IntelOrca.Biohazard.Room
         public MsgList MSGEN => new MsgList(Version, MsgLanguage.English, GetChunk(RdtFileChunkKinds.RDT2MSGEN));
         public Tim TIMSCROLL => new Tim(GetChunk(RdtFileChunkKinds.RDT2TIMSCROLL));
         public ScdProcedureList SCDINIT => new ScdProcedureList(Version, GetChunk(RdtFileChunkKinds.RDT2SCDINIT));
-        public ScdProcedureList SCDMAIN => new ScdProcedureList(Version, GetChunk(RdtFileChunkKinds.RDT2SCDMAIN));
+        public ScdProcedureList SCDMAIN => Version == BioVersion.Biohazard2 ?
+            new ScdProcedureList(Version, GetChunk(RdtFileChunkKinds.RDT2SCDMAIN)) :
+            new ScdProcedureList();
+        public ReadOnlySpan<byte> UNK => Version == BioVersion.Biohazard3 ?
+            GetChunk(RdtFileChunkKinds.RDT3UNK).Span :
+            ReadOnlySpan<byte>.Empty;
         public EspTable EspTable => new EspTable(GetChunk(RdtFileChunkKinds.RDT2ESPID));
         public Tim ESPTIM => new Tim(GetChunk(RdtFileChunkKinds.RDT2TIMESP));
         public ReadOnlySpan<int> TIMOBJ => MemoryMarshal.Cast<byte, int>(GetChunk(RdtFileChunkKinds.ObjectTextures).Span);
@@ -232,6 +248,7 @@ namespace IntelOrca.Biohazard.Room
             builder.FLRTerminator = FLRTerminator;
             builder.SCDINIT = SCDINIT;
             builder.SCDMAIN = SCDMAIN;
+            builder.UNK = UNK.ToArray();
             builder.MSGJA = MSGJA;
             builder.MSGEN = MSGEN;
             builder.TIMSCROLL = TIMSCROLL;
@@ -241,6 +258,10 @@ namespace IntelOrca.Biohazard.Room
             builder.VH = VH.ToArray();
             builder.VB = VB.ToArray();
             builder.ESPTIM = ESPTIM;
+
+            // 4 RE 3 RDTs have a garbage number in offset 2 (this preserves it)
+            if (Version == BioVersion.Biohazard3)
+                builder.VBOFFSET = Offsets[2];
 
             return builder;
         }
@@ -259,7 +280,7 @@ namespace IntelOrca.Biohazard.Room
 
         private ReadOnlySpan<T> GetSpan<T>(int offset, int count) where T : struct => Data.GetSafeSpan<T>(offset, count);
 
-        private static readonly int[] _offsetTableKinds = new[]
+        private static readonly int[] _offsetTableKinds2 = new[]
         {
             RdtFileChunkKinds.RDT2EDT,
             RdtFileChunkKinds.RDT2VH,
@@ -284,6 +305,32 @@ namespace IntelOrca.Biohazard.Room
             RdtFileChunkKinds.RDT2TIMESP,
             RdtFileChunkKinds.ObjectTextures,
             RdtFileChunkKinds.RDT2RBJ,
+        };
+
+        private static readonly int[] _offsetTableKinds3 = new[]
+{
+            RdtFileChunkKinds.RDT2EDT,
+            RdtFileChunkKinds.RDT2VH,
+            RdtFileChunkKinds.RDT2VB,
+            RdtFileChunkKinds.EmbeddedTrialVH,
+            RdtFileChunkKinds.EmbeddedTrialVB,
+            RdtFileChunkKinds.RDT2OVA,
+            RdtFileChunkKinds.RDT2SCA,
+            RdtFileChunkKinds.RDT2RID,
+            RdtFileChunkKinds.RDT2RVD,
+            RdtFileChunkKinds.RDT2LIT,
+            RdtFileChunkKinds.RDT2EmbeddedObjectTable,
+            RdtFileChunkKinds.RDT2FLR,
+            RdtFileChunkKinds.RDT2BLK,
+            RdtFileChunkKinds.RDT2MSGJA,
+            RdtFileChunkKinds.RDT2MSGEN,
+            RdtFileChunkKinds.RDT2TIMSCROLL,
+            RdtFileChunkKinds.RDT2SCDINIT,
+            RdtFileChunkKinds.RDT2ESPID,
+            RdtFileChunkKinds.RDT2EspEffTable,
+            RdtFileChunkKinds.RDT3UNK,
+            RdtFileChunkKinds.RDT2TIMESP,
+            RdtFileChunkKinds.ObjectTextures
         };
 
         [StructLayout(LayoutKind.Sequential)]

@@ -68,8 +68,6 @@
         public const int RDT2EmbeddedCamMask = 0x0200 | 27;
         public const int RDT2ESPEFF = 0x0100 | 28;
         public const int RDT2EmbeddedSpareEspTable = 0x0100 | 29;
-
-        public const int ScdUnused = 0x0500 | 27;
-        public const int ScdEvent = 0x0500 | 28;
+        public const int RDT3UNK = 0x0200 | 30;
     }
 }

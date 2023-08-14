@@ -192,6 +192,9 @@ namespace IntelOrca.Biohazard.Tests
         }
 
         [Fact]
+        public void RE3_All_Rebuild() => AssertRebuildAll(BioVersion.Biohazard3);
+
+        [Fact]
         public void RE3_100()
         {
             AssertRebuild(BioVersion.Biohazard3, "R100.RDT");
@@ -220,7 +223,7 @@ namespace IntelOrca.Biohazard.Tests
         {
             var rdt = GetRdt(version, fileName);
             var rebuiltRdt = rdt.ToBuilder().ToRdt();
-            AssertMemory(rdt.Data, rebuiltRdt.Data);
+            AssertAndCompareMemory(rdt.Data, rebuiltRdt.Data);
         }
 
         private static void AssertAndCompareMemory(ReadOnlyMemory<byte> expected, ReadOnlyMemory<byte> actual)
@@ -231,8 +234,10 @@ namespace IntelOrca.Biohazard.Tests
             }
             catch
             {
-                expected.WriteToFile(@"M:\temp\rdt\expected.dat");
-                actual.WriteToFile(@"M:\temp\rdt\actual.dat");
+                var path = @"M:\temp\rdt";
+                Directory.CreateDirectory(path);
+                expected.WriteToFile(Path.Combine(path, "expected.dat"));
+                actual.WriteToFile(Path.Combine(path, "actual.dat"));
                 throw;
             }
         }
@@ -317,8 +322,8 @@ namespace IntelOrca.Biohazard.Tests
                     var installPath = TestInfo.GetInstallPath(1);
                     for (var player = 0; player <= 1; player++)
                     {
-                        var plDirectory = Path.Combine(installPath, "data", $"pl{player}", "rdt");
-                        var files = Directory.GetFiles(plDirectory, "*.RDT");
+                        var rdtDirectory = Path.Combine(installPath, "data", $"pl{player}", "rdt");
+                        var files = Directory.GetFiles(rdtDirectory, "*.RDT");
                         foreach (var rdtPath in files)
                         {
                             var length = new FileInfo(rdtPath).Length;
@@ -332,6 +337,21 @@ namespace IntelOrca.Biohazard.Tests
                     break;
                 }
                 case BioVersion.Biohazard3:
+                {
+                    var installPath = TestInfo.GetInstallPath(2);
+                    var rofsFiles = Directory.GetFiles(installPath, "rofs*.dat");
+                    var repo = new FileRepository(installPath);
+                    foreach (var file in rofsFiles)
+                        repo.AddRE3Archive(file);
+
+                    var rdtDirectory = Path.Combine(installPath, "data_j", "rdt");
+                    var files = repo.GetFiles(rdtDirectory);
+                    foreach (var rdtPath in files)
+                    {
+                        results.Add(rdtPath);
+                    }
+                    break;
+                }
                 default:
                     throw new NotImplementedException();
             }

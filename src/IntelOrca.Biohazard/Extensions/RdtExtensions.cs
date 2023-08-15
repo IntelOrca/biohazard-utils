@@ -68,10 +68,10 @@ namespace IntelOrca.Biohazard.Extensions
                     var baseOffset = rdt1.Offsets[8];
                     for (int i = 0; i < scd.Count; i++)
                     {
-                        var proc = scd[i];
+                        var evt = scd[i];
                         var scdReader = new ScdReader();
-                        scdReader.BaseOffset = baseOffset + scd.GetProcedureOffset(i);
-                        scdReader.ReadEventScript(proc, visitor, i);
+                        scdReader.BaseOffset = baseOffset + scd.GetOffset(i);
+                        scdReader.ReadEventScript(evt.Data, visitor, i);
                     }
                 }
                 else

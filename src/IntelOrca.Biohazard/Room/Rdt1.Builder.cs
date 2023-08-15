@@ -22,7 +22,7 @@ namespace IntelOrca.Biohazard.Room
             public byte[] FLR { get; set; } = new byte[0];
             public ScdProcedure InitSCD { get; set; }
             public ScdProcedure MainSCD { get; set; }
-            public EventScd EventSCD { get; set; }
+            public ScdEventList EventSCD { get; set; }
             public Emr? EMR { get; set; }
             public Edd? EDD { get; set; }
             public byte[] MSG { get; set; } = new byte[0];

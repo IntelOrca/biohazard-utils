@@ -34,6 +34,18 @@ namespace IntelOrca.Biohazard.Tests
         }
 
         [Fact]
+        public void RE1_100_SCD_EVENTS()
+        {
+            var rdt = (Rdt1)GetRdt(BioVersion.Biohazard1, "ROOM1000.RDT");
+            var evtList = rdt.EventSCD;
+            for (var i = 0; i < evtList.Count; i++)
+            {
+                var evt = evtList[i];
+                var s = evt.AnalyseEvent();
+            }
+        }
+
+        [Fact]
         public void RE1_100_Rebuild() => AssertRebuild(BioVersion.Biohazard1, "ROOM1000.RDT");
 
         [Fact]

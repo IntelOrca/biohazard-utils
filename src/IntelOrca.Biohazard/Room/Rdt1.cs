@@ -176,7 +176,7 @@ namespace IntelOrca.Biohazard.Room
         public ReadOnlySpan<byte> FLR => GetChunk(RdtFileChunkKinds.RDT1FLR).Span;
         public ScdProcedure InitSCD => new ScdProcedure(Version, GetChunk(RdtFileChunkKinds.RDT1InitSCD));
         public ScdProcedure MainSCD => new ScdProcedure(Version, GetChunk(RdtFileChunkKinds.RDT1MainSCD));
-        public EventScd EventSCD => new EventScd(GetChunk(RdtFileChunkKinds.RDT1EventSCD));
+        public ScdEventList EventSCD => new ScdEventList(GetChunk(RdtFileChunkKinds.RDT1EventSCD));
         public Emr EMR => new Emr(Version, GetChunk(RdtFileChunkKinds.RDT1EMR));
         public Edd EDD => new Edd(GetChunk(RdtFileChunkKinds.RDT1EDD));
         public ReadOnlySpan<byte> MSG => GetChunk(RdtFileChunkKinds.RDT1MSG).Span;

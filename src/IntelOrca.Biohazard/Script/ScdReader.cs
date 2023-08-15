@@ -17,6 +17,14 @@ namespace IntelOrca.Biohazard.Script
             return decompiler.GetScript();
         }
 
+        public string Diassemble(ScdProcedure scd, BioScriptKind kind, bool listing = false)
+        {
+            var decompiler = new ScriptDecompiler(true, listing);
+            decompiler.VisitVersion(scd.Version);
+            ReadScript(scd.Data, scd.Version, kind, decompiler);
+            return decompiler.GetScript();
+        }
+
         internal void ReadScript(ReadOnlyMemory<byte> data, BioVersion version, BioScriptKind kind, IBioScriptVisitor visitor)
         {
             ReadScript(new SpanStream(data), data.Length, version, kind, visitor);

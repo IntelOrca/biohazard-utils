@@ -21,7 +21,7 @@ namespace IntelOrca.Biohazard.Script.Opcodes
         public short Z3 { get; set; }
         public ushort Type { get; set; }
         public ushort Amount { get; set; }
-        public ushort Array8Idx { get; set; }
+        public ushort GlobalId { get; set; }
         public byte MD1 { get; set; }
         public byte Action { get; set; }
 
@@ -48,7 +48,7 @@ namespace IntelOrca.Biohazard.Script.Opcodes
                 Z3 = br.ReadInt16(),
                 Type = br.ReadUInt16(),
                 Amount = br.ReadUInt16(),
-                Array8Idx = br.ReadUInt16(),
+                GlobalId = br.ReadUInt16(),
                 MD1 = br.ReadByte(),
                 Action = br.ReadByte()
             };
@@ -72,7 +72,7 @@ namespace IntelOrca.Biohazard.Script.Opcodes
             bw.Write(Z3);
             bw.Write(Type);
             bw.Write(Amount);
-            bw.Write(Array8Idx);
+            bw.Write(GlobalId);
             bw.Write(MD1);
             bw.Write(Action);
         }

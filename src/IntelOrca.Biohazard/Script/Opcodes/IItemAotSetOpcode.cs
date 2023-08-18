@@ -12,7 +12,7 @@
         byte Super { get; set; }
         ushort Type { get; set; }
         ushort Amount { get; set; }
-        ushort Array8Idx { get; set; }
+        ushort GlobalId { get; set; }
         byte MD1 { get; set; }
         byte Action { get; set; }
     }

@@ -873,7 +873,7 @@ namespace IntelOrca.Biohazard.Script
                             case 'l':
                             {
                                 var blockLen = br.ReadByte();
-                                var labelOffset = offset + instructionLength + blockLen;
+                                var labelOffset = offset + blockLen;
                                 _sb.InsertLabel(labelOffset);
                                 parameters.Add(_sb.GetLabelName(labelOffset));
                                 break;
@@ -922,14 +922,6 @@ namespace IntelOrca.Biohazard.Script
                             case 'I':
                                 parameters.Add(br.ReadInt16());
                                 break;
-                            case 'r':
-                            {
-                                var target = br.ReadByte();
-                                var stage = (byte)(target >> 5);
-                                var room = (byte)(target & 0b11111);
-                                parameters.Add($"RDT_{stage:X}{room:X2}");
-                                break;
-                            }
                             default:
                             {
                                 var v = char.IsUpper(c) ? br.ReadUInt16() : br.ReadByte();

@@ -2,23 +2,31 @@
 {
     internal enum Re1EventOpcode : byte
     {
-        Unk00,
+        // Operations
+        Nop,
         Unk01,
         Unk02,
         Unk03,
-        Unk04,
+        WorkSet,
         Fork,
         Block,
         Single,
         Unk08,
+        Disable,
+
+        // Mutations
         Unk86 = 0x86,
+
+        // Control
         UnkF6 = 0xF6,
-        UnkF8 = 0xF8,
+        UnkF7 = 0xF7,
+        Sleep = 0xF8,
+        UnkF9 = 0xF9,
         For = 0xFA,
-        Next = 0xFB,
-        SetInst = 0xFC,
-        ExecInst = 0xFD,
-        NextEvent = 0xFE,
-        Disable = 0xFF,
+        EndFor = 0xFB,
+        Do = 0xFC,
+        EndDo = 0xFD,
+        Next = 0xFE,
+        Finish = 0xFF,
     }
 }

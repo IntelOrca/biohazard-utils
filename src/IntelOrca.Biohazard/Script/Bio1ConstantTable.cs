@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace IntelOrca.Biohazard.Script
@@ -10,8 +11,26 @@ namespace IntelOrca.Biohazard.Script
         private const byte SCE_EVENT = 9;
         private const byte SCE_SAVE = 10;
 
+        private static readonly SortedDictionary<string, int> _constantMap = new SortedDictionary<string, int>();
+
         public string GetEnemyName(byte kind) => g_enemyNames.Namify("ENEMY_", kind);
         public string GetItemName(byte kind) => g_itemNames.Namify("ITEM_", kind);
+        private string GetKeyName(byte value)
+        {
+            return value switch
+            {
+                0 => "UNLOCKED",
+                254 => "UNLOCK",
+                255 => "LOCKED",
+                _ => GetItemName(value)
+            };
+        }
+        private string GetRdtName(byte target)
+        {
+            var stage = (byte)(target >> 5);
+            var room = (byte)(target & 0b11111);
+            return $"RDT_{stage:X}{room:X2}";
+        }
 
         public string GetOpcodeSignature(byte opcode, bool isEventOpcode)
         {
@@ -40,7 +59,7 @@ namespace IntelOrca.Biohazard.Script
                 }
                 else if (opcode == (byte)OpcodeV1.AotReset)
                 {
-                    if (pIndex == 5)
+                    if (pIndex == 4)
                     {
                         br.BaseStream.Position += 1;
                         var sce = br.ReadByte();
@@ -57,25 +76,16 @@ namespace IntelOrca.Biohazard.Script
 
         public string? GetConstant(char kind, int value)
         {
-            switch (kind)
+            return kind switch
             {
-                case 'e':
-                    return GetEnemyName((byte)value);
-                case 'i':
-                    if (value == 255)
-                        return "LOCKED";
-                    else if (value == 254)
-                        return "UNLOCK";
-                    else if (value == 0)
-                        return "UNLOCKED";
-                    else
-                        return GetItemName((byte)value);
-                case 's':
-                    return GetConstantName(g_sceNames, value);
-                case 'p':
-                    return $"event_{value:X2}";
-            }
-            return null;
+                'e' => GetEnemyName((byte)value),
+                't' => GetKeyName((byte)value),
+                's' => GetConstantName(g_sceNames, value),
+                'p' => $"event_{value:X2}",
+                'r' => GetRdtName((byte)value),
+                'w' => GetConstantName(g_wkNames, value),
+                _ => null
+            };
         }
 
         private string? GetConstantName(string?[] table, int value)
@@ -85,75 +95,59 @@ namespace IntelOrca.Biohazard.Script
             return null;
         }
 
-        private int? FindConstantValue(string symbol, char kind)
-        {
-            for (int i = 0; i < 256; i++)
-            {
-                var name = GetConstant(kind, i);
-                if (name == symbol)
-                    return i;
-            }
-            return null;
-        }
-
         public int? GetConstantValue(string symbol)
         {
-            switch (symbol)
+            if (_constantMap.Count == 0)
             {
-                case "LOCKED":
-                    return 255;
-                case "UNLOCK":
-                    return 254;
-                case "UNLOCKED":
-                    return 0;
-            }
-            if (symbol.StartsWith("ENEMY_"))
-                return FindConstantValue(symbol, 'e');
-            else if (symbol.StartsWith("ITEM_"))
-                return FindConstantValue(symbol, 'i');
-            else if (symbol.StartsWith("SCE_"))
-                return FindConstantValue(symbol, 'v');
-            else if (symbol.StartsWith("RDT_"))
-            {
-                var number = symbol.Substring(4);
-                if (int.TryParse(number, NumberStyles.HexNumber, null, out var rdt))
+                _constantMap.Add("I_GOSUB", (byte)OpcodeV2.Gosub);
+                var constChars = new char[]
                 {
-                    return rdt;
+                    'e', 'i', 's', 'p', 'r', 't', 'w',
+                };
+                foreach (var ch in constChars)
+                {
+                    for (var i = 0; i < 256; i++)
+                    {
+                        var name = GetConstant(ch, i);
+                        if (name != null && !name.Contains(" ") && !char.IsNumber(name[0]))
+                        {
+                            if (_constantMap.TryGetValue(name, out var check) && check != i)
+                                throw new InvalidOperationException();
+                            else
+                                _constantMap[name] = i;
+                        }
+                    }
                 }
             }
-            return null;
+            if (!_constantMap.TryGetValue(symbol, out var value))
+                return null;
+            return value;
         }
 
         public int GetInstructionSize(byte opcode, BinaryReader? br, bool isEventOpcode = false)
         {
             if (isEventOpcode)
             {
-                switch ((Re1EventOpcode)opcode)
+                return (Re1EventOpcode)opcode switch
                 {
-                    default:
-                        return 1;
-                    case Re1EventOpcode.Unk04:
-                        return 3;
-                    case Re1EventOpcode.Fork:
-                        return 4;
-                    case Re1EventOpcode.Block:
-                        return 2;
-                    case Re1EventOpcode.Single:
-                        return 2;
-                    case Re1EventOpcode.Unk08:
-                    case Re1EventOpcode.UnkF6:
-                        return 2;
-                    case Re1EventOpcode.UnkF8:
-                        return 4;
-                    case Re1EventOpcode.For:
-                        return 4;
-                    case Re1EventOpcode.SetInst:
-                        using (var br2 = br!.Fork())
-                        {
-                            var ll = br2.ReadByte();
-                            return 2 + ll;
-                        }
-                }
+                    Re1EventOpcode.Unk03 => 3,
+                    Re1EventOpcode.WorkSet => 3,
+                    Re1EventOpcode.Fork => 4,
+                    Re1EventOpcode.Block => 2,
+                    Re1EventOpcode.Single => 2,
+                    Re1EventOpcode.Unk08 => 2,
+
+                    (Re1EventOpcode)0x81 => 10,
+                    (Re1EventOpcode)0x83 => 8,
+                    (Re1EventOpcode)0x84 => 4,
+                    (Re1EventOpcode)0x87 => 4,
+
+                    Re1EventOpcode.Sleep => 4,
+                    Re1EventOpcode.For => 4,
+                    Re1EventOpcode.Do => 2,
+                    Re1EventOpcode.Finish => 2,
+                    _ => 1,
+                };
             }
             else
             {
@@ -164,20 +158,22 @@ namespace IntelOrca.Biohazard.Script
             }
         }
 
-        public byte? FindOpcode(string name)
+        public byte? FindOpcode(string name, bool isEventOpcode)
         {
-            for (int i = 0; i < _opcodes.Length; i++)
+            var table = isEventOpcode ? _eventOpcodes : _opcodes;
+            for (int i = 0; i < table.Length; i++)
             {
-                var signature = _opcodes[i];
-                var colonIndex = signature.IndexOf(':');
-                if (colonIndex == -1)
+                var signature = table[i];
+                if (signature == "")
                     continue;
 
-                var opcodeName = signature.Substring(0, colonIndex);
+                var opcodeName = signature;
+                var colonIndex = signature.IndexOf(':');
+                if (colonIndex != -1)
+                    opcodeName = signature.Substring(0, colonIndex);
+
                 if (name == opcodeName)
-                {
                     return (byte)i;
-                }
             }
             return null;
         }
@@ -230,16 +226,16 @@ namespace IntelOrca.Biohazard.Script
             "Cobweb",
             "Computer Hands (left)",
             "Computer Hands (right)",
-            "Unknown",
-            "Unknown",
-            "Unknown",
-            "Unknown",
-            "Unknown",
-            "Unknown",
-            "Unknown",
-            "Unknown",
-            "Unknown",
-            "Unknown",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
             "Chris (Stars)",
             "Jill (Stars)",
             "Barry (Stars)",
@@ -355,19 +351,19 @@ namespace IntelOrca.Biohazard.Script
             "cutnext:u",
             "cutcurr:u",
             "",
-            "door_aot_set:uIIIIuuuuurIIIIiu",
+            "door_aot_set:uIIIIuuuuurIIIItu",
             "aot_set:uIIIIsuuuuuuu",
             "nop:u",
             "",
-            "testitem:i",
-            "testpickup:i",
+            "testitem:t",
+            "testpickup:t",
             "aot_reset:usuIII",
             "aot_delete",
             "evt_exec:uup",
             "bgm_play:u",
             "bgm_stop:u",
             "",
-            "item_aot_set:uIIIIiuuuuuuuuuuuuuuu",
+            "item_aot_set:uIIIItuuuuuuuuuuuuuuu",
             "setbyte:uuu",
             "item_ck",
             "enemy:euuuuuuIuuIIIuuuu",
@@ -423,182 +419,7 @@ namespace IntelOrca.Biohazard.Script
             "",
             "",
             "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "plc_dest",
-            "plc_motion",
-            "",
-            "plc_ret",
-            "",
-            "plc_rotate",
-            "",
-            "",
-            "",
-            "sleep",
-            "",
-            "for",
-            "next",
-            "message_on",
-            "exec_inst",
-            "process",
-            "disable:u"
+            "", // last
         };
 
         private string[] _eventOpcodes = new string[]
@@ -607,12 +428,12 @@ namespace IntelOrca.Biohazard.Script
             "evt_01",
             "evt_02",
             "evt_03",
-            "evt_04",
+            "evt_work_set:wu",
             "evt_fork:upu",
             "evt_block:u",
             "evt_single:u",
             "evt_08",
-            "evt_09",
+            "evt_disable:u",
             "",
             "",
             "",
@@ -855,17 +676,17 @@ namespace IntelOrca.Biohazard.Script
             "evt_F9",
             "evt_for:uU",
             "evt_fornext",
-            "evt_set_inst",
-            "evt_exec_inst",
+            "evt_do:u",
+            "evt_dountil",
             "evt_next",
-            "evt_disable"
+            "evt_finish"
         };
 
         private static int[] _instructionSizes1 = new int[]
         {
             2, 2, 2, 2, 4, 4, 4, 6, 4, 2, 2, 4, 26, 18, 2, 8,
             2, 2, 10, 4, 4, 2, 2, 10, 26, 4, 2, 22, 6, 2, 4, 28,
-            14, 14, 4, 2, 4, 4, 0, 2, 4 + 0, 2, 12, 4, 2, 4, 0, 4,
+            14, 14, 4, 2, 4, 4, 0, 2, 4 + 2, 2, 12, 4, 2, 4, 0, 4,
             12, 4, 4, 4 + 0, 8, 4, 4, 4, 4, 2, 4, 6, 6, 12, 2, 6,
             16, 4, 4, 4, 2, 2, 44 + 0, 14, 2, 2, 2, 2, 4, 2, 4, 2,
             2
@@ -883,6 +704,13 @@ namespace IntelOrca.Biohazard.Script
             "SCE_ITEMBOX",
             "SCE_EVENT",
             "SCE_SAVE"
+        };
+
+        private static readonly string[] g_wkNames = new string[] {
+            "WK_PLAYER",
+            "WK_ENEMY",
+            "WK_OBJ",
+            "WK_AOT",
         };
     }
 }

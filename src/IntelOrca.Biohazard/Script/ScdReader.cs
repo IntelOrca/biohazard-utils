@@ -115,7 +115,7 @@ namespace IntelOrca.Biohazard.Script
                             if (len != 0)
                             {
                                 var baseOffset = (int)(BaseOffset + br.BaseStream.Position);
-                                var blockBytes = br.ReadBytes(len - 2);
+                                var blockBytes = br.ReadBytes(len - 1);
                                 var blockStream = new SpanStream(blockBytes);
                                 ReadRe1OpcodeBlock(blockStream, constantTable, visitor, baseOffset);
                             }
@@ -123,12 +123,13 @@ namespace IntelOrca.Biohazard.Script
                             break;
                         }
                         case Re1EventOpcode.Single:
+                        case Re1EventOpcode.Do:
                         {
                             var opcodeLen = br.ReadByte();
                             br.BaseStream.Position -= 2;
                             visitor.VisitBeginEventOpcode((int)(BaseOffset + br.BaseStream.Position), br.ReadBytes(2));
                             var baseOffset = (int)(BaseOffset + br.BaseStream.Position);
-                            var opcodeBytes = br.ReadBytes(opcodeLen - 1);
+                            var opcodeBytes = br.ReadBytes(opcodeLen - 2);
                             var blockStream = new SpanStream(opcodeBytes);
                             ReadRe1Opcode(blockStream, constantTable, visitor, baseOffset);
                             visitor.VisitEndEventOpcode();

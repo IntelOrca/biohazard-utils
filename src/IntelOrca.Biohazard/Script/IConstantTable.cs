@@ -12,7 +12,7 @@ namespace IntelOrca.Biohazard.Script
         int? GetConstantValue(string symbol);
         int GetInstructionSize(byte opcode, BinaryReader? br, bool isEventOpcode = false);
         bool IsOpcodeCondition(byte opcode);
-        byte? FindOpcode(string name);
+        byte? FindOpcode(string name, bool isEventOpcode);
         string? GetNamedFlag(int obj, int index);
         string? GetNamedVariable(int index);
     }

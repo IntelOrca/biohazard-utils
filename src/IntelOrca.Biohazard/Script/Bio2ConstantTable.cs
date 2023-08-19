@@ -68,7 +68,7 @@ namespace IntelOrca.Biohazard.Script
             return sz;
         }
 
-        public byte? FindOpcode(string name)
+        public byte? FindOpcode(string name, bool isEventOpcode)
         {
             for (int i = 0; i < g_instructionSignatures.Length; i++)
             {

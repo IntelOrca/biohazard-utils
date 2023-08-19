@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using IntelOrca.Biohazard.Extensions;
 using IntelOrca.Biohazard.Room;
 using IntelOrca.Biohazard.Script;
 using IntelOrca.Biohazard.Script.Compilation;
@@ -20,11 +21,11 @@ namespace IntelOrca.Biohazard.Tests
         }
 
         [Fact]
-        public void RE1_101()
+        public void RE1_104()
         {
-            var rdtPath = Path.Combine(TestInfo.GetInstallPath(0), @"JPN\STAGE1\ROOM1010.RDT");
-            var rdtFile = GetRdt(BioVersion.Biohazard1, "ROOM1010.RDT");
-            var sPath = Path.ChangeExtension(rdtPath, ".s");
+            var rdtFileName = "ROOM1040.RDT";
+            var rdtFile = GetRdt(BioVersion.Biohazard1, rdtFileName);
+            var sPath = Path.ChangeExtension(rdtFileName, ".s");
             var fail = AssertReassembleRdt(rdtFile, sPath);
             Assert.False(fail);
         }
@@ -83,10 +84,19 @@ namespace IntelOrca.Biohazard.Tests
 
         private bool AssertReassembleRdt(IRdt rdtFile, string sPath)
         {
-            var disassembly = IntelOrca.Biohazard.Extensions.RdtExtensions.DisassembleScd(rdtFile);
+            var disassembly = rdtFile.DisassembleScd();
             var scdAssembler = new ScdAssembler();
-            var err = scdAssembler.Generate(new StringFileIncluder(sPath, disassembly), sPath);
             var fail = false;
+            int err;
+            try
+            {
+                err = scdAssembler.Generate(new StringFileIncluder(sPath, disassembly), sPath);
+            }
+            catch
+            {
+                _output.WriteLine("Exception occured in '{0}'", sPath);
+                return true;
+            }
             if (err != 0)
             {
                 foreach (var error in scdAssembler.Errors.Errors)

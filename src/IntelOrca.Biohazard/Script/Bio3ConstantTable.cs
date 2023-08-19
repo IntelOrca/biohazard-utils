@@ -12,7 +12,7 @@ namespace IntelOrca.Biohazard.Script
         public string GetEnemyName(byte kind) => g_enemyNames.Namify("ENEMY_", kind);
         public string GetItemName(byte kind) => g_itemNames.Namify("ITEM_", kind);
 
-        public byte? FindOpcode(string name)
+        public byte? FindOpcode(string name, bool isEventOpcode)
         {
             for (int i = 0; i < g_instructionSignatures.Length; i++)
             {

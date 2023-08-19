@@ -13,10 +13,11 @@ namespace IntelOrca.Biohazard.Script
         public string GetEnemyName(byte kind) => g_enemyNames.Namify("ENEMY_", kind);
         public string GetItemName(byte kind) => g_itemNames.Namify("ITEM_", kind);
 
-        public string GetOpcodeSignature(byte opcode)
+        public string GetOpcodeSignature(byte opcode, bool isEventOpcode)
         {
-            if (opcode < _opcodes.Length)
-                return _opcodes[opcode];
+            var table = isEventOpcode ? _eventOpcodes : _opcodes;
+            if (opcode < table.Length)
+                return table[opcode];
             return "";
         }
 
@@ -123,24 +124,43 @@ namespace IntelOrca.Biohazard.Script
             return null;
         }
 
-        public int GetInstructionSize(byte opcode, BinaryReader? br)
+        public int GetInstructionSize(byte opcode, BinaryReader? br, bool isEventOpcode = false)
         {
-            switch (opcode)
+            if (isEventOpcode)
             {
-                case 0x80:
-                    return 1;
-                case 0xFC:
-                    using (var br2 = br!.Fork())
-                    {
-                        var blockLen = br!.ReadByte();
-                        return 2 + blockLen;
-                    }
-                case 0xFF:
-                    return 2;
-                default:
-                    if (opcode >= _instructionSizes1.Length)
-                        return 0;
-                    return _instructionSizes1[opcode];
+                switch ((Re1EventOpcode)opcode)
+                {
+                    default:
+                        return 1;
+                    case Re1EventOpcode.Unk04:
+                        return 3;
+                    case Re1EventOpcode.Fork:
+                        return 4;
+                    case Re1EventOpcode.Block:
+                        return 2;
+                    case Re1EventOpcode.Single:
+                        return 2;
+                    case Re1EventOpcode.Unk08:
+                    case Re1EventOpcode.UnkF6:
+                        return 2;
+                    case Re1EventOpcode.UnkF8:
+                        return 4;
+                    case Re1EventOpcode.For:
+                        return 4;
+                    case Re1EventOpcode.SetInst:
+                        using (var br2 = br!.Fork())
+                        {
+                            var ll = br2.ReadByte();
+                            return 2 + ll;
+                        }
+                }
+            }
+            else
+            {
+
+                if (opcode >= _instructionSizes1.Length)
+                    return 0;
+                return _instructionSizes1[opcode];
             }
         }
 
@@ -579,6 +599,266 @@ namespace IntelOrca.Biohazard.Script
             "exec_inst",
             "process",
             "disable:u"
+        };
+
+        private string[] _eventOpcodes = new string[]
+        {
+            "evt_nop",
+            "evt_01",
+            "evt_02",
+            "evt_03",
+            "evt_04",
+            "evt_fork:upu",
+            "evt_block:u",
+            "evt_single:u",
+            "evt_08",
+            "evt_09",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "evt_plc_dest",
+            "evt_plc_motion",
+            "",
+            "evt_plc_ret",
+            "",
+            "evt_plc_rotate",
+            "",
+            "evt_F6",
+            "evt_F7",
+            "evt_sleep",
+            "evt_F9",
+            "evt_for:uU",
+            "evt_fornext",
+            "evt_set_inst",
+            "evt_exec_inst",
+            "evt_next",
+            "evt_disable"
         };
 
         private static int[] _instructionSizes1 = new int[]

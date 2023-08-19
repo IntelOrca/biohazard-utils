@@ -311,14 +311,14 @@ namespace IntelOrca.Biohazard.Script
             return null;
         }
 
-        public int GetInstructionSize(byte opcode, BinaryReader? br)
+        public int GetInstructionSize(byte opcode, BinaryReader? br, bool isEventOpcode)
         {
             if (opcode < g_instructionSizes.Length)
                 return g_instructionSizes[opcode];
             return 0;
         }
 
-        public string GetOpcodeSignature(byte opcode)
+        public string GetOpcodeSignature(byte opcode, bool isEventOpcode)
         {
             if (opcode < g_instructionSignatures.Length)
                 return g_instructionSignatures[opcode];

@@ -33,6 +33,14 @@ namespace IntelOrca.Biohazard.Script
         {
         }
 
+        public virtual void VisitBeginEventOpcode(int offset, ReadOnlySpan<byte> opcodeBytes)
+        {
+        }
+
+        public virtual void VisitEndEventOpcode()
+        {
+        }
+
         public virtual void VisitOpcode(int offset, Span<byte> opcodeBytes)
         {
             VisitOpcode(offset, opcodeBytes.Length, new BinaryReader(new MemoryStream(opcodeBytes.ToArray())));

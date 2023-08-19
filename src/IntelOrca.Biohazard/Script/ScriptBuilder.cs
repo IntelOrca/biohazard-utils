@@ -86,7 +86,7 @@ namespace IntelOrca.Biohazard.Script
             }
         }
 
-        public void RecordOpcode(int offset, Span<byte> opcodeBytes)
+        public void RecordOpcode(int offset, ReadOnlySpan<byte> opcodeBytes)
         {
             CurrentOffset = offset;
             CurrentOpcodeBytes = opcodeBytes.ToArray();

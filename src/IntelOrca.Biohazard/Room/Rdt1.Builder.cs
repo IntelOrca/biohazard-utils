@@ -38,8 +38,7 @@ namespace IntelOrca.Biohazard.Room
             public List<Tmd> EmbeddedItemTmd { get; set; } = new List<Tmd>();
             public List<Tim> EmbeddedItemTim { get; set; } = new List<Tim>();
             public EmbeddedItemIcons EmbeddedItemIcons { get; set; }
-            public List<Eff> Esps { get; set; } = new List<Eff>();
-            public List<Tim> EspTextures { get; set; } = new List<Tim>();
+            public EmbeddedEffectList EmbeddedEffects { get; set; }
 
             IRdt IRdtBuilder.ToRdt() => ToRdt();
             public Rdt1 ToRdt()
@@ -117,11 +116,11 @@ namespace IntelOrca.Biohazard.Room
                 offsetTable[13] = (int)ms.Position;
                 bw.Write(ESPIDs);
 
-                var espTable = new int[Esps.Count];
-                for (var i = 0; i < Esps.Count; i++)
+                var espTable = new int[EmbeddedEffects.Count];
+                for (var i = 0; i < EmbeddedEffects.Count; i++)
                 {
                     espTable[i] = (int)ms.Position;
-                    bw.Write(Esps[i].Data.ToArray());
+                    bw.Write(EmbeddedEffects[i].Eff.Data.ToArray());
                 }
 
                 if (espTable.Length == 0)
@@ -174,11 +173,11 @@ namespace IntelOrca.Biohazard.Room
                     bw.Write(EmbeddedObjectTim[i].Data);
                 }
 
-                var espTimTable = new int[EspTextures.Count];
-                for (var i = 0; i < EspTextures.Count; i++)
+                var espTimTable = new int[EmbeddedEffects.Count];
+                for (var i = 0; i < EmbeddedEffects.Count; i++)
                 {
                     espTimTable[i] = (int)ms.Position;
-                    bw.Write(EspTextures[i].Data);
+                    bw.Write(EmbeddedEffects[i].Tim.Data);
                 }
 
                 if (espTimTable.Length != 0)

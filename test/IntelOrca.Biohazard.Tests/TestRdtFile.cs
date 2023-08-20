@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
 using IntelOrca.Biohazard.Extensions;
 using IntelOrca.Biohazard.Room;
 using Xunit;
@@ -74,24 +73,21 @@ namespace IntelOrca.Biohazard.Tests
         }
 
         [Fact]
-        public void RE1_10B()
+        public void RE1_10B_ESP()
         {
             var assertEspData = new Action<Rdt1>(rdt1 =>
             {
-                var builder = rdt1.ToBuilder();
-
                 // Check ESP files are as expected
-                AssertMemory(new byte[] { 0x03, 0x04, 0x20, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }, builder.ESPIDs.ToArray());
-                Assert.Equal(3, builder.EspTextures.Count);
-                Assert.Equal(3, builder.Esps.Count);
-
-                Assert.Equal(17731334930585642120U, builder.EspTextures[0].Data.CalculateFnv1a());
-                Assert.Equal(1363492920606414161U, builder.EspTextures[1].Data.CalculateFnv1a());
-                Assert.Equal(6968197342918359829U, builder.EspTextures[2].Data.CalculateFnv1a());
-
-                Assert.Equal(3831764485800859409U, builder.Esps[0].Data.CalculateFnv1a());
-                Assert.Equal(9618078066332305110U, builder.Esps[1].Data.CalculateFnv1a());
-                Assert.Equal(17638525937642694821U, builder.Esps[2].Data.CalculateFnv1a());
+                var effectList = rdt1.EmbeddedEffects;
+                Assert.Equal(0x03, effectList[0].Id);
+                Assert.Equal(0x04, effectList[1].Id);
+                Assert.Equal(0x20, effectList[2].Id);
+                Assert.Equal(17731334930585642120U, effectList[0].Tim.Data.CalculateFnv1a());
+                Assert.Equal(1363492920606414161U, effectList[1].Tim.Data.CalculateFnv1a());
+                Assert.Equal(6968197342918359829U, effectList[2].Tim.Data.CalculateFnv1a());
+                Assert.Equal(3831764485800859409U, effectList[0].Eff.Data.CalculateFnv1a());
+                Assert.Equal(9618078066332305110U, effectList[1].Eff.Data.CalculateFnv1a());
+                Assert.Equal(17638525937642694821U, effectList[2].Eff.Data.CalculateFnv1a());
             });
 
             var rdt = (Rdt1)GetRdt(BioVersion.Biohazard1, "ROOM10B0.RDT");

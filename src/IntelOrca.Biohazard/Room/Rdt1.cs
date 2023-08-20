@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using IntelOrca.Biohazard.Extensions;
 using IntelOrca.Biohazard.Model;
@@ -236,6 +238,29 @@ namespace IntelOrca.Biohazard.Room
                 return GetSpan<Rdt1EmbeddedModel>(offset, Header.nItem);
             }
         }
+        public EmbeddedEffectList EmbeddedEffects
+        {
+            get
+            {
+                var ids = ESPIDs;
+                var count = ids.ToArray().Count(x => x != 0xFF);
+                var effects = new EmbeddedEffect[count];
+                var effs = new List<Eff>();
+                var tims = new List<Tim>();
+                foreach (var chunk in _data.Chunks)
+                {
+                    if (chunk.Kind == RdtFileChunkKinds.RDT1EmbeddedEspEff)
+                        effs.Add(new Eff(chunk.Memory));
+                    else if (chunk.Kind == RdtFileChunkKinds.RDT1EmbeddedEspTim)
+                        tims.Add(new Tim(chunk.Memory));
+                }
+                for (var i = 0; i < count; i++)
+                {
+                    effects[i] = new EmbeddedEffect(ids[i], effs[i], tims[i]);
+                }
+                return new EmbeddedEffectList(effects);
+            }
+        }
 
         IRdtBuilder IRdt.ToBuilder() => ToBuilder();
         public Builder ToBuilder()
@@ -274,18 +299,7 @@ namespace IntelOrca.Biohazard.Room
                     builder.CameraTextures.Add(new Tim(chunk.Memory));
             }
 
-            // foreach (var espOffset in ESPEFF)
-            // {
-            //     if (espOffset)
-            // }
-
-            foreach (var chunk in _data.Chunks)
-            {
-                if (chunk.Kind == RdtFileChunkKinds.RDT1EmbeddedEspEff)
-                    builder.Esps.Add(new Eff(chunk.Memory));
-                else if (chunk.Kind == RdtFileChunkKinds.RDT1EmbeddedEspTim)
-                    builder.EspTextures.Add(new Tim(chunk.Memory));
-            }
+            builder.EmbeddedEffects = EmbeddedEffects;
 
             builder.Header = Header;
             builder.LIT = LIT.ToArray();

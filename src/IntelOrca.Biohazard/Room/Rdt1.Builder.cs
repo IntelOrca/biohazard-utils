@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using IntelOrca.Biohazard.Model;
 
 namespace IntelOrca.Biohazard.Room
@@ -20,8 +21,8 @@ namespace IntelOrca.Biohazard.Room
             public int? SCATerminator { get; set; }
             public byte[] BLK { get; set; } = new byte[0];
             public byte[] FLR { get; set; } = new byte[0];
-            public ScdProcedure InitSCD { get; set; }
-            public ScdProcedure MainSCD { get; set; }
+            public ScdProcedureContainer InitSCD { get; set; }
+            public ScdProcedureContainer MainSCD { get; set; }
             public ScdEventList EventSCD { get; set; }
             public Emr? EMR { get; set; }
             public Edd? EDD { get; set; }
@@ -131,11 +132,11 @@ namespace IntelOrca.Biohazard.Room
                 }
                 else
                 {
-                    offsetTable[14] = (int)ms.Position;
-                    foreach (var o in espTable)
-                    {
+                    for (var i = 0; i < 8 - espTable.Length; i++)
+                        bw.Write(-1);
+                    foreach (var o in espTable.Reverse())
                         bw.Write(o);
-                    }
+                    offsetTable[14] = (int)ms.Position - 4;
                 }
 
                 var itemTmdTable = new int[EmbeddedItemTmd.Count];
@@ -182,13 +183,11 @@ namespace IntelOrca.Biohazard.Room
 
                 if (espTimTable.Length != 0)
                 {
-                    // var undefinedEspTims = 8 - espTimTable.Length;
-                    // for (var i = 0; i < undefinedEspTims; i++)
-                    //     bw.Write(-1);
-
-                    offsetTable[15] = (int)ms.Position;
-                    foreach (var o in espTimTable)
+                    for (var i = 0; i < 8 - espTimTable.Length; i++)
+                        bw.Write(-1);
+                    foreach (var o in espTimTable.Reverse())
                         bw.Write(o);
+                    offsetTable[15] = (int)ms.Position - 4;
                 }
 
                 // Write item TIM table

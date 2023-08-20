@@ -85,6 +85,9 @@ namespace IntelOrca.Biohazard.Room
                         continue;
                     if ((i == 3 || i == 12) && Header.nItem == 0)
                         continue;
+                    // ESP/EFF and ESP/TIM tables point to last element
+                    if (i == 14 || i == 15)
+                        offset -= 7 * 4;
 
                     _data.RegisterOffset(_offsetTableKinds[i], offset);
                 }
@@ -126,12 +129,12 @@ namespace IntelOrca.Biohazard.Room
             }
             foreach (var embeddedEff in ESPEFF)
             {
-                if (embeddedEff != 0)
+                if (embeddedEff != 0 && embeddedEff != -1)
                     _data.RegisterOffset(RdtFileChunkKinds.RDT1EmbeddedEspEff, embeddedEff, true);
             }
             foreach (var embeddedTim in ESPTIM)
             {
-                if (embeddedTim != 0)
+                if (embeddedTim != -1)
                     _data.RegisterOffset(RdtFileChunkKinds.RDT1EmbeddedEspTim, embeddedTim, true);
             }
         }
@@ -174,8 +177,8 @@ namespace IntelOrca.Biohazard.Room
         public int SCATerminator => MemoryMarshal.Cast<byte, int>(GetChunk(RdtFileChunkKinds.RDT1SCA).Span.TruncateStartBy(-4))[0];
         public ReadOnlySpan<byte> BLK => GetChunk(RdtFileChunkKinds.RDT1BLK).Span.TruncateBy(2);
         public ReadOnlySpan<byte> FLR => GetChunk(RdtFileChunkKinds.RDT1FLR).Span;
-        public ScdProcedure InitSCD => new ScdProcedure(Version, GetChunk(RdtFileChunkKinds.RDT1InitSCD));
-        public ScdProcedure MainSCD => new ScdProcedure(Version, GetChunk(RdtFileChunkKinds.RDT1MainSCD));
+        public ScdProcedureContainer InitSCD => new ScdProcedureContainer(GetChunk(RdtFileChunkKinds.RDT1InitSCD));
+        public ScdProcedureContainer MainSCD => new ScdProcedureContainer(GetChunk(RdtFileChunkKinds.RDT1MainSCD));
         public ScdEventList EventSCD => new ScdEventList(GetChunk(RdtFileChunkKinds.RDT1EventSCD));
         public Emr EMR => new Emr(Version, GetChunk(RdtFileChunkKinds.RDT1EMR));
         public Edd EDD => new Edd(GetChunk(RdtFileChunkKinds.RDT1EDD));
@@ -271,6 +274,11 @@ namespace IntelOrca.Biohazard.Room
                     builder.CameraTextures.Add(new Tim(chunk.Memory));
             }
 
+            // foreach (var espOffset in ESPEFF)
+            // {
+            //     if (espOffset)
+            // }
+
             foreach (var chunk in _data.Chunks)
             {
                 if (chunk.Kind == RdtFileChunkKinds.RDT1EmbeddedEspEff)
@@ -312,6 +320,12 @@ namespace IntelOrca.Biohazard.Room
         {
             var chunk = _data.FindChunkByOffset(offset);
             return new Tim(chunk!.Value.Memory);
+        }
+
+        private Eff ReadEmbeddedEff(int offset)
+        {
+            var chunk = _data.FindChunkByOffset(offset);
+            return new Eff(chunk!.Value.Memory);
         }
 
         private ReadOnlySpan<T> GetSpan<T>(int offset, int count) where T : struct => Data.GetSafeSpan<T>(offset, count);

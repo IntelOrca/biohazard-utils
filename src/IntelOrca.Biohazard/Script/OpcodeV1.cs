@@ -1,6 +1,6 @@
 ﻿namespace IntelOrca.Biohazard.Script
 {
-    internal enum OpcodeV1 : byte
+    public enum OpcodeV1 : byte
     {
         End,
         IfelCk,

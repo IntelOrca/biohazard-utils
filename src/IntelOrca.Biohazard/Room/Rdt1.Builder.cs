@@ -27,7 +27,6 @@ namespace IntelOrca.Biohazard.Room
             public Emr? EMR { get; set; }
             public Edd? EDD { get; set; }
             public byte[] MSG { get; set; } = new byte[0];
-            public byte[] ESPIDs { get; set; } = new byte[0];
             public byte[] EDT { get; set; } = new byte[0];
             public byte[] VH { get; set; } = new byte[0];
             public byte[] VB { get; set; } = new byte[0];
@@ -114,7 +113,7 @@ namespace IntelOrca.Biohazard.Room
                 bw.Write(EmbeddedItemIcons.Data.ToArray());
 
                 offsetTable[13] = (int)ms.Position;
-                bw.Write(ESPIDs);
+                bw.Write(EmbeddedEffects.ESPID);
 
                 var espTable = new int[EmbeddedEffects.Count];
                 for (var i = 0; i < EmbeddedEffects.Count; i++)

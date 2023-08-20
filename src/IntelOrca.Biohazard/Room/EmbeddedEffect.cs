@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 
 namespace IntelOrca.Biohazard.Room
 {
@@ -29,7 +30,7 @@ namespace IntelOrca.Biohazard.Room
 
         public EmbeddedEffect this[int index] => Effects.Span[index];
 
-        public ReadOnlySpan<byte> Ids
+        public ReadOnlySpan<byte> ESPID
         {
             get
             {
@@ -37,10 +38,37 @@ namespace IntelOrca.Biohazard.Room
                 var ids = new byte[8];
                 for (var i = 0; i < ids.Length; i++)
                 {
-                    ids[i] = effects[i].Id;
+                    ids[i] = (byte)(effects.Length > i ? effects[i].Id : 0xFF);
                 }
                 return ids;
             }
         }
+
+        public byte[] Ids
+        {
+            get
+            {
+                var result = new byte[Count];
+                for (var i = 0; i < Count; i++)
+                {
+                    result[i] = this[i].Id;
+                }
+                return result;
+            }
+        }
+
+        public bool Contains(byte id)
+        {
+            for (var i = 0; i < Count; i++)
+            {
+                if (this[i].Id == id)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public override string ToString() => string.Join("-", Ids.Select(x => x.ToString("X2")));
     }
 }

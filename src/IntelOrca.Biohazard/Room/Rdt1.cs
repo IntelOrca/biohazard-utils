@@ -317,7 +317,6 @@ namespace IntelOrca.Biohazard.Room
             builder.EMR = EMR;
             builder.MSG = MSG.ToArray();
             builder.EmbeddedItemIcons = RDT1EmbeddedItemIcons;
-            builder.ESPIDs = ESPIDs.ToArray();
             builder.EDT = EDT.ToArray();
             builder.VH = VH.ToArray();
             builder.VB = VB.ToArray();

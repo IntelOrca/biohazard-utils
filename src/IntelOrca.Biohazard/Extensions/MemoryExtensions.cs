@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 
@@ -6,6 +7,17 @@ namespace IntelOrca.Biohazard.Extensions
 {
     public static class MemoryExtensions
     {
+        public static List<T> ToList<T>(this ReadOnlyMemory<T> data)
+        {
+            var span = data.Span;
+            var list = new List<T>(span.Length);
+            for (var i = 0; i < span.Length; i++)
+            {
+                list.Add(span[i]);
+            }
+            return list;
+        }
+
         public static void WriteToFile(this ReadOnlyMemory<byte> data, string path) => WriteToFile(data.Span, path);
         public static void WriteToFile(this ReadOnlySpan<byte> span, string path)
         {

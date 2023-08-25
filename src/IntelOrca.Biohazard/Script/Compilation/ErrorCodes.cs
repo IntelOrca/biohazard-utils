@@ -42,6 +42,7 @@
         public const int ExpectedColon = 38;
         public const int InvalidSyntax = 39;
         public const int RecursiveMacro = 40;
+        public const int EventNotValid = 41;
 
         public static string GetMessage(int code) => _messages[code];
 
@@ -88,6 +89,7 @@
                 ": expected",
                 "Invalid syntax",
                 "Recursive macro",
+                "Events are only valid in SCD version 1.",
         };
     }
 }

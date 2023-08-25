@@ -432,7 +432,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
 
             private void VisitOpcodeNode(OpcodeSyntaxNode opcodeNode)
             {
-                var opcodeRaw = _constantTable.FindOpcode(opcodeNode.OpcodeToken.Text);
+                var opcodeRaw = _constantTable.FindOpcode(opcodeNode.OpcodeToken.Text, isEventOpcode: false);
                 if (opcodeRaw == null)
                 {
                     if (opcodeNode.Operands.Length == 0)

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace IntelOrca.Biohazard.Script
@@ -16,6 +17,8 @@ namespace IntelOrca.Biohazard.Script
         private IConstantTable _constantTable = new Bio1ConstantTable();
         private BioScriptKind _kind;
         private int _lastReturnLine;
+        private Re1EventOpcode? _eventOpcode;
+        private bool _eventBlockSub;
 
         public bool AssemblyFormat => _sb.AssemblyFormat;
 
@@ -80,11 +83,8 @@ namespace IntelOrca.Biohazard.Script
                     break;
                 case BioScriptKind.Event:
                     _kind = BioScriptKind.Event;
+                    _eventOpcode = null;
                     _sb.WriteLine();
-                    if (AssemblyFormat)
-                    {
-                        _sb.WriteLine(".event");
-                    }
                     break;
             }
         }
@@ -101,18 +101,36 @@ namespace IntelOrca.Biohazard.Script
             {
                 _sb.WriteLine();
             }
-            if (AssemblyFormat)
+            if (_kind == BioScriptKind.Event)
             {
-                if (Version != BioVersion.Biohazard1)
-                    _sb.WriteLine($".proc {GetProcedureName(index)}");
+                if (AssemblyFormat)
+                {
+                    _sb.WriteLine($".event {GetProcedureName(index)}");
+                }
+                else
+                {
+                    _sb.ResetIndent();
+                    _sb.WriteLine($"event {GetProcedureName(index)}");
+                    _sb.OpenBlock();
+
+                    _blockEnds.Clear();
+                }
             }
             else
             {
-                _sb.ResetIndent();
-                _sb.WriteLine($"proc {GetProcedureName(index)}");
-                _sb.OpenBlock();
+                if (AssemblyFormat)
+                {
+                    if (Version != BioVersion.Biohazard1)
+                        _sb.WriteLine($".proc {GetProcedureName(index)}");
+                }
+                else
+                {
+                    _sb.ResetIndent();
+                    _sb.WriteLine($"proc {GetProcedureName(index)}");
+                    _sb.OpenBlock();
 
-                _blockEnds.Clear();
+                    _blockEnds.Clear();
+                }
             }
         }
 
@@ -148,6 +166,36 @@ namespace IntelOrca.Biohazard.Script
 
             _sb.CloseBlock();
             _sb.RemoveLine(_lastReturnLine);
+        }
+
+        public override void VisitBeginEventOpcode(int offset, ReadOnlySpan<byte> opcodeBytes)
+        {
+            _sb.RecordOpcode(offset, opcodeBytes);
+            if (_eventOpcode == Re1EventOpcode.Block)
+            {
+                _eventBlockSub = true;
+                var len = MemoryMarshal.Cast<byte, ushort>(opcodeBytes)[0];
+                _sb.WriteStandardOpcode("evt_block_sub", len);
+                return;
+            }
+
+            var eventOpcode = (Re1EventOpcode)opcodeBytes[0];
+            var bytes = opcodeBytes.ToArray();
+
+            var stream = new SpanStream(bytes);
+            var br = new BinaryReader(stream);
+            DiassembleGeneralOpcode(br, offset, (byte)eventOpcode, opcodeBytes.Length, isEventOpcode: true);
+            _eventOpcode = eventOpcode;
+        }
+
+        public override void VisitEndEventOpcode()
+        {
+            if (_eventBlockSub)
+            {
+                _eventBlockSub = false;
+                return;
+            }
+            _eventOpcode = null;
         }
 
         public override void VisitOpcode(int offset, Span<byte> opcodeSpan)
@@ -765,7 +813,7 @@ namespace IntelOrca.Biohazard.Script
             return true;
         }
 
-        private void DiassembleGeneralOpcode(BinaryReader br, int offset, byte opcode, int instructionLength)
+        private void DiassembleGeneralOpcode(BinaryReader br, int offset, byte opcode, int instructionLength, bool isEventOpcode = false)
         {
             var parameters = new List<object>();
             string opcodeName;
@@ -777,8 +825,8 @@ namespace IntelOrca.Biohazard.Script
 
             br.BaseStream.Position = originalStreamPosition + 1;
 
-            var signature = _constantTable.GetOpcodeSignature(opcode);
-            var expectedLength = _constantTable.GetInstructionSize(opcode, br);
+            var signature = _constantTable.GetOpcodeSignature(opcode, isEventOpcode);
+            var expectedLength = _constantTable.GetInstructionSize(opcode, br, isEventOpcode);
             if (expectedLength == 0 || expectedLength != instructionLength)
             {
                 signature = "";
@@ -825,7 +873,7 @@ namespace IntelOrca.Biohazard.Script
                             case 'l':
                             {
                                 var blockLen = br.ReadByte();
-                                var labelOffset = offset + instructionLength + blockLen;
+                                var labelOffset = offset + blockLen;
                                 _sb.InsertLabel(labelOffset);
                                 parameters.Add(_sb.GetLabelName(labelOffset));
                                 break;
@@ -874,14 +922,6 @@ namespace IntelOrca.Biohazard.Script
                             case 'I':
                                 parameters.Add(br.ReadInt16());
                                 break;
-                            case 'r':
-                            {
-                                var target = br.ReadByte();
-                                var stage = (byte)(target >> 5);
-                                var room = (byte)(target & 0b11111);
-                                parameters.Add($"RDT_{stage:X}{room:X2}");
-                                break;
-                            }
                             default:
                             {
                                 var v = char.IsUpper(c) ? br.ReadUInt16() : br.ReadByte();

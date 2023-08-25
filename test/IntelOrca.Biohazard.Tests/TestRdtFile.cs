@@ -1,10 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using IntelOrca.Biohazard.Extensions;
 using IntelOrca.Biohazard.Room;
 using Xunit;
 using Xunit.Abstractions;
+using static IntelOrca.Biohazard.Tests.TestInfo;
 
 namespace IntelOrca.Biohazard.Tests
 {
@@ -31,6 +31,74 @@ namespace IntelOrca.Biohazard.Tests
             Assert.Equal(66, rdt.LIT.Length);           // light.lit
             Assert.Equal(2076, rdt.PRI.Length);         // sprite.pri
             Assert.Equal(280, rdt.RVD.Length);          // zone.rvd
+        }
+
+        [Fact]
+        public void RE1_100_SCD_INIT_MAIN_EVENTS()
+        {
+            var rdt = (Rdt1)GetRdt(BioVersion.Biohazard1, "ROOM1000.RDT");
+            var rdtBuilder = rdt.ToBuilder();
+            {
+                var scd = rdt.InitSCD;
+                var scdBuilder = scd.ToBuilder();
+                var rebuiltScd = scdBuilder.ToContainer();
+                rdtBuilder.InitSCD = rebuiltScd;
+                AssertMemory(scd.Data, rebuiltScd.Data);
+            }
+            {
+                var scd = rdt.MainSCD;
+                var scdBuilder = scd.ToBuilder();
+                var rebuiltScd = scdBuilder.ToContainer();
+                rdtBuilder.MainSCD = rebuiltScd;
+                AssertMemory(scd.Data, rebuiltScd.Data);
+            }
+            var rebuiltRdt = rdtBuilder.ToRdt();
+            AssertMemory(rdt.Data, rebuiltRdt.Data);
+        }
+
+        [Fact]
+        public void RE1_100_SCD_EVENTS()
+        {
+            var rdt = (Rdt1)GetRdt(BioVersion.Biohazard1, "ROOM1000.RDT");
+
+            var evtList = rdt.EventSCD;
+            var evtListBuilder = evtList.ToBuilder();
+            var rebuiltEvtList = evtListBuilder.ToEventList();
+            AssertMemory(evtList.Data, rebuiltEvtList.Data);
+
+            var rdtBuilder = rdt.ToBuilder();
+            rdtBuilder.EventSCD = rebuiltEvtList;
+            var rebuiltRdt = rdtBuilder.ToRdt();
+            AssertMemory(rdt.Data, rebuiltRdt.Data);
+        }
+
+        [Fact]
+        public void RE1_10B_ESP()
+        {
+            var assertEspData = new Action<Rdt1>(rdt1 =>
+            {
+                // Check ESP files are as expected
+                var effectList = rdt1.EmbeddedEffects;
+                Assert.Equal(0x03, effectList[0].Id);
+                Assert.Equal(0x04, effectList[1].Id);
+                Assert.Equal(0x20, effectList[2].Id);
+                Assert.Equal(17731334930585642120U, effectList[0].Tim.Data.CalculateFnv1a());
+                Assert.Equal(1363492920606414161U, effectList[1].Tim.Data.CalculateFnv1a());
+                Assert.Equal(6968197342918359829U, effectList[2].Tim.Data.CalculateFnv1a());
+                Assert.Equal(3831764485800859409U, effectList[0].Eff.Data.CalculateFnv1a());
+                Assert.Equal(9618078066332305110U, effectList[1].Eff.Data.CalculateFnv1a());
+                Assert.Equal(17638525937642694821U, effectList[2].Eff.Data.CalculateFnv1a());
+            });
+
+            var rdt = (Rdt1)GetRdt(BioVersion.Biohazard1, "ROOM10B0.RDT");
+            assertEspData(rdt);
+
+            // Reduce the total RDT size in some way
+            var rdtBuilder = rdt.ToBuilder();
+            rdtBuilder.InitSCD = new ScdProcedureContainer(new byte[] { 0, 0, 0, 0 });
+
+            var newRdt = rdtBuilder.ToRdt();
+            assertEspData(newRdt);
         }
 
         [Fact]
@@ -256,106 +324,6 @@ namespace IntelOrca.Biohazard.Tests
                     Assert.False(true, $"Memory did not match at index {i}");
                 }
             }
-        }
-
-        private static IRdt GetRdt(BioVersion version, string fileName)
-        {
-            switch (version)
-            {
-                case BioVersion.Biohazard1:
-                {
-                    var installPath = TestInfo.GetInstallPath(0);
-                    var stage = int.Parse(fileName.Substring(4, 1));
-                    var rdtPath = Path.Combine(installPath, "JPN", $"STAGE{stage}", fileName);
-                    return new Rdt1(rdtPath);
-                }
-                case BioVersion.Biohazard2:
-                {
-                    var installPath = TestInfo.GetInstallPath(1);
-                    var player = int.Parse(fileName.Substring(7, 1));
-                    var rdtPath = Path.Combine(installPath, "data", $"pl{player}", "rdt", fileName);
-                    return new Rdt2(BioVersion.Biohazard2, rdtPath);
-                }
-                case BioVersion.Biohazard3:
-                {
-                    var installPath = TestInfo.GetInstallPath(2);
-                    var rofsFiles = Directory.GetFiles(installPath, "rofs*.dat");
-                    var repo = new FileRepository(installPath);
-                    foreach (var file in rofsFiles)
-                        repo.AddRE3Archive(file);
-
-                    var rdtPath = Path.Combine(installPath, "data_j", "rdt", fileName);
-                    var rdtBytes = repo.GetBytes(rdtPath);
-                    return new Rdt2(BioVersion.Biohazard3, rdtBytes);
-                }
-                default:
-                    throw new NotImplementedException();
-            }
-        }
-
-        private static string[] GetAllRdtFileNames(BioVersion version)
-        {
-            var results = new List<string>();
-            switch (version)
-            {
-                case BioVersion.Biohazard1:
-                {
-                    var installPath = TestInfo.GetInstallPath(0);
-                    for (var stage = 1; stage <= 7; stage++)
-                    {
-                        var stageDirectory = Path.Combine(installPath, "JPN", $"STAGE{stage}");
-                        var files = Directory.GetFiles(stageDirectory, "*.RDT");
-                        foreach (var rdtPath in files)
-                        {
-                            var length = new FileInfo(rdtPath).Length;
-                            if (length <= 5000)
-                                continue;
-
-                            var fileName = Path.GetFileName(rdtPath);
-                            results.Add(fileName);
-                        }
-                    }
-                    break;
-                }
-                case BioVersion.Biohazard2:
-                {
-                    var installPath = TestInfo.GetInstallPath(1);
-                    for (var player = 0; player <= 1; player++)
-                    {
-                        var rdtDirectory = Path.Combine(installPath, "data", $"pl{player}", "rdt");
-                        var files = Directory.GetFiles(rdtDirectory, "*.RDT");
-                        foreach (var rdtPath in files)
-                        {
-                            var length = new FileInfo(rdtPath).Length;
-                            if (length <= 5000)
-                                continue;
-
-                            var fileName = Path.GetFileName(rdtPath);
-                            results.Add(fileName);
-                        }
-                    }
-                    break;
-                }
-                case BioVersion.Biohazard3:
-                {
-                    var installPath = TestInfo.GetInstallPath(2);
-                    var rofsFiles = Directory.GetFiles(installPath, "rofs*.dat");
-                    var repo = new FileRepository(installPath);
-                    foreach (var file in rofsFiles)
-                        repo.AddRE3Archive(file);
-
-                    var rdtDirectory = Path.Combine(installPath, "data_j", "rdt");
-                    var files = repo.GetFiles(rdtDirectory);
-                    foreach (var rdtPath in files)
-                    {
-                        results.Add(rdtPath);
-                    }
-                    break;
-                }
-                default:
-                    throw new NotImplementedException();
-            }
-            return results.ToArray();
         }
     }
 }

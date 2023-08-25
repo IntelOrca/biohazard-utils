@@ -15,7 +15,7 @@ namespace IntelOrca.Biohazard.Survey
         [DllImport("kernel32.dll")]
         private extern static bool ReadProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, IntPtr lpBuffer, IntPtr nSize, out IntPtr lpNumberOfBytesRead);
 
-        private static string _jsonPath = @"M:\git\rer\IntelOrca.Biohazard\data\re3\enemy.json";
+        private static string _jsonPath = @"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re1\enemy.json";
 
         private static bool _exit;
         private static byte[] _buffer = new byte[64];
@@ -63,7 +63,12 @@ namespace IntelOrca.Biohazard.Survey
             while (!_exit)
             {
                 var pAll = Process.GetProcesses();
-                var p = pAll.FirstOrDefault(x => x.ProcessName.StartsWith("bio2"));
+                var p = pAll.FirstOrDefault(x => x.ProcessName.StartsWith("Bio"));
+                if (p != null)
+                {
+                    Spy(p);
+                }
+                p = pAll.FirstOrDefault(x => x.ProcessName.StartsWith("bio2"));
                 if (p != null)
                 {
                     Spy(p);
@@ -74,7 +79,7 @@ namespace IntelOrca.Biohazard.Survey
                     Spy(p);
                 }
 
-                Console.WriteLine("Waiting for RE 2 or RE 3 to start...");
+                Console.WriteLine("Waiting for RE 1, RE 2 or RE 3 to start...");
                 Thread.Sleep(4000);
             }
         }
@@ -128,7 +133,8 @@ namespace IntelOrca.Biohazard.Survey
                     Console.WriteLine($"D: {gameState.D,8}");
                     Console.WriteLine($"F: {gameState.Floor,8}");
 
-                    if (gameState.Key == 0x2300)
+                    var expectedKey = p.ProcessName.StartsWith("Bio") ? 0x0500 : 0x2300;
+                    if (gameState.Key == expectedKey)
                     {
                         AddEnemyPosition(gameState);
                         // RemoveEnemyPositions(gameState, 2000);
@@ -199,7 +205,27 @@ namespace IntelOrca.Biohazard.Survey
         {
             var buffer = _buffer;
 
-            if (p.ProcessName.StartsWith("bio2"))
+            if (p.ProcessName.StartsWith("Bio"))
+            {
+                ReadMemory(p, 0x00C38710, buffer, 0, 2);
+                gameState.Key = BitConverter.ToUInt16(buffer, 0);
+
+                ReadMemory(p, 0x00C351E8, buffer, 0, 12);
+                gameState.X = BitConverter.ToInt16(buffer, 0);
+                gameState.Y = BitConverter.ToInt16(buffer, 4);
+                gameState.Z = BitConverter.ToInt16(buffer, 8);
+
+                ReadMemory(p, 0x00C35228, buffer, 0, 2);
+                gameState.D = BitConverter.ToInt16(buffer, 0);
+
+                gameState.Floor = 0;
+
+                ReadMemory(p, 0x00C386F0, buffer, 0, 3);
+                gameState.Stage = buffer[0];
+                gameState.Room = buffer[1];
+                gameState.Cut = buffer[2];
+            }
+            else if (p.ProcessName.StartsWith("bio2"))
             {
                 ReadMemory(p, 0x00988604, buffer, 0, 2);
                 gameState.Key = BitConverter.ToUInt16(buffer, 0);
@@ -368,7 +394,7 @@ namespace IntelOrca.Biohazard.Survey
 
             public int DistanceTo(GameState other) => DistanceTo(other.RtdId, other.X, other.Y, other.Z);
             public int DistanceTo(EnemyPosition other) => DistanceTo(other.Room, other.X, other.Y, other.Z);
-            public bool IsVeryClose(EnemyPosition other) => DistanceTo(other) <= 100;
+            public bool IsVeryClose(EnemyPosition other) => DistanceTo(other) <= 500;
 
             public override string ToString()
             {

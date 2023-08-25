@@ -17,6 +17,14 @@ namespace IntelOrca.Biohazard.Script
             return decompiler.GetScript();
         }
 
+        public string Diassemble(ScdProcedure scd, BioScriptKind kind, bool listing = false)
+        {
+            var decompiler = new ScriptDecompiler(true, listing);
+            decompiler.VisitVersion(scd.Version);
+            ReadScript(scd.Data, scd.Version, kind, decompiler);
+            return decompiler.GetScript();
+        }
+
         internal void ReadScript(ReadOnlyMemory<byte> data, BioVersion version, BioScriptKind kind, IBioScriptVisitor visitor)
         {
             ReadScript(new SpanStream(data), data.Length, version, kind, visitor);
@@ -44,7 +52,7 @@ namespace IntelOrca.Biohazard.Script
         internal void ReadEventScript(ReadOnlyMemory<byte> data, IBioScriptVisitor visitor, int eventIndex)
         {
             var br = new BinaryReader(new SpanStream(data));
-            ReadScript1(br, data.Length, BioScriptKind.Event, visitor, eventIndex);
+            ReadScript1Event(br, data.Length, BioScriptKind.Event, visitor, eventIndex);
         }
 
         private void ReadScript1(BinaryReader br, int length, BioScriptKind kind, IBioScriptVisitor visitor, int eventIndex)
@@ -78,6 +86,122 @@ namespace IntelOrca.Biohazard.Script
             }
             visitor.VisitEndSubroutine(0);
             visitor.VisitEndScript(kind);
+        }
+
+        private void ReadScript1Event(BinaryReader br, int length, BioScriptKind kind, IBioScriptVisitor visitor, int eventIndex)
+        {
+            var scriptEnd = kind == BioScriptKind.Event ? length : br.ReadUInt16();
+            var constantTable = new Bio1ConstantTable();
+
+            visitor.VisitBeginScript(kind);
+            visitor.VisitBeginSubroutine(eventIndex);
+            try
+            {
+                while (br.BaseStream.Position < scriptEnd)
+                {
+                    var eventOpcode = (Re1EventOpcode)br.ReadByte();
+                    switch (eventOpcode)
+                    {
+                        default:
+                            var eventOpcodeLength = constantTable.GetInstructionSize((byte)eventOpcode, br, isEventOpcode: true);
+                            br.BaseStream.Position--;
+                            ReadSingleEventOpcode(br.BaseStream, visitor, eventOpcodeLength);
+                            break;
+                        case Re1EventOpcode.Block:
+                        {
+                            var len = br.ReadByte();
+                            br.BaseStream.Position -= 2;
+                            visitor.VisitBeginEventOpcode((int)(BaseOffset + br.BaseStream.Position), br.ReadBytes(2));
+                            if (len != 0)
+                            {
+                                var baseOffset = (int)(BaseOffset + br.BaseStream.Position);
+                                var blockBytes = br.ReadBytes(len - 1);
+                                var blockStream = new SpanStream(blockBytes);
+                                ReadRe1OpcodeBlock(blockStream, constantTable, visitor, baseOffset);
+                            }
+                            visitor.VisitEndEventOpcode();
+                            break;
+                        }
+                        case Re1EventOpcode.Single:
+                        case Re1EventOpcode.Do:
+                        {
+                            var opcodeLen = br.ReadByte();
+                            br.BaseStream.Position -= 2;
+                            visitor.VisitBeginEventOpcode((int)(BaseOffset + br.BaseStream.Position), br.ReadBytes(2));
+                            var baseOffset = (int)(BaseOffset + br.BaseStream.Position);
+                            var opcodeBytes = br.ReadBytes(opcodeLen - 2);
+                            var blockStream = new SpanStream(opcodeBytes);
+                            ReadRe1Opcode(blockStream, constantTable, visitor, baseOffset);
+                            visitor.VisitEndEventOpcode();
+                            break;
+                        }
+                    }
+                }
+            }
+            catch (Exception)
+            {
+            }
+            visitor.VisitEndSubroutine(0);
+            visitor.VisitEndScript(kind);
+        }
+
+        private void ReadSingleEventOpcode(Stream stream, IBioScriptVisitor visitor, int length)
+        {
+            var br = new BinaryReader(stream);
+            visitor.VisitBeginEventOpcode((int)(BaseOffset + stream.Position), br.ReadBytes(length));
+            visitor.VisitEndEventOpcode();
+        }
+
+        private void ReadRe1OpcodeBlock(Stream stream, Bio1ConstantTable constantTable, IBioScriptVisitor visitor, int baseOffset)
+        {
+            try
+            {
+                var br = new BinaryReader(stream);
+                ushort next;
+                do
+                {
+                    if (br.BaseStream.Position == br.BaseStream.Length - 1)
+                        break;
+                    next = br.ReadUInt16();
+                    br.BaseStream.Position -= 2;
+                    visitor.VisitBeginEventOpcode((int)(baseOffset + br.BaseStream.Position), br.ReadBytes(2));
+                    if (next != 0)
+                    {
+                        var baseOffset2 = (int)(baseOffset + br.BaseStream.Position);
+                        var opcodes = br.ReadBytes(next - 2);
+                        var opcodeStream = new SpanStream(opcodes);
+                        while (ReadRe1Opcode(opcodeStream, constantTable, visitor, baseOffset2))
+                        {
+                        }
+                    }
+                    visitor.VisitEndEventOpcode();
+                } while (next != 0 && (br.BaseStream.Position < stream.Length));
+            }
+            catch
+            {
+            }
+        }
+
+        private bool ReadRe1Opcode(Stream stream, Bio1ConstantTable constantTable, IBioScriptVisitor visitor, int baseOffset)
+        {
+            var br = new BinaryReader(stream);
+            var instructionPosition = (int)br.BaseStream.Position;
+            if (instructionPosition == br.BaseStream.Length)
+                return false;
+
+            var opcode = br.ReadByte();
+            var instructionSize = constantTable.GetInstructionSize(opcode, br);
+            if (instructionSize == 0)
+                return false;
+
+            br.BaseStream.Position = instructionPosition + 1;
+            var bytes = new byte[instructionSize];
+            bytes[0] = opcode;
+            if (br.Read(bytes, 1, instructionSize - 1) != instructionSize - 1)
+                return false;
+
+            visitor.VisitOpcode(baseOffset + instructionPosition, new Span<byte>(bytes));
+            return true;
         }
 
         private void ReadScript2(BinaryReader br, int length, BioScriptKind kind, IBioScriptVisitor visitor)

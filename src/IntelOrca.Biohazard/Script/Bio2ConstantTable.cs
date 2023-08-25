@@ -68,7 +68,7 @@ namespace IntelOrca.Biohazard.Script
             return sz;
         }
 
-        public byte? FindOpcode(string name)
+        public byte? FindOpcode(string name, bool isEventOpcode)
         {
             for (int i = 0; i < g_instructionSignatures.Length; i++)
             {
@@ -360,14 +360,14 @@ namespace IntelOrca.Biohazard.Script
             return value;
         }
 
-        public int GetInstructionSize(byte opcode, BinaryReader? br)
+        public int GetInstructionSize(byte opcode, BinaryReader? br, bool isEventOpcode)
         {
             if (opcode < g_instructionSizes.Length)
                 return g_instructionSizes[opcode];
             return 0;
         }
 
-        public string GetOpcodeSignature(byte opcode)
+        public string GetOpcodeSignature(byte opcode, bool isEventOpcode)
         {
             if (opcode < g_instructionSignatures.Length)
                 return g_instructionSignatures[opcode];

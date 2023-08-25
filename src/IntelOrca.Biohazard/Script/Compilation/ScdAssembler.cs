@@ -5,7 +5,8 @@ namespace IntelOrca.Biohazard.Script.Compilation
 {
     public partial class ScdAssembler : IScdGenerator
     {
-        private const byte UnkOpcode = 255;
+        private const int EvtBlockSubOpcode = -2;
+        private const int UnkOpcode = -1;
 
         private const int OperandStateNone = 0;
         private const int OperandStateValue = 1;
@@ -25,8 +26,9 @@ namespace IntelOrca.Biohazard.Script.Compilation
         private List<byte[]> _procedures = new List<byte[]>();
         private int _currentOpcodeOffset;
         private int _currentOpcodeLength;
-        private byte _currentOpcode;
+        private int _currentOpcode;
         private string _currentOpcodeSignature = "";
+        private bool _currentOpcodeIsEvent;
         private int _signatureIndex;
         private BioVersion? _version;
         private BioScriptKind? _currScriptKind;
@@ -272,6 +274,27 @@ namespace IntelOrca.Biohazard.Script.Compilation
                         _state = ParserState.ExpectProcName;
                     }
                     break;
+                case ".event":
+                    if (_version != BioVersion.Biohazard1)
+                    {
+                        EmitError(in token, ErrorCodes.EventNotValid);
+                        _state = ParserState.SkipToNextLine;
+                        _restoreState = ParserState.Default;
+                    }
+                    else
+                    {
+                        if (_currScriptKind != BioScriptKind.Event)
+                        {
+                            ChangeScriptKind(BioScriptKind.Event);
+                        }
+                        else
+                        {
+                            if (_procedures.Count != 0 || _procData.Count != 0)
+                                EndProcedure();
+                        }
+                        _state = ParserState.ExpectProcName;
+                    }
+                    break;
                 default:
                     EmitError(in token, ErrorCodes.UnknownDirective, token.Text);
                     _restoreState = _state;
@@ -288,8 +311,11 @@ namespace IntelOrca.Biohazard.Script.Compilation
             _procData.Clear();
             if (_version == BioVersion.Biohazard1)
             {
-                _procData.Add(0);
-                _procData.Add(0);
+                if (_currScriptKind != BioScriptKind.Event)
+                {
+                    _procData.Add(0);
+                    _procData.Add(0);
+                }
             }
         }
 
@@ -306,19 +332,34 @@ namespace IntelOrca.Biohazard.Script.Compilation
             {
                 if (_version == BioVersion.Biohazard1)
                 {
-                    var procLength = _procData.Count;
-                    if (procLength <= 2)
+                    if (_currScriptKind != BioScriptKind.Event)
                     {
-                        // Empty script
-                        procLength = 0;
-                    }
+                        var procLength = _procData.Count;
+                        if (procLength <= 2)
+                        {
+                            // Empty script
+                            procLength = 0;
+                        }
 
-                    _procData[0] = (byte)(procLength & 0xFF);
-                    _procData[1] = (byte)(procLength >> 8);
-                    _procData.Add(0);
-                    while ((_procData.Count & 3) != 0)
-                    {
+                        _procData[0] = (byte)(procLength & 0xFF);
+                        _procData[1] = (byte)(procLength >> 8);
                         _procData.Add(0);
+                        while ((_procData.Count & 3) != 0)
+                        {
+                            _procData.Add(0);
+                        }
+
+                        var output = _procData.ToArray();
+                        _editOperations.Add(new ScdRdtEditOperation(_currScriptKind.Value, new Room.ScdProcedureList(_version!.Value, output)));
+                    }
+                    else
+                    {
+                        EndProcedure();
+                        foreach (var proc in _procedures)
+                        {
+                            var output = proc.ToArray();
+                            _editOperations.Add(new ScdRdtEditOperation(_currScriptKind.Value, new Room.ScdProcedureList(_version!.Value, output)));
+                        }
                     }
                 }
                 else
@@ -335,10 +376,10 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     {
                         _procData.AddRange(p);
                     }
-                }
 
-                var output = _procData.ToArray();
-                _editOperations.Add(new ScdRdtEditOperation(_currScriptKind.Value, new Room.ScdProcedureList(_version!.Value, output)));
+                    var output = _procData.ToArray();
+                    _editOperations.Add(new ScdRdtEditOperation(_currScriptKind.Value, new Room.ScdProcedureList(_version!.Value, output)));
+                }
             }
         }
 
@@ -421,34 +462,51 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 _currScriptKind = BioScriptKind.Init;
 
             _currentOpcodeOffset = _procData.Count;
+            _signatureIndex = 0;
             if (name == "unk" || name == "db")
             {
                 _currentOpcode = UnkOpcode;
                 _currentOpcodeLength = 0;
                 return true;
             }
+            else if (name == "evt_block_sub")
+            {
+                _currentOpcode = EvtBlockSubOpcode;
+                _currentOpcodeLength = 2;
+                _currentOpcodeSignature = "U";
+                return true;
+            }
 
-            var opcode = _constantTable.FindOpcode(name);
+            byte? eventOpcode = null;
+            if (_currScriptKind == BioScriptKind.Event)
+            {
+                eventOpcode = _constantTable.FindOpcode(name, isEventOpcode: true);
+            }
+
+            var opcode = eventOpcode ?? _constantTable.FindOpcode(name, isEventOpcode: false);
             if (opcode == null)
             {
                 return false;
             }
+            _currentOpcodeIsEvent = eventOpcode != null;
             _currentOpcode = opcode.Value;
-            _currentOpcodeLength = _constantTable.GetInstructionSize(opcode.Value, null);
-            _currentOpcodeSignature = _constantTable.GetOpcodeSignature(opcode.Value);
+            _currentOpcodeLength = _constantTable.GetInstructionSize(opcode.Value, null, _currentOpcodeIsEvent);
+            _currentOpcodeSignature = _constantTable.GetOpcodeSignature(opcode.Value, _currentOpcodeIsEvent);
             var colonIndex = _currentOpcodeSignature.IndexOf(':');
             if (colonIndex == -1)
             {
                 var length = _currentOpcodeLength;
-                if (_currentOpcodeSignature != "")
-                    length--;
-                _currentOpcodeSignature = new string('u', length);
+                if (length != 0)
+                {
+                    if (_currentOpcodeSignature != "")
+                        length--;
+                    _currentOpcodeSignature = new string('u', length);
+                }
             }
             else
             {
                 _currentOpcodeSignature = _currentOpcodeSignature.Substring(colonIndex + 1);
             }
-            _signatureIndex = 0;
             WriteUInt8(opcode.Value);
             return true;
         }
@@ -513,12 +571,6 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 {
                     WriteUint16((ushort)_operandValue);
                 }
-                else if (arg == 'r')
-                {
-                    var room = _operandValue & 0xFF;
-                    var stage = _operandValue >> 8 & 0xFF;
-                    WriteUInt8((byte)(stage << 5 | room & 0b11111));
-                }
                 else if (char.IsUpper(arg))
                 {
                     WriteUint16((ushort)_operandValue);
@@ -548,7 +600,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 case '@':
                 case '~':
                     var baseAddress = _currentOpcodeOffset;
-                    if (arg == 'l' || arg == 'L' || arg == '\'')
+                    if (arg == 'L' || arg == '\'')
                         baseAddress += _currentOpcodeLength;
 
                     var size = arg == 'l' || arg == '\'' ? 1 : 2;
@@ -587,7 +639,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
         private bool EndCurrentOpcode(in Token token)
         {
             EndOperand();
-            if (_currentOpcode != UnkOpcode && _signatureIndex != _currentOpcodeSignature.Length)
+            if (_currentOpcodeLength != 0 && _signatureIndex != _currentOpcodeSignature.Length)
             {
                 EmitError(in token, ErrorCodes.IncorrectNumberOfOperands);
                 return false;

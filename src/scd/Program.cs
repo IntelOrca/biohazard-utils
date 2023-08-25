@@ -44,7 +44,7 @@ namespace IntelOrca.Scd
                     var eventScd = rdt1.EventSCD;
                     for (int i = 0; i < eventScd.Count; i++)
                     {
-                        eventScd[i].WriteToFile($"event_{i:X2}.scd");
+                        eventScd[i].Data.WriteToFile($"event_{i:X2}.scd");
                     }
                 }
                 else

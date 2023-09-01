@@ -67,6 +67,7 @@ namespace IntelOrca.Biohazard.Script
                         OpcodeV1.ElseCk => ElseCkOpcode.Read(br, offset),
                         OpcodeV1.TestPickup => TestPickupOpcode.Read(br, offset),
                         OpcodeV1.DoorAotSe => DoorAotSeOpcode.Read(br, offset),
+                        OpcodeV1.AotSet => AotSetOpcode.Read(br, offset),
                         OpcodeV1.ItemAotSet => ItemAotSetOpcode.Read(br, offset),
                         OpcodeV1.SceEmSet => SceEmSetOpcode.Read(br, offset),
                         _ => UnknownOpcode.Read(br, offset, length),

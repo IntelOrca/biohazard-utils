@@ -20,6 +20,7 @@
         TestPickup = 0x11,
         AotReset = 0x12,
         ItemAotSet = 0x18,
+        ItemCk = 0x1A,
         SceEmSet = 0x1B,
         OmSet = 0x1F
     }

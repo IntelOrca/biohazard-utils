@@ -187,6 +187,7 @@ namespace IntelOrca.Biohazard.Script
                 case OpcodeV1.Cmp7:
                 case OpcodeV1.TestItem:
                 case OpcodeV1.TestPickup:
+                case OpcodeV1.ItemCk:
                     return true;
             }
             return false;
@@ -365,7 +366,7 @@ namespace IntelOrca.Biohazard.Script
             "",
             "item_aot_set:uIIIItuuuuuuuuuuuuuuu",
             "setbyte:uuu",
-            "item_ck",
+            "item_ck:t",
             "enemy:euuuuuuIuuIIIuuuu",
             "",
             "",
@@ -383,7 +384,7 @@ namespace IntelOrca.Biohazard.Script
             "movie_on:u",
             "effect",
             "",
-            "remove_item",
+            "remove_item:t",
             "",
             "",
             "",

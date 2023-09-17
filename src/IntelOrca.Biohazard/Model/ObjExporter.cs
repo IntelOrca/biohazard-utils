@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 
@@ -38,58 +39,67 @@ namespace IntelOrca.Biohazard.Model
         public void Export(IModelMesh mesh, string objPath, int numPages, Func<int, Emr.Vector>? partTranslate = null)
         {
             var meshConverter = new MeshConverter();
-            var md2 = (Md2)meshConverter.ConvertMesh(mesh, BioVersion.Biohazard3, remap: false);
+            var md1 = (Md1)meshConverter.ConvertMesh(mesh, BioVersion.Biohazard2, remap: false);
 
             Begin(objPath, numPages);
 
-            var objIndex = 0;
             var vIndex = 1;
             var tvIndex = 1;
-            foreach (var obj in md2.Objects)
+            var nIndex = 1;
+            for (var partIndex = 0; partIndex < md1.NumParts; partIndex++)
             {
-                var translate = partTranslate == null ? new Emr.Vector() : partTranslate(objIndex);
+                var translate = partTranslate == null ? new Emr.Vector() : partTranslate(partIndex);
 
-                AppendLine($"o part_{objIndex:00}");
-                foreach (var v in md2.GetPositionData(obj))
+                var objTriangles = md1.Objects[(partIndex * 2) + 0];
+                var objQuads = md1.Objects[(partIndex * 2) + 1];
+                Debug.Assert(objTriangles.vtx_count == objQuads.vtx_count);
+                Debug.Assert(objTriangles.nor_count == objQuads.nor_count);
+
+                AppendLine($"o part_{partIndex:00}");
+
+                // Triangles
+                foreach (var v in md1.GetPositionData(objTriangles))
                 {
                     AppendDataLine("v", (translate.x + v.x) / 1000.0, (translate.y + v.y) / 1000.0, (translate.z + v.z) / 1000.0);
                 }
-                foreach (var v in md2.GetNormalData(obj))
+                foreach (var v in md1.GetNormalData(objTriangles))
                 {
                     AppendDataLine("vn", v.x / 5000.0, v.y / 5000.0, v.z / 5000.0);
                 }
-                foreach (var t in md2.GetTriangles(obj))
+                foreach (var t in md1.GetTriangleTextures(objTriangles))
                 {
                     var page = t.page & 0x0F;
                     var offsetU = page * 128;
-                    AppendDataLine("vt", (offsetU + t.tu2) / _textureWidth, 1 - t.tv2 / _textureHeight);
-                    AppendDataLine("vt", (offsetU + t.tu1) / _textureWidth, 1 - t.tv1 / _textureHeight);
-                    AppendDataLine("vt", (offsetU + t.tu0) / _textureWidth, 1 - t.tv0 / _textureHeight);
-                }
-                foreach (var t in md2.GetQuads(obj))
-                {
-                    var page = t.page & 0x0F;
-                    var offsetU = page * 128;
-                    AppendDataLine("vt", (offsetU + t.tu2) / _textureWidth, 1 - t.tv2 / _textureHeight);
-                    AppendDataLine("vt", (offsetU + t.tu3) / _textureWidth, 1 - t.tv3 / _textureHeight);
-                    AppendDataLine("vt", (offsetU + t.tu1) / _textureWidth, 1 - t.tv1 / _textureHeight);
-                    AppendDataLine("vt", (offsetU + t.tu0) / _textureWidth, 1 - t.tv0 / _textureHeight);
+                    AppendDataLine("vt", (offsetU + t.u2) / _textureWidth, 1 - t.v2 / _textureHeight);
+                    AppendDataLine("vt", (offsetU + t.u1) / _textureWidth, 1 - t.v1 / _textureHeight);
+                    AppendDataLine("vt", (offsetU + t.u0) / _textureWidth, 1 - t.v0 / _textureHeight);
                 }
                 AppendLine($"s 1");
-                foreach (var t in md2.GetTriangles(obj))
+                foreach (var t in md1.GetTriangles(objTriangles))
                 {
-                    AppendLine($"f {t.v2 + vIndex}/{tvIndex + 0}/{t.v2 + vIndex} {t.v1 + vIndex}/{tvIndex + 1}/{t.v1 + vIndex} {t.v0 + vIndex}/{tvIndex + 2}/{t.v0 + vIndex}");
+                    AppendLine($"f {t.v2 + vIndex}/{tvIndex + 0}/{t.n2 + vIndex} {t.v1 + vIndex}/{tvIndex + 1}/{t.n1 + vIndex} {t.v0 + vIndex}/{tvIndex + 2}/{t.n0 + vIndex}");
                     tvIndex += 3;
                 }
-                AppendLine($"s 1");
-                foreach (var t in md2.GetQuads(obj))
+
+                // Quads
+                foreach (var t in md1.GetQuadTextures(objQuads))
                 {
-                    AppendLine($"f {t.v2 + vIndex}/{tvIndex + 0}/{t.v2 + vIndex} {t.v3 + vIndex}/{tvIndex + 1}/{t.v3 + vIndex} {t.v1 + vIndex}/{tvIndex + 2}/{t.v1 + vIndex} {t.v0 + vIndex}/{tvIndex + 3}/{t.v0 + vIndex}");
+                    var page = t.page & 0x0F;
+                    var offsetU = page * 128;
+                    AppendDataLine("vt", (offsetU + t.u2) / _textureWidth, 1 - t.v2 / _textureHeight);
+                    AppendDataLine("vt", (offsetU + t.u3) / _textureWidth, 1 - t.v3 / _textureHeight);
+                    AppendDataLine("vt", (offsetU + t.u1) / _textureWidth, 1 - t.v1 / _textureHeight);
+                    AppendDataLine("vt", (offsetU + t.u0) / _textureWidth, 1 - t.v0 / _textureHeight);
+                }
+                AppendLine($"s 1");
+                foreach (var t in md1.GetQuads(objQuads))
+                {
+                    AppendLine($"f {t.v2 + vIndex}/{tvIndex + 0}/{t.n2 + vIndex} {t.v3 + vIndex}/{tvIndex + 1}/{t.n3 + vIndex} {t.v1 + vIndex}/{tvIndex + 2}/{t.n1 + vIndex} {t.v0 + vIndex}/{tvIndex + 3}/{t.n0 + vIndex}");
                     tvIndex += 4;
                 }
 
-                objIndex++;
-                vIndex += obj.vtx_count;
+                vIndex += objTriangles.vtx_count;
+                nIndex += objTriangles.nor_count;
             }
             End();
         }

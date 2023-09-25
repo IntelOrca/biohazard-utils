@@ -6,5 +6,6 @@
         Biohazard1_5,
         Biohazard2,
         Biohazard3,
+        Unknown,
     }
 }

@@ -171,6 +171,69 @@ namespace IntelOrca.Biohazard.Model
                     }
                 }
             }
+            else if (_mesh is Obj wfobj)
+            {
+                for (var i = 0; i < wfobj.NumParts; i++)
+                {
+                    if (VisitPart(i))
+                    {
+                        var group = wfobj.Groups[i];
+                        foreach (var position in group.Positions)
+                        {
+                            VisitPosition(new Vector(
+                                (short)(position.x * Obj.PositionMultiplier),
+                                (short)(position.y * Obj.PositionMultiplier),
+                                (short)(position.z * Obj.PositionMultiplier)));
+                        }
+                        foreach (var normal in group.Normals)
+                        {
+                            VisitNormal(new Vector(
+                                (short)(normal.x * Obj.NormalMultiplier),
+                                (short)(normal.y * Obj.NormalMultiplier),
+                                (short)(normal.z * Obj.NormalMultiplier)));
+                        }
+                        foreach (var primitive in group.Primitives)
+                        {
+                            // Determine which texture page this is on
+                            var firstTex = primitive.Vertices[0].Texture;
+                            var firstU = group.TextureCoordinates[firstTex].u;
+                            var firstPage = ((int)(firstU * 4)) & 3;
+
+                            var subPrimitives = new Obj.Primitive[0];
+                            if (primitive.NumPoints == 4 && Trianglulate)
+                            {
+                                subPrimitives = new[] {
+                                    primitive,
+                                    new Obj.Primitive(new[]
+                                    {
+                                        primitive.Vertices[3],
+                                        primitive.Vertices[2],
+                                        primitive.Vertices[1]
+                                    })
+                                };
+                            }
+                            else if (primitive.NumPoints == 3)
+                            {
+                                subPrimitives = new[] { primitive };
+                            }
+                            foreach (var sp in subPrimitives)
+                            {
+                                VisitPrimitive(sp.NumPoints, (byte)(firstPage & 0x0F));
+                                foreach (var p in primitive.Vertices)
+                                {
+                                    var texIndex = p.Texture;
+                                    var tex = group.TextureCoordinates[texIndex];
+                                    var u = (byte)((int)(tex.u * 256) & 0xFF);
+                                    var v = (byte)((int)(tex.v * 256) & 0xFF);
+                                    VisitPrimitivePoint((ushort)p.Position, (ushort)p.Normal, u, v);
+                                }
+                                LeavePrimitive();
+                            }
+                        }
+                        LeavePart(i);
+                    }
+                }
+            }
         }
 
         public virtual bool VisitPart(int index)

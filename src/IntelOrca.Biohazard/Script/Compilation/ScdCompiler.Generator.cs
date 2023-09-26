@@ -238,7 +238,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 try
                 {
                     var emrPath = Path.ChangeExtension(eddPath, ".emr");
-                    var edd = new Edd(File.ReadAllBytes(eddPath));
+                    var edd = new Edd1(BioVersion.Biohazard2, File.ReadAllBytes(eddPath));
                     var emr = new Emr(BioVersion.Biohazard2, File.ReadAllBytes(emrPath));
                     _operations.Add(new AnimationRdtEditOperation(
                         animationNode.Id, new RbjAnimation(animationNode.Flags, edd, emr)));

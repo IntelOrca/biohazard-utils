@@ -5,12 +5,14 @@ using IntelOrca.Biohazard.Extensions;
 
 namespace IntelOrca.Biohazard.Model
 {
-    public sealed partial class Edd
+    public sealed partial class Edd1 : IEdd
     {
+        public BioVersion Version { get; }
         public ReadOnlyMemory<byte> Data { get; }
 
-        public Edd(ReadOnlyMemory<byte> data)
+        public Edd1(BioVersion version, ReadOnlyMemory<byte> data)
         {
+            Version = version;
             Data = data;
         }
 
@@ -31,6 +33,20 @@ namespace IntelOrca.Biohazard.Model
             return GetSpan<Frame>(offset, animation.Count);
         }
 
+        public int GetAnimationDuration(int index)
+        {
+            var frames = GetFrames(index);
+            return frames.Length;
+        }
+
+        public int GetFrameIndex(int index, int time)
+        {
+            var frames = GetFrames(index);
+            var frameIndex = Math.Max(0, Math.Min(frames.Length - 1, time));
+            return frames[frameIndex].Index;
+        }
+
+        IEddBuilder IEdd.ToBuilder() => ToBuilder();
         public Builder ToBuilder()
         {
             var builder = new Builder();

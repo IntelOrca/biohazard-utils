@@ -25,7 +25,7 @@ namespace IntelOrca.Biohazard.Room
             public ScdProcedureContainer MainSCD { get; set; }
             public ScdEventList EventSCD { get; set; }
             public Emr? EMR { get; set; }
-            public Edd? EDD { get; set; }
+            public Edd1? EDD { get; set; }
             public byte[] MSG { get; set; } = new byte[0];
             public byte[] EDT { get; set; } = new byte[0];
             public byte[] VH { get; set; } = new byte[0];

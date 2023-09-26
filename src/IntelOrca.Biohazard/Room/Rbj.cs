@@ -38,7 +38,7 @@ namespace IntelOrca.Biohazard.Room
                 var flags = (EmrFlags)Data.GetSafeSpan<uint>(flagsOffset, 1)[0];
                 var emr = Data.Slice(emrOffset, eddOffset - emrOffset);
                 var edd = Data.Slice(eddOffset, endOffset - eddOffset);
-                return new RbjAnimation(flags, new Edd(edd), new Emr(Version, emr));
+                return new RbjAnimation(flags, new Edd1(Version, edd), new Emr(Version, emr));
             }
         }
 

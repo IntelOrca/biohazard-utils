@@ -67,7 +67,10 @@ namespace IntelOrca.Biohazard.Model
             switch (kind)
             {
                 case ChunkKind.Animation:
-                    return (T)(object)new Edd(GetChunkData(index));
+                    if (Version == BioVersion.Biohazard3)
+                        return (T)(object)new Edd2(GetChunkData(index));
+                    else
+                        return (T)(object)new Edd1(Version, GetChunkData(index));
                 case ChunkKind.Armature:
                     return (T)(object)new Emr(Version, GetChunkData(index));
                 case ChunkKind.Mesh:
@@ -92,7 +95,7 @@ namespace IntelOrca.Biohazard.Model
             switch (kind)
             {
                 case ChunkKind.Animation:
-                    SetChunkData(index, ((Edd)(object)value).Data);
+                    SetChunkData(index, ((IEdd)(object)value).Data);
                     break;
                 case ChunkKind.Armature:
                     SetChunkData(index, ((Emr)(object)value).Data);
@@ -154,8 +157,8 @@ namespace IntelOrca.Biohazard.Model
         public MorphData GetMorph(int number) => new MorphData(Version, GetChunk(ChunkKind.Morph, number));
         public void SetMorph(int number, MorphData value) => SetChunk(ChunkKind.Morph, number, value.Data);
 
-        public Edd GetEdd(int number) => new Edd(GetChunk(ChunkKind.Animation, number));
-        public void SetEdd(int number, Edd value) => SetChunk(ChunkKind.Animation, number, value.Data);
+        public IEdd GetEdd(int number) => GetChunk<IEdd>(ChunkKind.Animation, number);
+        public void SetEdd(int number, IEdd value) => SetChunk(ChunkKind.Animation, number, value.Data);
 
         public Emr GetEmr(int number) => new Emr(Version, GetChunk(ChunkKind.Armature, number));
         public void SetEmr(int number, Emr value) => SetChunk(ChunkKind.Armature, number, value.Data);

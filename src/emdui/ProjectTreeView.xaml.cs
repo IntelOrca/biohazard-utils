@@ -237,7 +237,7 @@ namespace emdui
                     case MorphData morph:
                         tvi = new MorphTreeViewItem(projectFile, i, morph);
                         break;
-                    case Edd edd:
+                    case IEdd edd:
                         tvi = new EddTreeViewItem(projectFile, i, edd);
                         break;
                     case Emr emr:
@@ -320,10 +320,10 @@ namespace emdui
     {
         public override ImageSource Image => (ImageSource)Application.Current.Resources["IconEDD"];
         public override string Header => "EDD";
-        public Edd Edd { get; }
+        public IEdd Edd { get; }
         public int Index { get; }
 
-        public EddTreeViewItem(ProjectFile projectFile, int chunkIndex, Edd edd)
+        public EddTreeViewItem(ProjectFile projectFile, int chunkIndex, IEdd edd)
             : base(projectFile, chunkIndex)
         {
             Edd = edd;
@@ -346,7 +346,10 @@ namespace emdui
                 .AddExtension("*.edd")
                 .Show(path =>
                 {
-                    Model.SetEdd(0, new Edd(File.ReadAllBytes(path)));
+                    if (Edd.Version == BioVersion.Biohazard3)
+                        Model.SetEdd(0, new Edd2(File.ReadAllBytes(path)));
+                    else
+                        Model.SetEdd(0, new Edd1(Edd.Version, File.ReadAllBytes(path)));
                 });
         }
 
@@ -367,10 +370,10 @@ namespace emdui
     {
         public override ImageSource Image => (ImageSource)Application.Current.Resources["IconAnimation"];
         public override string Header => $"Animation {Index}";
-        public Edd Edd { get; }
+        public IEdd Edd { get; }
         public int Index { get; }
 
-        public AnimationTreeViewItem(ProjectFile projectFile, int chunkIndex, Edd edd, int index)
+        public AnimationTreeViewItem(ProjectFile projectFile, int chunkIndex, IEdd edd, int index)
             : base(projectFile, chunkIndex)
         {
             Edd = edd;
@@ -392,9 +395,6 @@ namespace emdui
                 }
                 return;
             }
-
-            if (Model.Version == BioVersion.Biohazard3)
-                return;
 
             var project = mainWindow.Project;
             var emrChunkIndex = GetEmrChunkIndex();
@@ -423,7 +423,8 @@ namespace emdui
             }
             else if (ProjectFile.Content is EmdFile emdFile)
             {
-                mainWindow.LoadMesh(emdFile.GetMesh(0));
+                var meshIndex = emdFile.Version == BioVersion.Biohazard3 ? 1 : 0;
+                mainWindow.LoadMesh(emdFile.GetMesh(meshIndex));
                 mainWindow.LoadAnimation(emr, Edd, Index);
             }
         }

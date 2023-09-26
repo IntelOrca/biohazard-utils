@@ -23,7 +23,7 @@ namespace emdui
         private TimFile _tim;
         private Emr _baseEmr;
         private Emr _emr;
-        private Edd _edd;
+        private IEdd _edd;
 
         private ModelScene _scene;
         private DispatcherTimer _timer;
@@ -77,14 +77,16 @@ namespace emdui
                 // _animationIndex = animationDropdown.SelectedIndex;
             }
 
-            var frames = edd.GetFrames(_animationIndex);
-            while (_time >= frames.Length)
+            var duration = edd.GetAnimationDuration(_animationIndex);
+            var emrKeyframeIndex = 0;
+            if (duration > 0)
             {
-                _time -= frames.Length;
+                while (_time >= duration)
+                {
+                    _time -= duration;
+                }
+                emrKeyframeIndex = edd.GetFrameIndex(_animationIndex, (int)_time);
             }
-
-            var animationKeyframe = (int)_time;
-            var emrKeyframeIndex = frames[animationKeyframe].Index;
 
             timeTextBlock.Text = _time.ToString("0.00");
             _scene.SetKeyframe(emrKeyframeIndex);
@@ -255,7 +257,7 @@ namespace emdui
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\chris\PL00.PLD");
             // LoadProject(@"F:\games\re3\mod_biorand\DATA\PLD\PL00.PLD");
             // LoadProject(@"F:\games\re2\data\Pl0\emd0\em041.emd");
-            LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re3\pld0\dario\pl00.pld");
+            LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re3\pld0\barry\pl00.pld");
             // LoadProject(@"F:\games\re2\data\Pl0\emd0\em010.emd");
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\ark\pl00.pld");
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld1\ashley\PL01.PLD");
@@ -388,7 +390,7 @@ namespace emdui
             RefreshTimImage();
         }
 
-        public void LoadAnimation(Emr emr, Edd edd, int index)
+        public void LoadAnimation(Emr emr, IEdd edd, int index)
         {
             _emr = _baseEmr.WithKeyframes(emr);
             _edd = edd;

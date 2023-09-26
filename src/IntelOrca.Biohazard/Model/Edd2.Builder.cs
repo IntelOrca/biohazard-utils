@@ -3,13 +3,14 @@ using System.IO;
 
 namespace IntelOrca.Biohazard.Model
 {
-    public sealed partial class Edd
+    public sealed partial class Edd2
     {
-        public class Builder
+        public class Builder : IEddBuilder
         {
             public List<Animation> Animations { get; } = new List<Animation>();
 
-            public Edd ToEdd()
+            IEdd IEddBuilder.ToEdd() => ToEdd();
+            public Edd2 ToEdd()
             {
                 var ms = new MemoryStream();
                 var bw = new BinaryWriter(ms);
@@ -20,7 +21,8 @@ namespace IntelOrca.Biohazard.Model
                     var animation = Animations[i];
                     bw.Write((ushort)animation.Frames.Length);
                     bw.Write((ushort)offset);
-                    offset += animation.Frames.Length * 4;
+                    bw.Write((uint)animation.StartFrame);
+                    offset += animation.Frames.Length * 2;
                 }
 
                 foreach (var animation in Animations)
@@ -33,11 +35,12 @@ namespace IntelOrca.Biohazard.Model
 
                 bw.Write((uint)ms.Length);
 
-                return new Edd(ms.ToArray());
+                return new Edd2(ms.ToArray());
             }
 
             public class Animation
             {
+                public uint StartFrame { get; set; }
                 public Frame[] Frames { get; set; } = new Frame[0];
             }
         }

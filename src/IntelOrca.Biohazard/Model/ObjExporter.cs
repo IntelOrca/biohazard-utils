@@ -77,7 +77,7 @@ namespace IntelOrca.Biohazard.Model
                 AppendLine($"s 1");
                 foreach (var t in md1.GetTriangles(objTriangles))
                 {
-                    AppendLine($"f {t.v2 + vIndex}/{tvIndex + 0}/{t.n2 + vIndex} {t.v1 + vIndex}/{tvIndex + 1}/{t.n1 + vIndex} {t.v0 + vIndex}/{tvIndex + 2}/{t.n0 + vIndex}");
+                    AppendLine($"f {t.v2 + vIndex}/{tvIndex + 0}/{t.n2 + nIndex} {t.v1 + vIndex}/{tvIndex + 1}/{t.n1 + nIndex} {t.v0 + vIndex}/{tvIndex + 2}/{t.n0 + nIndex}");
                     tvIndex += 3;
                 }
 
@@ -94,7 +94,7 @@ namespace IntelOrca.Biohazard.Model
                 AppendLine($"s 1");
                 foreach (var t in md1.GetQuads(objQuads))
                 {
-                    AppendLine($"f {t.v2 + vIndex}/{tvIndex + 0}/{t.n2 + vIndex} {t.v3 + vIndex}/{tvIndex + 1}/{t.n3 + vIndex} {t.v1 + vIndex}/{tvIndex + 2}/{t.n1 + vIndex} {t.v0 + vIndex}/{tvIndex + 3}/{t.n0 + vIndex}");
+                    AppendLine($"f {t.v2 + vIndex}/{tvIndex + 0}/{t.n2 + nIndex} {t.v3 + vIndex}/{tvIndex + 1}/{t.n3 + nIndex} {t.v1 + vIndex}/{tvIndex + 2}/{t.n1 + nIndex} {t.v0 + vIndex}/{tvIndex + 3}/{t.n0 + nIndex}");
                     tvIndex += 4;
                 }
 

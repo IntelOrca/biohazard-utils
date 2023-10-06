@@ -7,15 +7,37 @@ namespace IntelOrca.Biohazard
 {
     public class TimCollectionFile
     {
+        private readonly ReadOnlyMemory<byte> _data;
+
         public List<TimFile> Tims { get; } = new List<TimFile>();
 
-        public TimCollectionFile(string path)
+        public TimCollectionFile(ReadOnlyMemory<byte> data)
         {
-            using var fs = new FileStream(path, FileMode.Open, FileAccess.Read);
-            while (fs.Position < fs.Length)
+            _data = data;
+            Scan();
+        }
+
+        public TimCollectionFile(string path)
+            : this(File.ReadAllBytes(path))
+        {
+        }
+
+        private void Scan()
+        {
+            var stream = new SpanStream(_data);
+            var lengths = new List<int>();
+            while (stream.Position < stream.Length)
             {
-                var tim = new TimFile(fs);
-                Tims.Add(tim);
+                var len = TimFile.CalculateLength(stream);
+                lengths.Add(len);
+            }
+
+            var offset = 0;
+            foreach (var len in lengths)
+            {
+                var span = _data.Slice(offset, len);
+                Tims.Add(new TimFile(span));
+                offset += len;
             }
         }
 

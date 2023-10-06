@@ -258,7 +258,7 @@ namespace IntelOrca.Biohazard.Room
                 {
                     effects[i] = new EmbeddedEffect(ids[i], effs[i], tims[i]);
                 }
-                return new EmbeddedEffectList(effects);
+                return new EmbeddedEffectList(Version, effects);
             }
         }
 

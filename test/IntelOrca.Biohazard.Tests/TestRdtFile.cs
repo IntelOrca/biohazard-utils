@@ -127,7 +127,7 @@ namespace IntelOrca.Biohazard.Tests
 
             // Assert.Equal(8, rdt.ESPID.Length);
             // Assert.Equal(8, rdt.ESPEFF.Length);
-            Assert.Equal(4256, rdt.ESPTIM.Data.Length);
+            Assert.Equal(4224, rdt.EmbeddedEffects[0].Tim.Data.Length);
         }
 
         [Fact]

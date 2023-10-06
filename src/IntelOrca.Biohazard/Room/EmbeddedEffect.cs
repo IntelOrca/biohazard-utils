@@ -19,10 +19,12 @@ namespace IntelOrca.Biohazard.Room
 
     public readonly struct EmbeddedEffectList
     {
+        public BioVersion Version { get; }
         public ReadOnlyMemory<EmbeddedEffect> Effects { get; }
 
-        public EmbeddedEffectList(ReadOnlyMemory<EmbeddedEffect> effects)
+        public EmbeddedEffectList(BioVersion version, ReadOnlyMemory<EmbeddedEffect> effects)
         {
+            Version = version;
             Effects = effects;
         }
 
@@ -35,7 +37,7 @@ namespace IntelOrca.Biohazard.Room
             get
             {
                 var effects = Effects.Span;
-                var ids = new byte[8];
+                var ids = new byte[Version == BioVersion.Biohazard3 ? 16 : 8];
                 for (var i = 0; i < ids.Length; i++)
                 {
                     ids[i] = (byte)(effects.Length > i ? effects[i].Id : 0xFF);

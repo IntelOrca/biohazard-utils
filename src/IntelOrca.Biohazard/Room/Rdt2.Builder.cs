@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using IntelOrca.Biohazard.Model;
 
 namespace IntelOrca.Biohazard.Room
@@ -30,12 +31,12 @@ namespace IntelOrca.Biohazard.Room
             public byte[] EDT { get; set; } = new byte[0];
             public byte[] VH { get; set; } = new byte[0];
             public byte[] VB { get; set; } = new byte[0];
-            public Tim ESPTIM { get; set; }
             public int? VBOFFSET { get; set; }
 
             public List<ModelTextureIndex> EmbeddedObjectModelTable { get; set; } = new List<ModelTextureIndex>();
             public List<Md1> EmbeddedObjectMd1 { get; set; } = new List<Md1>();
             public List<Tim> EmbeddedObjectTim { get; set; } = new List<Tim>();
+            public EmbeddedEffectList EmbeddedEffects { get; set; }
 
             IRdt IRdtBuilder.ToRdt() => ToRdt();
 
@@ -132,17 +133,51 @@ namespace IntelOrca.Biohazard.Room
 
                 if (!EspTable.Data.IsEmpty)
                 {
-                    if (Version == BioVersion.Biohazard2)
+                    var tableIndex = Version == BioVersion.Biohazard2 ? 18 : 17;
+                    offsetTable[tableIndex] = (int)ms.Position;
+                    bw.Write(EspTable.Data);
+                    offsetTable[tableIndex + 1] = (int)ms.Position - 4;
+                }
+                else
+                {
+                    var numEsps = EmbeddedEffects.Count;
+                    if (numEsps == 0)
                     {
-                        offsetTable[18] = (int)ms.Position;
-                        bw.Write(EspTable.Data);
-                        offsetTable[19] = (int)ms.Position - 4;
+                        // Most RE 3 RDTs just 80 0xFF bytes for some reason
+                        // R100 however doesn't
+                        // if (Version == BioVersion.Biohazard3)
+                        // {
+                        //     offsetTable[17] = (int)ms.Position;
+                        //     for (var i = 0; i < 80; i++)
+                        //         bw.Write((byte)0xFF);
+                        //     offsetTable[18] = (int)ms.Position - 4;
+                        // }
                     }
                     else
                     {
-                        offsetTable[17] = (int)ms.Position;
-                        bw.Write(EspTable.Data);
-                        offsetTable[18] = (int)ms.Position - 4;
+                        var maxEsps = Version == BioVersion.Biohazard2 ? 8 : 16;
+                        var tableIndex = Version == BioVersion.Biohazard2 ? 18 : 17;
+                        offsetTable[tableIndex] = (int)ms.Position;
+                        bw.Write(EmbeddedEffects.ESPID);
+
+                        // EFFs
+                        var espTable = new int[EmbeddedEffects.Count];
+                        var relativeOffset = maxEsps;
+                        for (var i = 0; i < EmbeddedEffects.Count; i++)
+                        {
+                            var eff = EmbeddedEffects[i].Eff;
+                            espTable[i] = relativeOffset;
+                            bw.Write(eff.Data);
+                            relativeOffset += eff.Data.Length;
+                        }
+
+                        // EFF relative offsets
+                        for (var i = 0; i < maxEsps - espTable.Length; i++)
+                            bw.Write(-1);
+                        foreach (var o in espTable.Reverse())
+                            bw.Write(o);
+
+                        offsetTable[tableIndex + 1] = (int)ms.Position - 4;
                     }
                 }
 
@@ -193,11 +228,34 @@ namespace IntelOrca.Biohazard.Room
                     offsetTable[20] = (int)ms.Position;
                 }
 
-                if (!ESPTIM.Data.IsEmpty)
+                if (Version == BioVersion.Biohazard2)
                 {
-                    offsetTable[20] = (int)ms.Position;
-                    bw.Write(ESPTIM.Data);
-                    offsetTable[21] = (int)ms.Position;
+                    var numEsps = EmbeddedEffects.Count;
+                    if (numEsps != 0)
+                    {
+                        offsetTable[20] = (int)ms.Position;
+                        var relativeOffsets = new int[numEsps];
+                        var relativeOffset = 0;
+                        for (var i = 0; i < numEsps; i++)
+                        {
+                            var tim = EmbeddedEffects[i].Tim;
+                            relativeOffsets[i] = relativeOffset;
+                            bw.Write(tim.Data);
+                            relativeOffset += tim.Data.Length;
+                        }
+                        for (var i = 0; i < 8; i++)
+                        {
+                            var index = 7 - i;
+                            var offset = index >= numEsps ? -1 : relativeOffsets[index];
+                            bw.Write(offset);
+                        }
+                        offsetTable[21] = (int)ms.Position;
+                    }
+                }
+                else
+                {
+                    // offsetTable[20] = (int)ms.Position;
+                    // offsetTable[21] = (int)ms.Position;
                 }
 
                 var objectTimTable = new int[EmbeddedObjectTim.Count];

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using IntelOrca.Biohazard.Extensions;
 using IntelOrca.Biohazard.Model;
@@ -136,6 +137,23 @@ namespace IntelOrca.Biohazard.Room
                     }
                 }
             }
+
+            chunk = _data.FindChunkByKind(RdtFileChunkKinds.RDT2TIMESP);
+            if (chunk != null && chunk.Value.Length != 0)
+            {
+                var timOffsets = MemoryMarshal.Cast<byte, int>(chunk.Value.Span.TruncateStartBy(-4 * 8));
+
+                // Record where the TIM relative offsets are
+                _data.RegisterOffset(RdtFileChunkKinds.RDT2ESPTIMTABLE, chunk.Value.Offset + chunk.Value.Length - (4 * 8));
+
+                var numEsps = EspTable.Count;
+                for (var i = 0; i < numEsps; i++)
+                {
+                    var index = 7 - i;
+                    var offsetA = timOffsets[index];
+                    _data.RegisterOffset(RdtFileChunkKinds.RDT2TIMESP, chunk.Value.Offset + offsetA, true);
+                }
+            }
         }
 
         private ReadOnlyMemory<byte> GetChunk(int kind)
@@ -175,8 +193,7 @@ namespace IntelOrca.Biohazard.Room
         public ReadOnlySpan<byte> UNK => Version == BioVersion.Biohazard3 ?
             GetChunk(RdtFileChunkKinds.RDT3UNK).Span :
             ReadOnlySpan<byte>.Empty;
-        public EspTable EspTable => new EspTable(GetChunk(RdtFileChunkKinds.RDT2ESPID));
-        public Tim ESPTIM => new Tim(GetChunk(RdtFileChunkKinds.RDT2TIMESP));
+        public EspTable EspTable => new EspTable(Version, GetChunk(RdtFileChunkKinds.RDT2ESPID));
         public ReadOnlySpan<int> TIMOBJ => MemoryMarshal.Cast<byte, int>(GetChunk(RdtFileChunkKinds.ObjectTextures).Span);
         public Rbj RBJ => new Rbj(Version, GetChunk(RdtFileChunkKinds.RDT2RBJ));
 
@@ -219,6 +236,34 @@ namespace IntelOrca.Biohazard.Room
             }
         }
 
+        public EmbeddedEffectList EmbeddedEffects
+        {
+            get
+            {
+                if (EspTable.Count == 0)
+                {
+                    return new EmbeddedEffectList();
+                }
+
+                var ids = EspTable.Ids;
+                var count = ids.ToArray().Count(x => x != 0xFF);
+                var effects = new EmbeddedEffect[count];
+                var tims = new List<Tim>();
+                foreach (var chunk in _data.Chunks)
+                {
+                    if (chunk.Kind == RdtFileChunkKinds.RDT2TIMESP)
+                        tims.Add(new Tim(chunk.Memory));
+                }
+                for (var i = 0; i < count; i++)
+                {
+                    var eff = EspTable.GetEff(i);
+                    var tim = i < tims.Count ? tims[i] : new Tim();
+                    effects[i] = new EmbeddedEffect(ids[i], eff, tim);
+                }
+                return new EmbeddedEffectList(Version, effects);
+            }
+        }
+
         IRdtBuilder IRdt.ToBuilder() => ToBuilder();
         public Builder ToBuilder()
         {
@@ -237,6 +282,12 @@ namespace IntelOrca.Biohazard.Room
             foreach (var offset in embeddedObjectTimOffsets)
                 builder.EmbeddedObjectTim.Add(ReadEmbeddedTim(offset));
 
+            // Most RE 3 RDTs have 80 bytes of 0xFF, this ensures 100% identical rebuild
+            if (Version == BioVersion.Biohazard3)
+                builder.EspTable = EspTable;
+
+            builder.EmbeddedEffects = EmbeddedEffects;
+
             builder.Header = Header;
             builder.RID = RID.ToArray();
             builder.RVD = RVD.ToArray();
@@ -252,12 +303,10 @@ namespace IntelOrca.Biohazard.Room
             builder.MSGJA = MSGJA;
             builder.MSGEN = MSGEN;
             builder.TIMSCROLL = TIMSCROLL;
-            builder.EspTable = EspTable;
             builder.RBJ = RBJ;
             builder.EDT = EDT.ToArray();
             builder.VH = VH.ToArray();
             builder.VB = VB.ToArray();
-            builder.ESPTIM = ESPTIM;
 
             // 4 RE 3 RDTs have a garbage number in offset 2 (this preserves it)
             if (Version == BioVersion.Biohazard3)

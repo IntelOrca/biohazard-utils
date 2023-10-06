@@ -268,6 +268,12 @@ namespace IntelOrca.Biohazard.Tests
             AssertRebuild(BioVersion.Biohazard3, "R100.RDT");
         }
 
+        [Fact]
+        public void RE3_101()
+        {
+            AssertRebuild(BioVersion.Biohazard3, "R101.RDT");
+        }
+
         private void AssertRebuildAll(BioVersion version)
         {
             var fail = false;

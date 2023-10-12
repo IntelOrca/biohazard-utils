@@ -107,11 +107,11 @@ namespace IntelOrca.Biohazard.Room
                 _data.RegisterLength(offsets[10], Header.nOmodel * 8);
 
             // Embedded stuff
-            foreach (var camera in Cameras)
+            foreach (var camera in RID.Cameras)
             {
                 if (camera.masks_offset > 0)
                 {
-                    _data.RegisterOffset(RdtFileChunkKinds.RDT2EmbeddedCamMask, camera.masks_offset);
+                    _data.RegisterOffset(RdtFileChunkKinds.RDT2EmbeddedCamMask, (int)camera.masks_offset);
                 }
             }
 
@@ -176,7 +176,7 @@ namespace IntelOrca.Biohazard.Room
         public ReadOnlySpan<byte> TrialVB => GetChunk(RdtFileChunkKinds.EmbeddedTrialVB).Span;
         public ReadOnlySpan<byte> OTA => GetChunk(RdtFileChunkKinds.RDT2OVA).Span;
         public ReadOnlySpan<byte> SCA => GetChunk(RdtFileChunkKinds.RDT2SCA).Span;
-        public ReadOnlySpan<byte> RID => GetChunk(RdtFileChunkKinds.RDT2RID).Span;
+        public Rid RID => new Rid(GetChunk(RdtFileChunkKinds.RDT2RID));
         public ReadOnlySpan<byte> RVD => GetChunk(RdtFileChunkKinds.RDT2RVD).Span.TruncateBy(4);
         public ReadOnlySpan<byte> LIT => GetChunk(RdtFileChunkKinds.RDT2LIT).Span;
         public EmbeddedModelTable2 EmbeddedObjectModelTable => new EmbeddedModelTable2(GetChunk(RdtFileChunkKinds.RDT2EmbeddedObjectTable));
@@ -214,15 +214,6 @@ namespace IntelOrca.Biohazard.Room
                 if (minOffset == int.MaxValue)
                     return ReadOnlySpan<byte>.Empty;
                 return Data.Slice(minOffset, maxOffset - minOffset).Span;
-            }
-        }
-
-        public ReadOnlySpan<Rdt2Camera> Cameras
-        {
-            get
-            {
-                var offset = Offsets[7];
-                return GetSpan<Rdt2Camera>(offset, Header.nCut);
             }
         }
 
@@ -289,7 +280,7 @@ namespace IntelOrca.Biohazard.Room
             builder.EmbeddedEffects = EmbeddedEffects;
 
             builder.Header = Header;
-            builder.RID = RID.ToArray();
+            builder.RID = RID;
             builder.RVD = RVD.ToArray();
             builder.LIT = LIT.ToArray();
             builder.PRI = PRI.ToArray();

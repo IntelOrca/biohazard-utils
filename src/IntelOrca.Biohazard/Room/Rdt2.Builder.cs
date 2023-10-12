@@ -12,7 +12,7 @@ namespace IntelOrca.Biohazard.Room
         {
             public BioVersion Version { get; }
             public Rdt2Header Header { get; set; }
-            public byte[] RID { get; set; } = new byte[0];
+            public Rid RID { get; set; }
             public byte[] RVD { get; set; } = new byte[0];
             public byte[] LIT { get; set; } = new byte[0];
             public byte[] PRI { get; set; } = new byte[0];
@@ -66,7 +66,8 @@ namespace IntelOrca.Biohazard.Room
                 }
 
                 offsetTable[7] = (int)ms.Position;
-                bw.Write(RID);
+                // Place holder until we write the PRI block
+                bw.Write(0, RID.Data.Length);
 
                 offsetTable[10] = (int)ms.Position;
                 for (var i = 0; i < EmbeddedObjectModelTable.Count; i++)
@@ -82,6 +83,13 @@ namespace IntelOrca.Biohazard.Room
                 offsetTable[9] = (int)ms.Position;
                 bw.Write(LIT);
 
+                var priOffset = (int)ms.Position;
+
+                // Re-write RID now that we know the PRI offset
+                ms.Position = offsetTable[7];
+                bw.Write(RID.WithPriOffset(priOffset).Data);
+
+                ms.Position = priOffset;
                 bw.Write(PRI);
 
                 offsetTable[6] = (int)ms.Position;

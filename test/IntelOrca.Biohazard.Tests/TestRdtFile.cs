@@ -117,7 +117,7 @@ namespace IntelOrca.Biohazard.Tests
 
             Assert.Equal(840, rdt.RVD.Length);                  // animation/anim.rbj
             Assert.Equal(112, rdt.BLK.Length);                  // block.blk
-            Assert.Equal(512, rdt.RID.Length);                  // camera.rid
+            Assert.Equal(512, rdt.RID.Data.Length);             // camera.rid
             Assert.Equal(832, rdt.SCA.Length);                  // collision.sca
             Assert.Equal(50, rdt.FLR.Length);                   // floor.flr
             Assert.Equal(640, rdt.LIT.Length);                  // light.lit

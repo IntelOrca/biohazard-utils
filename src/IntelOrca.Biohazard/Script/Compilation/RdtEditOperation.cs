@@ -1,5 +1,6 @@
 ﻿using System;
 using IntelOrca.Biohazard.Extensions;
+using IntelOrca.Biohazard.Model;
 using IntelOrca.Biohazard.Room;
 
 namespace IntelOrca.Biohazard.Script.Compilation
@@ -97,6 +98,45 @@ namespace IntelOrca.Biohazard.Script.Compilation
             if (target is Rdt2.Builder builder2)
             {
                 builder2.RBJ = builder2.RBJ.WithAnimation(Index, Animation);
+            }
+            else
+            {
+                throw new NotSupportedException();
+            }
+        }
+    }
+
+    public class ObjectRdtEditOperation : IRdtEditOperation
+    {
+        public int Index { get; }
+        public Md1 Model { get; }
+        public Tim Texture { get; }
+
+        public ObjectRdtEditOperation(int index, Md1 model, Tim texture)
+        {
+            Index = index;
+            Model = model;
+            Texture = texture;
+        }
+
+        public void Perform(IRdtBuilder target)
+        {
+            if (target is Rdt2.Builder builder2)
+            {
+                builder2.EmbeddedObjectMd1.Add(Model);
+                builder2.EmbeddedObjectTim.Add(Texture);
+
+                if (builder2.EmbeddedObjectModelTable.Count <= Index)
+                {
+                    builder2.EmbeddedObjectModelTable.Add(builder2.EmbeddedObjectModelTable[0]);
+                    var header = builder2.Header;
+                    header.nOmodel++;
+                    builder2.Header = header;
+                }
+
+                builder2.EmbeddedObjectModelTable[Index] = new ModelTextureIndex(
+                    builder2.EmbeddedObjectMd1.Count - 1,
+                    builder2.EmbeddedObjectTim.Count - 1);
             }
             else
             {

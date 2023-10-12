@@ -167,6 +167,9 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     case AnimationSyntaxNode animationNode:
                         VisitAnimationNode(animationNode);
                         break;
+                    case ObjectSyntaxNode objectNode:
+                        VisitObjectNode(objectNode);
+                        break;
                     case ProcedureSyntaxNode procedureNode:
                         VisitProcedureNode(procedureNode);
                         break;
@@ -246,6 +249,22 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 catch (Exception)
                 {
                     _errors.AddError(_path, 0, 0, ErrorCodes.FileNotFound, eddPath);
+                }
+            }
+
+            private void VisitObjectNode(ObjectSyntaxNode objectNode)
+            {
+                var md1Path = Path.Combine(Path.GetDirectoryName(_path), objectNode.Path);
+                try
+                {
+                    var timPath = Path.ChangeExtension(md1Path, ".tim");
+                    var md1 = new Md1(File.ReadAllBytes(md1Path));
+                    var tim = new Tim(File.ReadAllBytes(timPath));
+                    _operations.Add(new ObjectRdtEditOperation(objectNode.Id, md1, tim));
+                }
+                catch (Exception)
+                {
+                    _errors.AddError(_path, 0, 0, ErrorCodes.FileNotFound, md1Path);
                 }
             }
 

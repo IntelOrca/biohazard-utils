@@ -144,6 +144,23 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     var text = ConvertStringToken(in LastToken);
                     return new AnimationSyntaxNode(id, flags, text);
                 }
+                else if (directive == "#object")
+                {
+                    if (!ParseToken(TokenKind.Number))
+                    {
+                        EmitError(in lastToken, ErrorCodes.ExpectedOperand);
+                        return null;
+                    }
+                    var id = int.Parse(LastToken.Text);
+
+                    if (!ParseToken(TokenKind.String))
+                    {
+                        EmitError(in lastToken, ErrorCodes.ExpectedOperand);
+                        return null;
+                    }
+                    var text = ConvertStringToken(in LastToken);
+                    return new ObjectSyntaxNode(id, text);
+                }
                 else
                 {
                     EmitError(in lastToken, ErrorCodes.UnknownDirective, lastToken.Text);
@@ -697,6 +714,18 @@ namespace IntelOrca.Biohazard.Script.Compilation
             {
                 Id = id;
                 Flags = flags;
+                Path = path;
+            }
+        }
+
+        private class ObjectSyntaxNode : SyntaxNode
+        {
+            public int Id { get; }
+            public string Path { get; }
+
+            public ObjectSyntaxNode(int id, string path)
+            {
+                Id = id;
                 Path = path;
             }
         }

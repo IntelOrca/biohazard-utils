@@ -128,7 +128,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
 
                 if (builder2.EmbeddedObjectModelTable.Count <= Index)
                 {
-                    builder2.EmbeddedObjectModelTable.Add(builder2.EmbeddedObjectModelTable[0]);
+                    builder2.EmbeddedObjectModelTable.Add(new ModelTextureIndex(-1, -1));
                     var header = builder2.Header;
                     header.nOmodel++;
                     builder2.Header = header;

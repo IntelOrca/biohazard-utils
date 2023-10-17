@@ -63,6 +63,8 @@
             <StatusBarItem x:Name="fileTypeLabel">RE 2 .PLD Model</StatusBarItem>
             <StatusBarItem x:Name="numPartsLabel">0 parts</StatusBarItem>
             <StatusBarItem x:Name="numPolygonsLabel">0 polygons</StatusBarItem>
+            <Separator />
+            <StatusBarItem x:Name="partStatsLabel"></StatusBarItem>
         </StatusBar>
 
         <Grid>

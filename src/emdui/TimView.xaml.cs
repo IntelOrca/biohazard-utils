@@ -389,7 +389,6 @@ namespace emdui
         {
             try
             {
-
                 var pageToPaletteTrim = 1;
                 var numPages = _timFile.Width / 128;
 
@@ -590,6 +589,26 @@ namespace emdui
 
             RefreshAndRaiseTimEvent();
             mainWindow.LoadMesh(project.MainModel.GetMesh(0));
+        }
+
+        private void FixHD_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                for (var y = 0; y < 4; y++)
+                {
+                    for (var x = 0; x < 4; x++)
+                    {
+                        // _timFile.SetPalette(0, x, 0);
+                        _timFile.SetRawPixel(3, 2, 0);
+                    }
+                }
+                RefreshAndRaiseTimEvent();
+            }
+            catch (Exception ex)
+            {
+                ex.ShowMessageBox(this);
+            }
         }
     }
 }

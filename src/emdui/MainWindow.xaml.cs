@@ -181,6 +181,7 @@ namespace emdui
             _scene.HighlightPart(_isolatedPartIndex == -1 ? _selectedPartIndex : -1);
             RefreshTimPrimitives();
             RefreshRelativePositionTextBoxes();
+            RefreshPartStats();
         }
 
         private void RefreshTimPrimitives()
@@ -220,6 +221,41 @@ namespace emdui
             }
         }
 
+        private void RefreshPartStats()
+        {
+            var content = "";
+
+            if (_selectedPartIndex != -1)
+            {
+                var partIndex = _isolatedPartIndex == -1 ? _selectedPartIndex : 0;
+                partIndex = Math.Min(partIndex, _mesh.NumParts - 1);
+                switch (_mesh)
+                {
+                    case Tmd tmd:
+                    {
+                        var obj = tmd.Objects[partIndex];
+                        content = $"Vertices: {obj.vtx_count} Normals: {obj.nor_count} Triangles: {obj.pri_count}";
+                        break;
+                    }
+                    case Md1 md1:
+                    {
+                        var objT = md1.Objects[partIndex * 2 + 0];
+                        var objQ = md1.Objects[partIndex * 2 + 1];
+                        content = $"Vertices {objT.vtx_count} Normals: {objT.nor_count} Triangles: {objT.pri_count} Quads: {objQ.pri_count}";
+                        break;
+                    }
+                    case Md2 md2:
+                    {
+                        var obj = md2.Objects[partIndex];
+                        content = $"Vertices / Normals: {obj.vtx_count} Triangles: {obj.tri_count} Quads: {obj.quad_count}";
+                        break;
+                    }
+                }
+            }
+
+            partStatsLabel.Content = content;
+        }
+
         private void RefreshStatusBar()
         {
             var game = _project.Version == BioVersion.Biohazard2 ? "RE 2" : "RE 3";
@@ -257,7 +293,7 @@ namespace emdui
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\chris\PL00.PLD");
             // LoadProject(@"F:\games\re3\mod_biorand\DATA\PLD\PL00.PLD");
             // LoadProject(@"F:\games\re2\data\Pl0\emd0\em041.emd");
-            LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re3\pld0\barry\pl00.pld");
+            LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re3\pld0\regina\pl00.pld");
             // LoadProject(@"F:\games\re2\data\Pl0\emd0\em010.emd");
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\ark\pl00.pld");
             // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld1\ashley\PL01.PLD");

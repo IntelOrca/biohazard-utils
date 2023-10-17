@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -921,6 +922,8 @@ namespace emdui
             AddMenuItem("Move all UV to page 1", () => MoveUVToPage(1));
             AddMenuItem("Move all UV to page 2", () => MoveUVToPage(2));
             AddMenuItem("Move all UV to page 3", () => MoveUVToPage(3));
+            AddSeperator();
+            AddMenuItem("Check", Check);
         }
 
         public override void OnSelect()
@@ -1095,6 +1098,20 @@ namespace emdui
         {
             Mesh = Mesh.MoveUVToPage(PartIndex, page);
             RefreshMesh();
+        }
+
+        private void Check()
+        {
+            var md2 = Mesh as Md2;
+            var builder = md2.ToBuilder();
+            var sb = new StringBuilder();
+            foreach (var part in builder.Parts)
+            {
+                foreach (var q in part.Quads)
+                {
+                    sb.AppendLine($"{q.visible},{q.page},{q.dummy2},{q.dummy7},{q.tu0},{q.tu1},{q.tu2},{q.tu3}");
+                }
+            }
         }
     }
 

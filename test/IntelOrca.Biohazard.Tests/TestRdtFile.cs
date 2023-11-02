@@ -1,7 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using IntelOrca.Biohazard.Extensions;
 using IntelOrca.Biohazard.Room;
+using IntelOrca.Biohazard.Script;
+using IntelOrca.Biohazard.Script.Opcodes;
 using Xunit;
 using Xunit.Abstractions;
 using static IntelOrca.Biohazard.Tests.TestInfo;
@@ -272,6 +276,52 @@ namespace IntelOrca.Biohazard.Tests
         public void RE3_101()
         {
             AssertRebuild(BioVersion.Biohazard3, "R101.RDT");
+        }
+
+        [Fact]
+        public void RE3_100_ETD()
+        {
+            var rdt = (Rdt2)GetRdt(BioVersion.Biohazard3, "R100.RDT");
+            AssertRebuildEtd(rdt.ETD);
+        }
+
+        [Fact]
+        public void RE3_101_ETD()
+        {
+            var rdt = (Rdt2)GetRdt(BioVersion.Biohazard3, "R101.RDT");
+            AssertRebuildEtd(rdt.ETD);
+        }
+
+        [Fact]
+        public void RE3_103_ETD()
+        {
+            var rdt = (Rdt2)GetRdt(BioVersion.Biohazard3, "R103.RDT");
+            AssertRebuildEtd(rdt.ETD);
+        }
+
+        [Fact]
+        public void RE3_201_ETD()
+        {
+            var rdt = (Rdt2)GetRdt(BioVersion.Biohazard3, "R201.RDT");
+            AssertRebuildEtd(rdt.ETD);
+        }
+
+        [Fact]
+        public void RE3_Rebuild_All_ETD()
+        {
+            var fileNames = GetAllRdtFileNames(BioVersion.Biohazard3);
+            foreach (var fileName in fileNames)
+            {
+                var rdt = (Rdt2)GetRdt(BioVersion.Biohazard3, fileName);
+                AssertRebuildEtd(rdt.ETD);
+            }
+        }
+
+        private void AssertRebuildEtd(Etd unk)
+        {
+            var unkBuilder = unk.ToBuilder();
+            var rebuilt = unkBuilder.ToEtd();
+            AssertAndCompareMemory(unk.Data, rebuilt.Data);
         }
 
         private void AssertRebuildAll(BioVersion version)

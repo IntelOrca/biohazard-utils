@@ -190,9 +190,9 @@ namespace IntelOrca.Biohazard.Room
         public ScdProcedureList SCDMAIN => Version == BioVersion.Biohazard2 ?
             new ScdProcedureList(Version, GetChunk(RdtFileChunkKinds.RDT2SCDMAIN)) :
             new ScdProcedureList();
-        public ReadOnlySpan<byte> UNK => Version == BioVersion.Biohazard3 ?
-            GetChunk(RdtFileChunkKinds.RDT3UNK).Span :
-            ReadOnlySpan<byte>.Empty;
+        public Etd ETD => Version == BioVersion.Biohazard3 ?
+            new Etd(GetChunk(RdtFileChunkKinds.RDT3ETD)) :
+            new Etd();
         public EspTable EspTable => new EspTable(Version, GetChunk(RdtFileChunkKinds.RDT2ESPID));
         public ReadOnlySpan<int> TIMOBJ => MemoryMarshal.Cast<byte, int>(GetChunk(RdtFileChunkKinds.ObjectTextures).Span);
         public Rbj RBJ => new Rbj(Version, GetChunk(RdtFileChunkKinds.RDT2RBJ));
@@ -290,7 +290,7 @@ namespace IntelOrca.Biohazard.Room
             builder.FLRTerminator = FLRTerminator;
             builder.SCDINIT = SCDINIT;
             builder.SCDMAIN = SCDMAIN;
-            builder.UNK = UNK.ToArray();
+            builder.ETD = ETD;
             builder.MSGJA = MSGJA;
             builder.MSGEN = MSGEN;
             builder.TIMSCROLL = TIMSCROLL;
@@ -368,7 +368,7 @@ namespace IntelOrca.Biohazard.Room
             RdtFileChunkKinds.RDT2SCDINIT,
             RdtFileChunkKinds.RDT2ESPID,
             RdtFileChunkKinds.RDT2EspEffTable,
-            RdtFileChunkKinds.RDT3UNK,
+            RdtFileChunkKinds.RDT3ETD,
             RdtFileChunkKinds.RDT2TIMESP,
             RdtFileChunkKinds.ObjectTextures
         };

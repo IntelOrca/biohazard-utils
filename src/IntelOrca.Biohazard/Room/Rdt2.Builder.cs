@@ -22,7 +22,7 @@ namespace IntelOrca.Biohazard.Room
             public ushort? FLRTerminator { get; set; }
             public ScdProcedureList SCDINIT { get; set; }
             public ScdProcedureList SCDMAIN { get; set; }
-            public byte[] UNK { get; set; } = new byte[0];
+            public Etd ETD { get; set; }
             public MsgList MSGJA { get; set; }
             public MsgList MSGEN { get; set; }
             public Tim TIMSCROLL { get; set; }
@@ -229,10 +229,10 @@ namespace IntelOrca.Biohazard.Room
                     offsetTable[2] = VBOFFSET ?? offsetTable[1] + 1;
                 }
 
-                if (Version == BioVersion.Biohazard3 && UNK.Length != 0)
+                if (Version == BioVersion.Biohazard3 && !ETD.Data.IsEmpty)
                 {
                     offsetTable[19] = (int)ms.Position;
-                    bw.Write(UNK);
+                    bw.Write(ETD.Data);
                     offsetTable[20] = (int)ms.Position;
                 }
 

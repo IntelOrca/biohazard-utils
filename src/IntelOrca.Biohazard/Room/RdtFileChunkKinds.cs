@@ -67,6 +67,6 @@
         public const int RDT2MD1OBJECT = 0x0200 | 26;
         public const int RDT2EmbeddedCamMask = 0x0200 | 27;
         public const int RDT2ESPTIMTABLE = 0x0100 | 28;
-        public const int RDT3UNK = 0x0200 | 30;
+        public const int RDT3ETD = 0x0200 | 30;
     }
 }

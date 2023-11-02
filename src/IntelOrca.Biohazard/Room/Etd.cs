@@ -40,8 +40,8 @@ namespace IntelOrca.Biohazard.Room
                 if (ChunkCount == 0)
                     return 0;
 
-                var vh = GetChunk(0);
-                return MemoryMarshal.Cast<byte, ushort>(vh.Slice(6, 2))[0];
+                var paletteData = GetChunk(0);
+                return MemoryMarshal.Cast<byte, ushort>(paletteData.Slice(6, 2))[0];
             }
         }
 
@@ -52,8 +52,8 @@ namespace IntelOrca.Biohazard.Room
                 if (ChunkCount == 0)
                     return ReadOnlySpan<Palette>.Empty;
 
-                var vh = GetChunk(0);
-                return MemoryMarshal.Cast<byte, Palette>(vh.Slice(8));
+                var paletteData = GetChunk(0);
+                return MemoryMarshal.Cast<byte, Palette>(paletteData.Slice(8));
             }
         }
 
@@ -74,7 +74,18 @@ namespace IntelOrca.Biohazard.Room
 
         public unsafe struct Palette
         {
-            public fixed byte data[0x20];
+            private fixed byte data[0x20];
+
+            public ReadOnlySpan<byte> Data
+            {
+                get
+                {
+                    fixed (byte* b = data)
+                    {
+                        return new ReadOnlySpan<byte>(b, 0x20);
+                    }
+                }
+            }
         }
 
         public class Builder
@@ -115,19 +126,19 @@ namespace IntelOrca.Biohazard.Room
                 bw.Write(0x01E00120);
                 bw.Write((ushort)0x10);
                 bw.Write((ushort)Palettes.Count);
-                foreach (var vh in Palettes)
+                foreach (var palette in Palettes)
                 {
-                    bw.Write(vh);
+                    bw.Write(palette);
                 }
 
                 var pageId = 0x03C0;
-                foreach (var vb in Pages)
+                foreach (var page in Pages)
                 {
                     offsets.Add((int)ms.Position);
                     bw.Write(pageId);
                     bw.Write((ushort)0x40);
-                    bw.Write((ushort)(vb.Length / 128));
-                    bw.Write(vb);
+                    bw.Write((ushort)(page.Length / 128));
+                    bw.Write(page);
                     pageId -= 64;
                 }
 

@@ -49,5 +49,18 @@ namespace IntelOrca.Biohazard.Room
         }
 
         private int MaxEsps => Version == BioVersion.Biohazard2 ? 8 : 16;
+
+        public bool ContainsId(int id)
+        {
+            var count = Count;
+            for (var i = 0; i < count; i++)
+            {
+                if (Ids[i] == id)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
     }
 }

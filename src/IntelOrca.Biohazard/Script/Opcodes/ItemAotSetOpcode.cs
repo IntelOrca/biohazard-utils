@@ -4,7 +4,7 @@ using System.IO;
 namespace IntelOrca.Biohazard.Script.Opcodes
 {
     [DebuggerDisplay("item_aot_set")]
-    internal class ItemAotSetOpcode : OpcodeBase, IItemAotSetOpcode
+    public class ItemAotSetOpcode : OpcodeBase, IItemAotSetOpcode
     {
         public byte Id { get; set; }
         public byte SCE { get; set; }

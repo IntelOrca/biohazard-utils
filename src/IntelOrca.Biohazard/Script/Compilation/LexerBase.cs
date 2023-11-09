@@ -108,15 +108,17 @@ namespace IntelOrca.Biohazard.Script.Compilation
         protected bool ParseWhitespace()
         {
             var c = PeekChar();
-            if (!char.IsWhiteSpace(c))
+            if (!char.IsWhiteSpace(c) || IsNewLine(c))
                 return false;
             do
             {
                 ReadChar();
                 c = PeekChar();
-            } while (c != char.MinValue && char.IsWhiteSpace(c));
+            } while (c != char.MinValue && char.IsWhiteSpace(c) && !IsNewLine(c));
             return true;
         }
+
+        private static bool IsNewLine(char c) => c == '\r' || c == '\n';
 
         protected bool ParseString()
         {

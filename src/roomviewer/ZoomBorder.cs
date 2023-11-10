@@ -143,5 +143,15 @@ namespace IntelOrca.Biohazard.RoomViewer
                 }
             }
         }
+
+        public Point GetPosition(Point p)
+        {
+            var tt = GetTranslateTransform(child);
+            var st = GetScaleTransform(child);
+            var t = new TransformGroup();
+            t.Children.Add(st);
+            t.Children.Add(tt);
+            return t.Inverse.Transform(p);
+        }
     }
 }

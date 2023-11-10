@@ -9,17 +9,15 @@
         WindowStartupLocation="CenterScreen"
         Width="800"
         Height="800">
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
-        <StackPanel Grid.Row="0">
+    <DockPanel>
+        <StackPanel DockPanel.Dock="Top">
             <ComboBox x:Name="roomDropdown" SelectionChanged="roomDropdown_SelectionChanged" />
         </StackPanel>
-        <local:ZoomBorder Grid.Row="1" ClipToBounds="True" Background="White">
-            <Canvas x:Name="canvas" Width="10000" Height="10000">
-            </Canvas>
+        <StatusBar DockPanel.Dock="Bottom">
+            <StatusBarItem x:Name="positionStatusBarItem" Content="0, 0" />
+        </StatusBar>
+        <local:ZoomBorder ClipToBounds="True" Background="White" PreviewMouseMove="canvas_MouseMove">
+            <Canvas x:Name="canvas" />
         </local:ZoomBorder>
-    </Grid>
+    </DockPanel>
 </Window>

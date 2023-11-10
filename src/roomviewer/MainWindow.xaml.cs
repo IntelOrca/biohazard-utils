@@ -45,7 +45,7 @@ namespace IntelOrca.Biohazard.RoomViewer
                 .ToArray();
 
             roomDropdown.ItemsSource = rdtIds;
-            roomDropdown.SelectedIndex = Array.IndexOf(rdtIds, RdtId.FromInteger(0x10C));
+            roomDropdown.SelectedIndex = Array.IndexOf(rdtIds, RdtId.FromInteger(0x107));
         }
 
         private Rdt2 LoadRdt(RdtId id)
@@ -304,6 +304,16 @@ namespace IntelOrca.Biohazard.RoomViewer
                     canvas.Children.Add(rect);
                 }
             }
+        }
+
+        private void canvas_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            var zoomBorder = sender as ZoomBorder;
+            var mousePos = e.GetPosition(sender as IInputElement);
+            var pos = zoomBorder.GetPosition(mousePos);
+            pos.X = (((int)pos.X) / 10) * 10;
+            pos.Y = (((int)pos.Y) / 10) * 10;
+            positionStatusBarItem.Content = $"{pos.X}, {pos.Y}";
         }
     }
 }

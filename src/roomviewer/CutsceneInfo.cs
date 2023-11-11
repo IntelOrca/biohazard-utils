@@ -40,6 +40,7 @@ namespace IntelOrca.Biohazard.RoomViewer
     internal class PointOfInterest
     {
         public int Id { get; set; }
+        public string[] Tags { get; set; }
         public string Kind { get; set; }
         public int X { get; set; }
         public int Y { get; set; }

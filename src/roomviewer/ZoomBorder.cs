@@ -51,11 +51,9 @@ namespace IntelOrca.Biohazard.RoomViewer
                 child.RenderTransform = group;
                 child.RenderTransformOrigin = new Point(0.0, 0.0);
                 this.MouseWheel += child_MouseWheel;
-                this.MouseLeftButtonDown += child_MouseLeftButtonDown;
-                this.MouseLeftButtonUp += child_MouseLeftButtonUp;
+                this.MouseDown += child_MouseDown;
+                this.MouseUp += child_MouseUp;
                 this.MouseMove += child_MouseMove;
-                this.PreviewMouseRightButtonDown += new MouseButtonEventHandler(
-                  child_PreviewMouseRightButtonDown);
 
                 Reset();
             }
@@ -104,8 +102,17 @@ namespace IntelOrca.Biohazard.RoomViewer
             }
         }
 
-        private void child_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        private void child_MouseDown(object sender, MouseButtonEventArgs e)
         {
+            if (e.ChangedButton == MouseButton.Right)
+            {
+                Reset();
+                return;
+            }
+
+            if (e.ChangedButton != MouseButton.Middle)
+                return;
+
             if (child != null)
             {
                 var tt = GetTranslateTransform(child);
@@ -116,18 +123,16 @@ namespace IntelOrca.Biohazard.RoomViewer
             }
         }
 
-        private void child_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        private void child_MouseUp(object sender, MouseButtonEventArgs e)
         {
+            if (e.ChangedButton != MouseButton.Middle)
+                return;
+
             if (child != null)
             {
                 child.ReleaseMouseCapture();
                 this.Cursor = Cursors.Arrow;
             }
-        }
-
-        void child_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            this.Reset();
         }
 
         private void child_MouseMove(object sender, MouseEventArgs e)

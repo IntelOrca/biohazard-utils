@@ -15,8 +15,12 @@
         </StackPanel>
         <StatusBar DockPanel.Dock="Bottom">
             <StatusBarItem x:Name="positionStatusBarItem" Content="0, 0" />
+            <StatusBarItem x:Name="lastPositionStatusBarItem" Content="0, 0" />
+            <StatusBarItem x:Name="poiStatusBarItem" Content="???" />
         </StatusBar>
-        <local:ZoomBorder ClipToBounds="True" Background="White" PreviewMouseMove="canvas_MouseMove">
+        <local:ZoomBorder ClipToBounds="True" Background="White"
+                          PreviewMouseMove="canvas_MouseMove"
+                          PreviewMouseDown="canvas_MouseDown">
             <Canvas x:Name="canvas" />
         </local:ZoomBorder>
     </DockPanel>

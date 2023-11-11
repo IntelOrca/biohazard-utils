@@ -4,8 +4,10 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using IntelOrca.Biohazard.Extensions;
@@ -26,6 +28,7 @@ namespace IntelOrca.Biohazard.RoomViewer
         private readonly Dictionary<RdtId, CutsceneRoomInfo> _cutsceneRoomInfoMap = new Dictionary<RdtId, CutsceneRoomInfo>();
         private Point _origin;
         private Rdt2 _rdt;
+        private PointOfInterest _lastPoi;
 
         public MainWindow()
         {
@@ -36,6 +39,16 @@ namespace IntelOrca.Biohazard.RoomViewer
         private void Load()
         {
             LoadCutsceneRoomInfo();
+            var fsw = new FileSystemWatcher(System.IO.Path.GetDirectoryName(_cutsceneJsonPath));
+            fsw.EnableRaisingEvents = true;
+            fsw.Changed += (sender, e) =>
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    LoadCutsceneRoomInfo();
+                    LoadMap((RdtId)roomDropdown.SelectedItem);
+                });
+            };
 
             var rdtIds = Directory
                 .GetFiles(@"F:\games\re2\data\Pl0\Rdt")
@@ -61,8 +74,9 @@ namespace IntelOrca.Biohazard.RoomViewer
             canvas.Children.Clear();
 
             AddCollision();
-            AddPointsOfInterest(id);
             AddAots();
+            AddPointsOfInterest(id);
+            SortChildren();
         }
 
         private void AddCollision()
@@ -148,15 +162,45 @@ namespace IntelOrca.Biohazard.RoomViewer
                     if (poi.X == 0 && poi.Z == 0)
                         continue;
 
+                    var tags = poi.Tags ?? new string[0];
+
                     var node = new Ellipse();
-                    node.Fill = GetNodeColor(poi.Kind);
+                    node.Fill = GetNodeColor(tags.FirstOrDefault());
                     node.Width = 1000;
                     node.Height = 1000;
+                    node.Tag = poi;
 
                     Canvas.SetLeft(node, poi.X - (node.Width / 2));
                     Canvas.SetTop(node, poi.Z - (node.Height / 2));
 
                     canvas.Children.Add(node);
+
+                    if (tags.Contains(PoiKind.Door) ||
+                        tags.Contains(PoiKind.Stairs) ||
+                        tags.Contains(PoiKind.Meet))
+                    {
+                        var angle = GetAngle(poi);
+                        var lengthX = Math.Cos(angle) * 2000;
+                        var lengthZ = Math.Sin(angle) * 2000;
+
+                        var arrow = new Line();
+                        arrow.Stroke = node.Fill;
+                        arrow.StrokeThickness = 256;
+                        arrow.X1 = poi.X;
+                        arrow.Y1 = poi.Z;
+                        arrow.X2 = poi.X + lengthX;
+                        arrow.Y2 = poi.Z + lengthZ;
+                        arrow.Tag = poi;
+                        canvas.Children.Add(arrow);
+                    }
+
+                    var textBlock = new TextBlock();
+                    textBlock.RenderTransform = new ScaleTransform(1, -1);
+                    textBlock.FontSize = 600;
+                    textBlock.Text = poi.Cut.ToString();
+                    Canvas.SetLeft(textBlock, poi.X + 400);
+                    Canvas.SetTop(textBlock, poi.Z + 0);
+                    canvas.Children.Add(textBlock);
 
                     if (poi.Edges != null)
                     {
@@ -167,7 +211,7 @@ namespace IntelOrca.Biohazard.RoomViewer
                             {
                                 var line = new Line();
                                 line.Stroke = Brushes.Black;
-                                line.StrokeThickness = 8;
+                                line.StrokeThickness = 32;
                                 line.X1 = poi.X;
                                 line.Y1 = poi.Z;
                                 line.X2 = connection.X;
@@ -177,6 +221,31 @@ namespace IntelOrca.Biohazard.RoomViewer
                         }
                     }
                 }
+            }
+        }
+
+        private void SortChildren()
+        {
+            var children = new UIElement[canvas.Children.Count];
+            for (var i = 0; i < canvas.Children.Count; i++)
+            {
+                children[i] = canvas.Children[i];
+            }
+            children = children.OrderBy(x =>
+            {
+                if (x is FrameworkElement fe && fe.Tag is PointOfInterest)
+                {
+                    return 1;
+                }
+                else
+                {
+                    return 0;
+                }
+            }).ToArray();
+            canvas.Children.Clear();
+            foreach (var el in children)
+            {
+                canvas.Children.Add(el);
             }
         }
 
@@ -192,11 +261,19 @@ namespace IntelOrca.Biohazard.RoomViewer
                     return Brushes.Brown;
                 case PoiKind.Meet:
                     return Brushes.Red;
+                case PoiKind.Trigger:
                 case PoiKind.Waypoint:
                     return Brushes.Aqua;
                 default:
                     return Brushes.Black;
             }
+        }
+
+        private double GetAngle(PointOfInterest poi)
+        {
+            var angleNormalized = poi.D / (1024.0 * 4);
+            var angle = angleNormalized * (Math.PI * 2);
+            return -angle;
         }
 
         private Point GetDrawPos(PointOfInterest poi) => GetDrawPos(poi.X, poi.Z);
@@ -232,7 +309,7 @@ namespace IntelOrca.Biohazard.RoomViewer
         {
             _cutsceneRoomInfoMap.Clear();
 
-            var json = File.ReadAllText(_cutsceneJsonPath);
+            var json = ReadAllText(_cutsceneJsonPath);
             var map = JsonSerializer.Deserialize<Dictionary<string, CutsceneRoomInfo>>(json, new JsonSerializerOptions()
             {
                 ReadCommentHandling = JsonCommentHandling.Skip,
@@ -243,6 +320,24 @@ namespace IntelOrca.Biohazard.RoomViewer
                 var key = RdtId.Parse(kvp.Key);
                 _cutsceneRoomInfoMap[key] = kvp.Value;
             }
+        }
+
+        private static string ReadAllText(string path)
+        {
+            Exception cachedException = null;
+            for (var i = 0; i < 50; i++)
+            {
+                try
+                {
+                    return File.ReadAllText(path);
+                }
+                catch (Exception ex)
+                {
+                    cachedException = ex;
+                }
+                Thread.Sleep(100);
+            }
+            throw cachedException;
         }
 
         private void roomDropdown_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -306,7 +401,26 @@ namespace IntelOrca.Biohazard.RoomViewer
             }
         }
 
-        private void canvas_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+        private void canvas_MouseMove(object sender, MouseEventArgs e)
+        {
+            var (pos, poi) = MapPosition(sender, e);
+            positionStatusBarItem.Content = $"{pos.X}, {pos.Y}";
+
+            poi = poi == null ? _lastPoi : poi;
+            if (poi != null)
+            {
+                poiStatusBarItem.Content = $"POI: {poi.Id}, [{string.Join(", ", poi.Tags ?? new string[0])}]";
+            }
+        }
+
+        private void canvas_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            var (pos, poi) = MapPosition(sender, e);
+            lastPositionStatusBarItem.Content = $"{pos.X}, {pos.Y}";
+            _lastPoi = poi;
+        }
+
+        private Tuple<Point, PointOfInterest> MapPosition(object sender, MouseEventArgs e)
         {
             var zoomBorder = sender as ZoomBorder;
             var mousePos = e.GetPosition(sender as IInputElement);
@@ -314,6 +428,15 @@ namespace IntelOrca.Biohazard.RoomViewer
             pos.X = (((int)pos.X) / 10) * 10;
             pos.Y = (((int)pos.Y) / 10) * 10;
             positionStatusBarItem.Content = $"{pos.X}, {pos.Y}";
+
+            PointOfInterest poi = null;
+            var hitResult = VisualTreeHelper.HitTest(zoomBorder, mousePos);
+            if (hitResult != null)
+            {
+                var uiElement = hitResult.VisualHit as FrameworkElement;
+                poi = uiElement.Tag as PointOfInterest;
+            }
+            return new Tuple<Point, PointOfInterest>(pos, poi);
         }
     }
 }

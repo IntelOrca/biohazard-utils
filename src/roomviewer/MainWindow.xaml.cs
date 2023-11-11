@@ -45,6 +45,7 @@ namespace IntelOrca.Biohazard.RoomViewer
             {
                 Dispatcher.Invoke(() =>
                 {
+                    Thread.Sleep(100);
                     LoadCutsceneRoomInfo();
                     LoadMap((RdtId)roomDropdown.SelectedItem);
                 });
@@ -177,7 +178,8 @@ namespace IntelOrca.Biohazard.RoomViewer
 
                     if (tags.Contains(PoiKind.Door) ||
                         tags.Contains(PoiKind.Stairs) ||
-                        tags.Contains(PoiKind.Meet))
+                        tags.Contains(PoiKind.Meet) ||
+                        tags.Contains(PoiKind.Npc))
                     {
                         var angle = GetAngle(poi);
                         var lengthX = Math.Cos(angle) * 2000;
@@ -309,16 +311,28 @@ namespace IntelOrca.Biohazard.RoomViewer
         {
             _cutsceneRoomInfoMap.Clear();
 
-            var json = ReadAllText(_cutsceneJsonPath);
-            var map = JsonSerializer.Deserialize<Dictionary<string, CutsceneRoomInfo>>(json, new JsonSerializerOptions()
+            while (true)
             {
-                ReadCommentHandling = JsonCommentHandling.Skip,
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            });
-            foreach (var kvp in map)
-            {
-                var key = RdtId.Parse(kvp.Key);
-                _cutsceneRoomInfoMap[key] = kvp.Value;
+                try
+                {
+                    var json = ReadAllText(_cutsceneJsonPath);
+
+                    var map = JsonSerializer.Deserialize<Dictionary<string, CutsceneRoomInfo>>(json, new JsonSerializerOptions()
+                    {
+                        ReadCommentHandling = JsonCommentHandling.Skip,
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                    });
+                    foreach (var kvp in map)
+                    {
+                        var key = RdtId.Parse(kvp.Key);
+                        _cutsceneRoomInfoMap[key] = kvp.Value;
+                    }
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
             }
         }
 
@@ -329,7 +343,10 @@ namespace IntelOrca.Biohazard.RoomViewer
             {
                 try
                 {
-                    return File.ReadAllText(path);
+                    var result = File.ReadAllText(path);
+                    if (result.Length == 0)
+                        continue;
+                    return result;
                 }
                 catch (Exception ex)
                 {
@@ -337,7 +354,10 @@ namespace IntelOrca.Biohazard.RoomViewer
                 }
                 Thread.Sleep(100);
             }
-            throw cachedException;
+            if (cachedException != null)
+                throw cachedException;
+            else
+                throw new Exception();
         }
 
         private void roomDropdown_SelectionChanged(object sender, SelectionChangedEventArgs e)

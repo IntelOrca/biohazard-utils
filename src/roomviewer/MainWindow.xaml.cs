@@ -173,7 +173,6 @@ namespace IntelOrca.Biohazard.RoomViewer
 
                     Canvas.SetLeft(node, poi.X - (node.Width / 2));
                     Canvas.SetTop(node, poi.Z - (node.Height / 2));
-
                     canvas.Children.Add(node);
 
                     if (tags.Contains(PoiKind.Door) ||
@@ -194,6 +193,19 @@ namespace IntelOrca.Biohazard.RoomViewer
                         arrow.Y2 = poi.Z + lengthZ;
                         arrow.Tag = poi;
                         canvas.Children.Add(arrow);
+                    }
+
+                    if (poi.Tags.Length > 1)
+                    {
+                        var nodeInner = new Ellipse();
+                        nodeInner.Fill = GetNodeColor(poi.Tags[1]);
+                        nodeInner.Width = 500;
+                        nodeInner.Height = 500;
+                        nodeInner.Tag = poi;
+
+                        Canvas.SetLeft(nodeInner, poi.X - (nodeInner.Width / 2));
+                        Canvas.SetTop(nodeInner, poi.Z - (nodeInner.Height / 2));
+                        canvas.Children.Add(nodeInner);
                     }
 
                     var textBlock = new TextBlock();

@@ -221,7 +221,7 @@ namespace IntelOrca.Biohazard.RoomViewer
                         foreach (var edge in poi.Edges)
                         {
                             var connection = info.Poi.FirstOrDefault(x => x.Id == edge);
-                            if (connection != null && !(connection.X == 0 && connection.Y == 0))
+                            if (connection != null && !(connection.X == 0 && connection.Z == 0))
                             {
                                 var line = new Line();
                                 line.Stroke = Brushes.Black;

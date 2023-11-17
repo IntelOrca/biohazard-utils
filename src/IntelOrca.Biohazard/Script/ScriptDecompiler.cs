@@ -385,7 +385,7 @@ namespace IntelOrca.Biohazard.Script
                 {
                     br.ReadByte();
                     _lastReturnLine = sb.LineCount;
-                    sb.WriteLine($"return;");
+                    sb.WriteLine($"evt_end(0);");
                     break;
                 }
                 case OpcodeV2.EvtExec:

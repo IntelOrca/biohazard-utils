@@ -1,15 +1,10 @@
 ﻿namespace IntelOrca.Biohazard.Script.Opcodes
 {
-    public interface IItemAotSetOpcode
+    public interface IItemAotSetOpcode : IAot
     {
         int Offset { get; }
         byte Opcode { get; }
 
-        byte Id { get; set; }
-        byte SCE { get; set; }
-        byte SAT { get; set; }
-        byte Floor { get; set; }
-        byte Super { get; set; }
         ushort Type { get; set; }
         ushort Amount { get; set; }
         ushort GlobalId { get; set; }

@@ -15,7 +15,7 @@ namespace IntelOrca.Biohazard.Survey
         [DllImport("kernel32.dll")]
         private extern static bool ReadProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, IntPtr lpBuffer, IntPtr nSize, out IntPtr lpNumberOfBytesRead);
 
-        private static string _jsonPath = @"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re1\enemy.json";
+        private static string _jsonPath = @"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\enemy.json";
 
         private static bool _exit;
         private static byte[] _buffer = new byte[64];

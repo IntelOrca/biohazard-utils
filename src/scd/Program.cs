@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using IntelOrca.Biohazard;
@@ -13,7 +14,7 @@ namespace IntelOrca.Scd
     {
         public static int Main(string[] args)
         {
-            var paths = args.Where(x => !x.StartsWith("-")).ToArray();
+            var paths = GetArgs(args);
             var rdtPath = paths.FirstOrDefault();
             if (rdtPath == null)
             {
@@ -190,6 +191,26 @@ namespace IntelOrca.Scd
                 }
                 return 0;
             }
+        }
+
+        private static string[] GetArgs(string[] args)
+        {
+            var result = new List<string>();
+            for (var i = 0; i < args.Length; i++)
+            {
+                if (args[i].StartsWith("--init") ||
+                    args[i].StartsWith("--main") ||
+                    args[i].StartsWith("-o") ||
+                    args[i].StartsWith("-v"))
+                {
+                    i++;
+                }
+                else
+                {
+                    result.Add(args[i]);
+                }
+            }
+            return result.ToArray();
         }
 
         private static string Diassemble(BioVersion version, BioScriptKind kind, ScdProcedureList scd, bool listing = false)

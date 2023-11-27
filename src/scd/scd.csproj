@@ -5,6 +5,9 @@
     <IsTool>true</IsTool>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Spectre.Console.Cli" Version="0.48.0" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\IntelOrca.BioHazard\IntelOrca.Biohazard.csproj" />
   </ItemGroup>
 </Project>

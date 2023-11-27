@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
-using System.Linq;
 using IntelOrca.Biohazard;
 using IntelOrca.Biohazard.Extensions;
 using IntelOrca.Biohazard.Room;
 using IntelOrca.Biohazard.Script;
 using IntelOrca.Biohazard.Script.Compilation;
+using Spectre.Console.Cli;
 
 namespace IntelOrca.Scd
 {
@@ -14,29 +15,77 @@ namespace IntelOrca.Scd
     {
         public static int Main(string[] args)
         {
-            var paths = GetArgs(args);
-            var rdtPath = paths.FirstOrDefault();
-            if (rdtPath == null)
+            var app = new CommandApp<ScdCommand>();
+            return app
+                .WithDescription("SCD compiler / decompiler for Resident Evil 1-3")
+                .Run(args);
+        }
+    }
+
+    internal sealed class ScdCommand : Command<ScdCommand.Settings>
+    {
+        public sealed class Settings : CommandSettings
+        {
+            [CommandArgument(0, "<rdt>")]
+            [Description("Input RDT file")]
+            public string RdtPath { get; set; }
+
+            [CommandArgument(1, "[script]")]
+            [Description("Input .s|.bio file")]
+            public string ScriptPath { get; set; }
+
+            [CommandOption("--game")]
+            [Description("Version of Resident Evil/Biohazard. E.g. 1, 2 or 3")]
+            public int Game { get; set; }
+
+            [CommandOption("-x")]
+            [Description("Extract SCD data")]
+            public bool Extract { get; set; }
+
+            [CommandOption("-d")]
+            [Description("Disassemble SCD data to .s")]
+            public bool Disassemble { get; set; }
+
+            [CommandOption("--decompile")]
+            [Description("Decompile SCD data to .bio")]
+            public bool Decompile { get; set; }
+
+            [CommandOption("--list")]
+            [Description("Disassemble SCD data to .lst")]
+            public bool Listing { get; set; }
+
+            [CommandOption("--init <scd>")]
+            [Description("Input SCD path for the init SCD data")]
+            public string InitInput { get; set; }
+
+            [CommandOption("--main <scd>")]
+            [Description("Input SCD path for the main SCD data")]
+            public string MainInput { get; set; }
+
+            [CommandOption("-o <output>")]
+            [Description("Output RDT path")]
+            public string Output { get; set; }
+        }
+
+        public override int Execute(CommandContext context, Settings settings)
+        {
+            var rdtPath = settings.RdtPath;
+            if (string.IsNullOrEmpty(rdtPath))
             {
                 return PrintUsage();
             }
 
             var bioVersion = BioVersion.Biohazard2;
-            var version = GetOption(args, "-v");
+            var version = settings.Game;
             if (version != null)
             {
-                if (!int.TryParse(version, out var parsedVersion) || parsedVersion < 1 || parsedVersion > 3)
-                {
-                    Console.Error.WriteLine("Invalid version");
-                    return 1;
-                }
-                if (parsedVersion == 1)
+                if (version == 1)
                     bioVersion = BioVersion.Biohazard1;
-                else if (parsedVersion == 3)
+                else if (version == 3)
                     bioVersion = BioVersion.Biohazard3;
             }
 
-            if (args.Contains("-x"))
+            if (settings.Extract)
             {
                 var rdtFile = Biohazard.Room.Rdt.FromFile(bioVersion, rdtPath);
                 if (bioVersion == BioVersion.Biohazard1)
@@ -57,14 +106,14 @@ namespace IntelOrca.Scd
                 }
                 return 0;
             }
-            else if (args.Contains("-d"))
+            else if (settings.Disassemble)
             {
                 if (rdtPath.EndsWith(".rdt", StringComparison.OrdinalIgnoreCase))
                 {
                     var rdtFile = Biohazard.Room.Rdt.FromFile(bioVersion, rdtPath);
                     foreach (var listing in new[] { false, true })
                     {
-                        if (listing && !args.Contains("--list"))
+                        if (listing && !settings.Listing)
                             continue;
 
                         var script = rdtFile.DisassembleScd(listing);
@@ -74,7 +123,7 @@ namespace IntelOrca.Scd
                 }
                 else if (rdtPath.EndsWith(".scd", StringComparison.OrdinalIgnoreCase))
                 {
-                    var kind = args.Contains("--main") ? BioScriptKind.Main : BioScriptKind.Init;
+                    var kind = settings.MainInput != null ? BioScriptKind.Main : BioScriptKind.Init;
                     var scd = new ScdProcedureList(bioVersion, File.ReadAllBytes(rdtPath));
                     var s = Diassemble(bioVersion, kind, scd);
                     var sPath = Path.ChangeExtension(rdtPath, ".s");
@@ -85,7 +134,7 @@ namespace IntelOrca.Scd
                 }
                 return 0;
             }
-            else if (args.Contains("--decompile"))
+            else if (settings.Decompile)
             {
                 if (rdtPath.EndsWith(".rdt", StringComparison.OrdinalIgnoreCase))
                 {
@@ -135,12 +184,12 @@ namespace IntelOrca.Scd
                 else
                 {
                     var rdtFile = Biohazard.Room.Rdt.FromFile(bioVersion, rdtPath).ToBuilder();
-                    if (paths.Length >= 2)
+                    if (!string.IsNullOrEmpty(settings.ScriptPath))
                     {
-                        var inPath = Path.GetFullPath(paths[1]);
+                        var inPath = Path.GetFullPath(settings.ScriptPath);
                         if (inPath.EndsWith(".scd", StringComparison.OrdinalIgnoreCase))
                         {
-
+                            throw new NotImplementedException();
                         }
                         else if (CreateGenerator(inPath) is IScdGenerator generator2)
                         {
@@ -164,8 +213,8 @@ namespace IntelOrca.Scd
                     else
                     {
 
-                        var initScdPath = GetOption(args, "--init");
-                        var mainScdPath = GetOption(args, "--main");
+                        var initScdPath = settings.InitInput;
+                        var mainScdPath = settings.MainInput;
                         if (initScdPath != null)
                         {
                             var initScd = new ScdProcedureList(bioVersion, File.ReadAllBytes(initScdPath));
@@ -179,7 +228,7 @@ namespace IntelOrca.Scd
                     }
 
                     var outRdt = rdtFile.ToRdt();
-                    var outPath = GetOption(args, "-o");
+                    var outPath = settings.Output;
                     if (outPath != null)
                     {
                         outRdt.Data.WriteToFile(outPath);

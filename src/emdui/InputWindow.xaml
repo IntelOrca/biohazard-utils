@@ -1,0 +1,23 @@
+﻿<Window x:Class="emdui.InputWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:emdui"
+        mc:Ignorable="d"
+        Title="TITLE"
+        SizeToContent="WidthAndHeight"
+        WindowStartupLocation="CenterOwner"
+        MinWidth="300"
+        MinHeight="100">
+    <Grid Margin="8">
+        <StackPanel>
+            <TextBlock x:Name="descriptionLabel" Margin="2" Text="DESCRIPTION" />
+            <TextBox x:Name="inputTextBox" Margin="2" TextChanged="inputTextBox_TextChanged" Text="DEFAULT" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Cancel" MinWidth="80" Margin="2" IsCancel="True" />
+                <Button x:Name="okButton" Content="OK" MinWidth="80" Margin="2" IsDefault="True" Click="okButton_Click" />
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Window>

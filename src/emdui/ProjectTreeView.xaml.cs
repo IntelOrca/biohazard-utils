@@ -333,7 +333,7 @@ namespace emdui
             var numAnimations = edd.AnimationCount;
             for (var i = 0; i < numAnimations; i++)
             {
-                Items.Add(new AnimationTreeViewItem(ProjectFile, chunkIndex, edd, i));
+                Items.Add(new AnimationTreeViewItem(ProjectFile, chunkIndex, i));
             }
 
             AddMenuItem("Import...", Import);
@@ -371,14 +371,50 @@ namespace emdui
     {
         public override ImageSource Image => (ImageSource)Application.Current.Resources["IconAnimation"];
         public override string Header => $"Animation {Index}";
-        public IEdd Edd { get; }
         public int Index { get; }
 
-        public AnimationTreeViewItem(ProjectFile projectFile, int chunkIndex, IEdd edd, int index)
+        public IEdd Edd
+        {
+            get => Model.GetChunk<IEdd>(ChunkIndex);
+            set => Model.SetChunk(ChunkIndex, value);
+        }
+
+        public AnimationTreeViewItem(ProjectFile projectFile, int chunkIndex, int index)
             : base(projectFile, chunkIndex)
         {
-            Edd = edd;
             Index = index;
+
+            AddMenuItem("Change speed...", ChangeSpeed);
+        }
+
+        private void ChangeSpeed()
+        {
+            var value = InputWindow.Show("Set animation speed", "Enter a speed modifier:", "1.0",
+                s => double.TryParse(s, out var result) && result >= 0 && result <= 100);
+
+            if (!double.TryParse(value, out var speed))
+                return;
+
+            if (speed == 1.0f)
+                return;
+
+            var builder = ((Edd1)Edd).ToBuilder();
+            var animation = builder.Animations[Index];
+
+            var currentCount = animation.Frames.Length;
+            var newCount = (int)(currentCount * (1 / speed));
+
+            var newFrames = new List<Edd1.Frame>();
+            for (var i = 0; i < newCount; i++)
+            {
+                var srcIndex = Math.Min(currentCount - 1, (int)Math.Round(i * speed));
+                var srcFrame = animation.Frames[srcIndex];
+                newFrames.Add(srcFrame);
+            }
+            animation.Frames = newFrames.ToArray();
+
+            Edd = builder.ToEdd();
+            OnDefaultAction();
         }
 
         public override void OnDefaultAction()

@@ -5,6 +5,7 @@
     <LangVersion>8.0</LangVersion>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="System.Memory" Version="4.5.5" />
     <PackageReference Include="System.Text.Json" Version="6.0.6" />
     <PackageReference Include="NVorbis" Version="0.10.5" />
   </ItemGroup>

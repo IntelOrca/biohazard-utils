@@ -400,21 +400,50 @@ namespace emdui
 
             var builder = ((Edd1)Edd).ToBuilder();
             var animation = builder.Animations[Index];
-
-            var currentCount = animation.Frames.Length;
-            var newCount = (int)(currentCount * (1 / speed));
-
-            var newFrames = new List<Edd1.Frame>();
-            for (var i = 0; i < newCount; i++)
-            {
-                var srcIndex = Math.Min(currentCount - 1, (int)Math.Round(i * speed));
-                var srcFrame = animation.Frames[srcIndex];
-                newFrames.Add(srcFrame);
-            }
-            animation.Frames = newFrames.ToArray();
+            var newFrames = StretchFrames(animation, speed);
+            animation.Frames = newFrames;
 
             Edd = builder.ToEdd();
             OnDefaultAction();
+        }
+
+        private Edd1.Frame[] StretchFrames(Edd1.Builder.Animation animation, double speed)
+        {
+            var count = animation.Frames.Length;
+
+            var keyFrames = new List<int>();
+            for (var i = 0; i < count; i++)
+            {
+                if (i == 0 || i == count - 1 || animation.Frames[i].Flags != 0)
+                {
+                    keyFrames.Add(i);
+                }
+            }
+
+            var newFrames = new List<Edd1.Frame>();
+            for (var i = 0; i < keyFrames.Count - 1; i++)
+            {
+                var from = keyFrames[i];
+                var to = keyFrames[i + 1];
+                StretchFrames(newFrames, animation, from, to, speed);
+            }
+            newFrames.Add(animation.Frames[keyFrames[keyFrames.Count - 1]]);
+            return newFrames.ToArray();
+        }
+
+        private void StretchFrames(List<Edd1.Frame> dst, Edd1.Builder.Animation animation, int from, int to, double speed)
+        {
+            var count = to - from;
+            var newCount = (int)(count * (1 / speed));
+            for (var i = 0; i < newCount; i++)
+            {
+                var srcIndex = from + Math.Min(count - 1, (int)Math.Round(i * speed));
+                if (srcIndex == to)
+                    break;
+
+                var srcFrame = animation.Frames[srcIndex];
+                dst.Add(srcFrame);
+            }
         }
 
         public override void OnDefaultAction()

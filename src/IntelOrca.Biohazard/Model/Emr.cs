@@ -181,7 +181,7 @@ namespace IntelOrca.Biohazard.Model
 
         [DebuggerDisplay("({x}, {y}, {z})")]
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
-        public struct Vector
+        public struct Vector : IEquatable<Vector>
         {
             public short x, y, z;
 
@@ -191,6 +191,21 @@ namespace IntelOrca.Biohazard.Model
                 this.y = y;
                 this.z = z;
             }
+
+            public override readonly bool Equals(object obj) => obj is Vector v && Equals(v);
+            public readonly bool Equals(Vector other) => other.x == x && other.y == y && other.z == z;
+
+            public override int GetHashCode()
+            {
+                int hashCode = 373119288;
+                hashCode = hashCode * -1521134295 + x.GetHashCode();
+                hashCode = hashCode * -1521134295 + y.GetHashCode();
+                hashCode = hashCode * -1521134295 + z.GetHashCode();
+                return hashCode;
+            }
+
+            public static bool operator ==(Vector left, Vector right) => left.Equals(right);
+            public static bool operator !=(Vector left, Vector right) => !(left == right);
         }
 
         [StructLayout(LayoutKind.Sequential, Pack = 1)]

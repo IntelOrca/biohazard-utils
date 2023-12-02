@@ -379,31 +379,61 @@ namespace emdui
             set => Model.SetChunk(ChunkIndex, value);
         }
 
+        public Emr Emr
+        {
+            get => Model.GetChunk<Emr>(ChunkIndex + 1);
+            set => Model.SetChunk(ChunkIndex + 1, value);
+        }
+
         public AnimationTreeViewItem(ProjectFile projectFile, int chunkIndex, int index)
             : base(projectFile, chunkIndex)
         {
             Index = index;
 
             AddMenuItem("Change speed...", ChangeSpeed);
+            AddMenuItem("Stretch...", () => Stretch(false));
+            AddMenuItem("Stretch (looping)...", () => Stretch(true));
         }
 
-        private void ChangeSpeed()
+        private void Stretch(bool looping)
         {
-            var value = InputWindow.Show("Set animation speed", "Enter a speed modifier:", "1.0",
+            var value = InputWindow.Show("Stretch animation", "Enter a stretch modifier (faster = 2.0, slower = 0.5):", "1.0",
                 s => double.TryParse(s, out var result) && result >= 0 && result <= 100);
 
             if (!double.TryParse(value, out var speed))
                 return;
 
-            if (speed == 1.0f)
+            if (speed == 1.0)
                 return;
 
-            var builder = ((Edd1)Edd).ToBuilder();
+            var builder = AnimationBuilder.FromEddEmr(Edd, Emr);
             var animation = builder.Animations[Index];
-            var newFrames = StretchFrames(animation, speed);
-            animation.Frames = newFrames;
+            animation.Stretch(1 / speed, looping);
 
-            Edd = builder.ToEdd();
+            var (newEdd, newEmr) = builder.ToEddEmr();
+            Edd = newEdd;
+            Emr = newEmr;
+            OnDefaultAction();
+        }
+
+        private void ChangeSpeed()
+        {
+            var value = InputWindow.Show("Change speed", "Enter a speed modifier (faster = 2.0, slower = 0.5):", "1.0",
+                s => double.TryParse(s, out var result) && result >= 0 && result <= 100);
+
+            if (!double.TryParse(value, out var speed))
+                return;
+
+            if (speed == 1.0)
+                return;
+
+            var builder = AnimationBuilder.FromEddEmr(Edd, Emr);
+            var animation = builder.Animations[Index];
+            animation.ChangeSpeed(1 / speed);
+
+            var (newEdd, newEmr) = builder.ToEddEmr();
+            Edd = newEdd;
+            Emr = newEmr;
             OnDefaultAction();
         }
 

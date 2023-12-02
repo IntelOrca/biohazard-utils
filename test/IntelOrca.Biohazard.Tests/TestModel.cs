@@ -212,6 +212,28 @@ namespace IntelOrca.Biohazard.Tests
             }
         }
 
+        [Fact]
+        public void RebuildEddEmr()
+        {
+            var installPath = TestInfo.GetInstallPath(1);
+            var pldPath = Path.Combine(installPath, "data", "pl0", "pld", "pl00.pld");
+            var pldFile = new PldFile(BioVersion.Biohazard2, pldPath);
+
+            var edd = pldFile.GetEdd(0);
+            var emr = pldFile.GetEmr(0);
+
+            var animationBuilder = AnimationBuilder.FromEddEmr(edd, emr);
+            var (eddRebuilt, emrRebuilt) = animationBuilder.ToEddEmr();
+
+            AssertByteArraysEqual(edd.Data, eddRebuilt.Data);
+            AssertByteArraysEqual(emr.Data, emrRebuilt.Data);
+        }
+
+        private static void AssertByteArraysEqual(ReadOnlyMemory<byte> expected, ReadOnlyMemory<byte> actual)
+        {
+            AssertByteArraysEqual(expected.ToArray(), actual.ToArray());
+        }
+
         private static void AssertByteArraysEqual(byte[] expected, byte[] actual)
         {
             Assert.Equal(expected.Length, actual.Length);

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 
 namespace IntelOrca.Biohazard.Model
 {
@@ -123,11 +124,34 @@ namespace IntelOrca.Biohazard.Model
                 return new Emr(Version, ms.ToArray());
             }
 
-            public class Keyframe
+            public class Keyframe : IEquatable<Keyframe>
             {
                 public Vector Offset { get; set; }
                 public Vector Speed { get; set; }
                 public Vector[] Angles { get; set; } = new Vector[0];
+
+                public override bool Equals(object? obj) => obj is Keyframe keyframe && Equals(keyframe);
+
+                public bool Equals(Keyframe other)
+                {
+                    return Offset.Equals(other.Offset) &&
+                           Speed.Equals(other.Speed) &&
+                           Angles.SequenceEqual(other.Angles);
+                }
+
+                public override int GetHashCode()
+                {
+                    int hashCode = 1148422459;
+                    hashCode = hashCode * -1521134295 + Offset.GetHashCode();
+                    hashCode = hashCode * -1521134295 + Speed.GetHashCode();
+                    hashCode = hashCode * -1521134295 + EqualityComparer<Vector[]>.Default.GetHashCode(Angles);
+                    return hashCode;
+                }
+
+                public static bool operator ==(Keyframe? left, Keyframe? right) =>
+                    ReferenceEquals(left, right) ||
+                    (!ReferenceEquals(left, null) && !ReferenceEquals(right, null) && left.Equals(right));
+                public static bool operator !=(Keyframe? left, Keyframe? right) => !(left == right);
             }
         }
     }

@@ -49,7 +49,7 @@ namespace IntelOrca.Biohazard.Model
         IEddBuilder IEdd.ToBuilder() => ToBuilder();
         public Builder ToBuilder()
         {
-            var builder = new Builder();
+            var builder = new Builder(Version);
             for (var i = 0; i < AnimationCount; i++)
             {
                 builder.Animations.Add(new Builder.Animation()

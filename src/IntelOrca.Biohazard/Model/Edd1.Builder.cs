@@ -10,6 +10,11 @@ namespace IntelOrca.Biohazard.Model
             public BioVersion Version { get; }
             public List<Animation> Animations { get; } = new List<Animation>();
 
+            public Builder(BioVersion version)
+            {
+                Version = version;
+            }
+
             IEdd IEddBuilder.ToEdd() => ToEdd();
             public Edd1 ToEdd()
             {

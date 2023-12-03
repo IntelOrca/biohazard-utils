@@ -429,7 +429,7 @@ namespace emdui
 
             var builder = AnimationBuilder.FromEddEmr(Edd, Emr);
             var animation = builder.Animations[Index];
-            animation.ChangeSpeed(1 / speed);
+            animation.ChangeSpeed(speed);
 
             var (newEdd, newEmr) = builder.ToEddEmr();
             Edd = newEdd;

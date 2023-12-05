@@ -213,10 +213,27 @@ namespace IntelOrca.Biohazard.Tests
         }
 
         [Fact]
-        public void RebuildEddEmr()
+        public void RebuildEddEmr_PLD()
         {
             var installPath = TestInfo.GetInstallPath(1);
             var pldPath = Path.Combine(installPath, "data", "pl0", "pld", "pl00.pld");
+            var pldFile = new PldFile(BioVersion.Biohazard2, pldPath);
+
+            var edd = pldFile.GetEdd(0);
+            var emr = pldFile.GetEmr(0);
+
+            var animationBuilder = AnimationBuilder.FromEddEmr(edd, emr);
+            var (eddRebuilt, emrRebuilt) = animationBuilder.ToEddEmr();
+
+            AssertByteArraysEqual(edd.Data, eddRebuilt.Data);
+            AssertByteArraysEqual(emr.Data, emrRebuilt.Data);
+        }
+
+        [Fact]
+        public void RebuildEddEmr_PLW()
+        {
+            var installPath = TestInfo.GetInstallPath(1);
+            var pldPath = Path.Combine(installPath, "data", "pl0", "pld", "pl00w02.plw");
             var pldFile = new PldFile(BioVersion.Biohazard2, pldPath);
 
             var edd = pldFile.GetEdd(0);

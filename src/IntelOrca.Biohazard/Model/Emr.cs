@@ -223,6 +223,8 @@ namespace IntelOrca.Biohazard.Model
             private readonly int _offset;
             private readonly int _length;
 
+            public ReadOnlySpan<byte> Span => GetSpan<byte>(0, _length);
+
             public Vector Offset
             {
                 get

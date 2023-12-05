@@ -82,10 +82,10 @@ namespace IntelOrca.Biohazard.Model
                 set => _value = (uint)(_value & ~0xFFF | (uint)value & 0xFFF);
             }
 
-            public byte Flags
+            public ushort Flags
             {
-                get => (byte)(_value >> 12);
-                set => _value = (uint)value << 12 | _value & 0xFFF;
+                get => (ushort)(_value >> 12);
+                set => _value = ((uint)value << 12) | (_value & 0xFFF);
             }
         }
     }

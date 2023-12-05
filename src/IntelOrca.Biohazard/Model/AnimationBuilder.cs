@@ -46,25 +46,24 @@ namespace IntelOrca.Biohazard.Model
             var emrBuilder = _emr.ToBuilder();
             emrBuilder.KeyFrames.Clear();
 
-            var lastFrameIndex = -1;
-            var lastFrame = (EmrFrame?)null;
+            var cache = new Dictionary<EmrFrame, int>();
             foreach (var animation in Animations)
             {
                 var frames = new List<Edd1.Frame>();
                 for (var i = 0; i < animation.Frames.Count; i++)
                 {
                     var frame = animation.Frames[i];
-                    if (frame.EmrFrame != lastFrame)
+                    if (!cache.TryGetValue(frame.EmrFrame, out var frameIndex))
                     {
-                        lastFrameIndex++;
-                        lastFrame = frame.EmrFrame;
+                        frameIndex = emrBuilder.KeyFrames.Count;
+                        cache.Add(frame.EmrFrame, frameIndex);
                         emrBuilder.KeyFrames.Add(frame.EmrFrame);
                     }
 
                     frames.Add(new Edd1.Frame()
                     {
                         Flags = frame.Flags,
-                        Index = (ushort)lastFrameIndex
+                        Index = (ushort)frameIndex
                     });
                 }
 
@@ -72,7 +71,6 @@ namespace IntelOrca.Biohazard.Model
                 {
                     Frames = frames.ToArray()
                 });
-                lastFrame = null;
             }
 
             return (eddBuilder.ToEdd(), emrBuilder.ToEmr());
@@ -207,10 +205,10 @@ namespace IntelOrca.Biohazard.Model
 
         public class Frame
         {
-            public byte Flags { get; set; }
+            public ushort Flags { get; set; }
             public EmrFrame EmrFrame { get; set; }
 
-            public Frame(byte flags, EmrFrame emrFrame)
+            public Frame(ushort flags, EmrFrame emrFrame)
             {
                 Flags = flags;
                 EmrFrame = emrFrame;

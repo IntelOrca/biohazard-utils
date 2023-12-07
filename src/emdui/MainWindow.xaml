@@ -26,6 +26,7 @@
                 <KeyGesture>ALT+F4</KeyGesture>
             </RoutedUICommand.InputGestures>
         </RoutedUICommand>
+        <RoutedUICommand x:Key="ChangeSpeedCommand" Text="Change Speed..." />
     </Window.Resources>
     <Window.CommandBindings>
         <CommandBinding Command="{StaticResource OpenCommand}" Executed="OpenCommandBinding_Executed" />
@@ -33,6 +34,7 @@
         <CommandBinding Command="{StaticResource SaveAsCommand}" Executed="SaveAsCommandBinding_Executed" CanExecute="SaveCommandBinding_CanExecute" />
         <CommandBinding Command="{StaticResource ExportForBioRandCommand}" Executed="ExportForBioRandCommandBinding_Executed" CanExecute="SaveCommandBinding_CanExecute" />
         <CommandBinding Command="{StaticResource ExitCommand}" Executed="ExitCommandBinding_Executed" />
+        <CommandBinding Command="{StaticResource ChangeSpeedCommand}" Executed="ChangeSpeedCommandBinding_Executed" />
     </Window.CommandBindings>
     <DockPanel>
         <Menu DockPanel.Dock="Top">
@@ -57,6 +59,9 @@
                 <MenuItem Header="_Show Floor" IsCheckable="True" IsChecked="{Binding ShowFloor, ElementName=mainWindow}" />
                 <MenuItem Header="_Show Bones" IsCheckable="True" IsChecked="{Binding ShowBones, ElementName=mainWindow}" />
                 <MenuItem Header="_Dark Background" IsCheckable="True" IsChecked="{Binding DarkBackground, ElementName=mainWindow}" />
+            </MenuItem>
+            <MenuItem Header="Tools">
+                <MenuItem Header="_Change Speed..." Command="{StaticResource ChangeSpeedCommand}" />
             </MenuItem>
         </Menu>
         <StatusBar DockPanel.Dock="Bottom">

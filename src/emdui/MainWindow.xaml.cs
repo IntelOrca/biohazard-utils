@@ -560,5 +560,50 @@ namespace emdui
                 MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
+        private void ChangeSpeedCommandBinding_Executed(object sender, System.Windows.Input.ExecutedRoutedEventArgs e)
+        {
+            if (_project.Version != BioVersion.Biohazard2)
+            {
+                MessageBox.Show("Currently only supported for RE 2", "Not supported", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            var value = InputWindow.Show("Change speed", "Enter a speed modifier (faster = 2.0, slower = 0.5):", "1.0",
+                s => double.TryParse(s, out var result) && result >= 0 && result <= 100);
+
+            if (!double.TryParse(value, out var speed))
+                return;
+
+            if (speed == 1.0)
+                return;
+
+            ChangeSpeed(_project.MainModel, speed);
+            foreach (var weapon in _project.Weapons)
+            {
+                ChangeSpeed(weapon, speed);
+            }
+        }
+
+        private void ChangeSpeed(ModelFile model, double speed)
+        {
+            var speedsPld = new[] { 0, 1, 8, 9 };
+            var speedsPlw = new[] { 0, 1, 3, 4 };
+            var speeds = model is PldFile ? speedsPld : speedsPlw;
+
+            var edd = model.GetEdd(0);
+            var emr = model.GetEmr(0);
+
+            var builder = AnimationBuilder.FromEddEmr(edd, emr);
+            foreach (var index in speeds)
+            {
+                var animation = builder.Animations[index];
+                animation.ChangeSpeed(speed);
+            }
+            var (newEdd, newEmr) = builder.ToEddEmr();
+
+            model.SetEdd(0, newEdd);
+            model.SetEmr(0, newEmr);
+        }
     }
 }

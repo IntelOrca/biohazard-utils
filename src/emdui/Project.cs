@@ -16,10 +16,13 @@ namespace emdui
         public string MainPath { get; set; }
 
         public ModelFile MainModel { get; set; }
-        public PlwFile[] Weapons { get; set; }
 
         public BioVersion Version => MainModel.Version;
         public IReadOnlyList<ProjectFile> Files => _projectFiles;
+        public PlwFile[] Weapons => _projectFiles
+            .Where(x => x.Kind == ProjectFileKind.Plw)
+            .Select(x => (PlwFile)x.Content)
+            .ToArray();
 
         public static Project FromFile(string path)
         {

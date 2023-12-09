@@ -892,7 +892,7 @@ namespace IntelOrca.Biohazard.Script
             "se_vol",
             "",
             "",
-            "",
+            "heal",
             "",
             "",
             "poison_ck",

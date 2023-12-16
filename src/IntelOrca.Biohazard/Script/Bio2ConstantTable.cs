@@ -855,7 +855,7 @@ namespace IntelOrca.Biohazard.Script
             "keep_item_ck:t",
             "xa_vol",
 
-            "kage_set",
+            "kage_set:uuuuuIIII",
             "cut_be_set",
             "sce_item_lost:t",
             "plc_gun_eff",

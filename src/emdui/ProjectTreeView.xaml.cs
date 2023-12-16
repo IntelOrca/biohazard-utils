@@ -481,47 +481,49 @@ namespace emdui
             var mainWindow = MainWindow.Instance;
             if (Model == null)
             {
-                var rdt = ProjectFile.Content as IRdt;
-                if (rdt != null)
+                if (ProjectFile.Content is IRdt rdt)
                 {
                     var mainModel = mainWindow.Project.MainModel;
-                    var relatedEmr = ((Rdt2)rdt).RBJ[ChunkIndex].Emr;
+                    var rbj = ((Rdt2)rdt).RBJ;
+                    var edd = rbj[ChunkIndex].Edd;
+                    var emr = rbj[ChunkIndex].Emr;
                     mainWindow.LoadMesh(mainModel.GetMesh(0));
-                    mainWindow.LoadAnimation(relatedEmr, Edd, Index);
+                    mainWindow.LoadAnimation(emr, edd, Index);
                 }
-                return;
             }
-
-            var project = mainWindow.Project;
-            var emrChunkIndex = GetEmrChunkIndex();
-            var emr = Model.GetChunk<Emr>(emrChunkIndex);
-            if (ProjectFile.Content is PldFile pldFile)
+            else
             {
-                mainWindow.LoadMesh(pldFile.GetMesh(0));
-                mainWindow.LoadAnimation(emr, Edd, Index);
-            }
-            else if (ProjectFile.Content is PlwFile plwFile)
-            {
-                var texture = project.MainTexture;
-                if (plwFile.Version != BioVersion.Biohazard1)
-                    texture = texture.WithWeaponTexture(plwFile.Tim);
-                var mesh = project.MainModel.GetMesh(0);
-                switch (Model.Version)
+                var project = mainWindow.Project;
+                var emrChunkIndex = GetEmrChunkIndex();
+                var emr = Model.GetChunk<Emr>(emrChunkIndex);
+                if (ProjectFile.Content is PldFile pldFile)
                 {
-                    case BioVersion.Biohazard1:
-                    case BioVersion.Biohazard2:
-                        mesh = mesh.ReplacePart(11, plwFile.GetMesh(0));
-                        break;
+                    mainWindow.LoadMesh(pldFile.GetMesh(0));
+                    mainWindow.LoadAnimation(emr, Edd, Index);
                 }
+                else if (ProjectFile.Content is PlwFile plwFile)
+                {
+                    var texture = project.MainTexture;
+                    if (plwFile.Version != BioVersion.Biohazard1)
+                        texture = texture.WithWeaponTexture(plwFile.Tim);
+                    var mesh = project.MainModel.GetMesh(0);
+                    switch (Model.Version)
+                    {
+                        case BioVersion.Biohazard1:
+                        case BioVersion.Biohazard2:
+                            mesh = mesh.ReplacePart(11, plwFile.GetMesh(0));
+                            break;
+                    }
 
-                mainWindow.LoadMesh(mesh, texture);
-                mainWindow.LoadAnimation(emr, Edd, Index);
-            }
-            else if (ProjectFile.Content is EmdFile emdFile)
-            {
-                var meshIndex = emdFile.Version == BioVersion.Biohazard3 ? 1 : 0;
-                mainWindow.LoadMesh(emdFile.GetMesh(meshIndex));
-                mainWindow.LoadAnimation(emr, Edd, Index);
+                    mainWindow.LoadMesh(mesh, texture);
+                    mainWindow.LoadAnimation(emr, Edd, Index);
+                }
+                else if (ProjectFile.Content is EmdFile emdFile)
+                {
+                    var meshIndex = emdFile.Version == BioVersion.Biohazard3 ? 1 : 0;
+                    mainWindow.LoadMesh(emdFile.GetMesh(meshIndex));
+                    mainWindow.LoadAnimation(emr, Edd, Index);
+                }
             }
         }
 

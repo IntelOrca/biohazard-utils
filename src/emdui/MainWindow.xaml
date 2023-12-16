@@ -14,6 +14,7 @@
                 <KeyGesture>CTRL+O</KeyGesture>
             </RoutedUICommand.InputGestures>
         </RoutedUICommand>
+        <RoutedUICommand x:Key="OpenRdtCommand" Text="Open" />
         <RoutedUICommand x:Key="SaveCommand" Text="Save">
             <RoutedUICommand.InputGestures>
                 <KeyGesture>CTRL+S</KeyGesture>
@@ -30,6 +31,7 @@
     </Window.Resources>
     <Window.CommandBindings>
         <CommandBinding Command="{StaticResource OpenCommand}" Executed="OpenCommandBinding_Executed" />
+        <CommandBinding Command="{StaticResource OpenRdtCommand}" Executed="OpenRdtCommandBinding_Executed" />
         <CommandBinding Command="{StaticResource SaveCommand}" Executed="SaveCommandBinding_Executed" CanExecute="SaveCommandBinding_CanExecute" />
         <CommandBinding Command="{StaticResource SaveAsCommand}" Executed="SaveAsCommandBinding_Executed" CanExecute="SaveCommandBinding_CanExecute" />
         <CommandBinding Command="{StaticResource ExportForBioRandCommand}" Executed="ExportForBioRandCommandBinding_Executed" CanExecute="SaveCommandBinding_CanExecute" />
@@ -40,6 +42,11 @@
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="File">
                 <MenuItem Header="_Open" Command="{StaticResource OpenCommand}">
+                    <MenuItem.Icon>
+                        <Image Source="{StaticResource IconOpen}"></Image>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_OpenRdt" Command="{StaticResource OpenRdtCommand}">
                     <MenuItem.Icon>
                         <Image Source="{StaticResource IconOpen}"></Image>
                     </MenuItem.Icon>

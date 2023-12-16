@@ -304,6 +304,10 @@ namespace emdui
 
             // LoadProject(@"F:\games\re3\mod_biorand\ROOM\EMD\EM5C.EMD");
             // LoadProject(@"F:\games\re1\JPN\ENEMY\Em1000.emd");
+
+            // _project.LoadRdt(@"F:\games\re2\data\Pl1\Rdt\ROOM6141.RDT");
+            // projectTreeView.Project = null;
+            // projectTreeView.Project = _project;
 #if false
             var texturePackerWindow = new TexturePackerWindow();
             texturePackerWindow.Meshes = _project.Files
@@ -455,6 +459,18 @@ namespace emdui
             if (openFileDialog.ShowDialog() == true)
             {
                 LoadProject(openFileDialog.FileName);
+            }
+        }
+
+        private void OpenRdtCommandBinding_Executed(object sender, System.Windows.Input.ExecutedRoutedEventArgs e)
+        {
+            var openFileDialog = new OpenFileDialog();
+            openFileDialog.InitialDirectory = _project == null ? null : System.IO.Path.GetDirectoryName(_project.MainPath);
+            openFileDialog.Filter = "RDT Files (*.rdt)|*.rdt";
+            if (openFileDialog.ShowDialog() == true)
+            {
+                _project.LoadRdt(openFileDialog.FileName);
+                RefreshTreeView();
             }
         }
 

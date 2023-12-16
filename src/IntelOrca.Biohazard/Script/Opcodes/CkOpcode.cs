@@ -4,7 +4,7 @@ using System.IO;
 namespace IntelOrca.Biohazard.Script.Opcodes
 {
     [DebuggerDisplay("ck")]
-    internal class CkOpcode : OpcodeBase
+    public class CkOpcode : OpcodeBase
     {
         public byte BitArray { get; set; }
         public byte Index { get; set; }

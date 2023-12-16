@@ -417,8 +417,12 @@ namespace IntelOrca.Biohazard.Script
             {
                 2 => "V_USED_ITEM",
                 16 => "V_TEMP",
+                24 => "V_STAGE",
+                25 => "V_ROOM",
                 26 => "V_CUT",
                 27 => "V_LAST_RDT",
+                29 => "V_RNG",
+                32 => "V_NEXT_PLD",
                 _ => $"V_{index:X2}",
             };
         }

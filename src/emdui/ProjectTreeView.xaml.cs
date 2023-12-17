@@ -1020,6 +1020,8 @@ namespace emdui
             AddMenuItem("Move all UV to page 2", () => MoveUVToPage(2));
             AddMenuItem("Move all UV to page 3", () => MoveUVToPage(3));
             AddSeperator();
+            AddMenuItem("Insert dummy points...", InsertDummyPoints);
+            AddSeperator();
             AddMenuItem("Check", Check);
         }
 
@@ -1210,6 +1212,20 @@ namespace emdui
                 }
             }
         }
+
+        private void InsertDummyPoints()
+        {
+            var value = InputWindow.Show("Insert dummy points", "Enter the number of points to insert:", "0",
+                s => int.TryParse(s, out var result) && result >= 0);
+
+            if (!int.TryParse(value, out var count) && count >= 0)
+                return;
+
+            var builder = Mesh.ToBuilder();
+            builder[PartIndex].InsertDummyPoints(count);
+            Mesh = builder.ToMesh();
+            RefreshMesh();
+        }
     }
 
     public class TimTreeViewItem : ProjectTreeViewItem
@@ -1288,6 +1304,12 @@ namespace emdui
 
             AddMenuItem("Import...", Import);
             AddMenuItem("Export...", Export);
+
+            if (morphData.Version == BioVersion.Biohazard2)
+            {
+                AddSeperator();
+                AddMenuItem("Make dummy morph", MakeDummyMorph);
+            }
         }
 
         private void CreateChildren()
@@ -1323,6 +1345,40 @@ namespace emdui
             dialog
                 .AddExtension("*.dat")
                 .Show(path => File.WriteAllBytes(path, MorphData.Data.ToArray()));
+        }
+
+        private void MakeDummyMorph()
+        {
+            var morph = MorphData.ToBuilder();
+
+            // Copy skeleton from EMR
+            var emr = Model.GetEmr(0);
+            var skel = Enumerable.Range(0, emr.NumParts).Select(x => emr.GetRelativePosition(x)).ToArray();
+            for (var i = 0; i < morph.Skeletons.Count; i++)
+            {
+                morph.Skeletons[i] = skel;
+            }
+
+            // Copy positions from chest mesh to morph group 0
+            var positionData = ((Md1)Model.GetMesh(0))
+                .ToBuilder().Parts[0].Positions
+                .Select(p => new Emr.Vector(p.x, p.y, p.z))
+                .ToArray();
+            for (var i = 0; i < morph.Groups[0].Positions.Count; i++)
+            {
+                morph.Groups[0].Positions[i] = positionData;
+            }
+
+            // Other morph groups can just be zeros
+            for (var g = 1; g < morph.Groups.Count; g++)
+            {
+                for (var i = 0; i < morph.Groups[1].Positions.Count; i++)
+                {
+                    morph.Groups[g].Positions[i] = new Emr.Vector[1];
+                }
+            }
+
+            Model.SetMorph(0, morph.ToMorphData());
         }
     }
 

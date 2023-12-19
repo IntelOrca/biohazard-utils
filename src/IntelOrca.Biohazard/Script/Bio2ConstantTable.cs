@@ -902,7 +902,7 @@ namespace IntelOrca.Biohazard.Script
             "poison_ck",
             "poison_clr",
             "sce_item_ck_lost:tu",
-            "",
+            "heal_partner",
             "nop_8a",
             "nop_8b",
             "nop_8c",

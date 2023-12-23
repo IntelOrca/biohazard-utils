@@ -11,7 +11,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
         {
             var lexer = new Lexer(includer, Errors);
             var tokens = lexer.GetTokens(path).ToArray();
-            if (Errors.Count != 0)
+            if (Errors.ErrorCount != 0)
                 return 1;
 
             var parser = new Parser(Errors);

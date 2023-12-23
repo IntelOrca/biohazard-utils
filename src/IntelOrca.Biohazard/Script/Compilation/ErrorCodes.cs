@@ -43,6 +43,7 @@
         public const int InvalidSyntax = 39;
         public const int RecursiveMacro = 40;
         public const int EventNotValid = 41;
+        public const int ExpectedLabelName = 42;
 
         public static string GetMessage(int code) => _messages[code];
 
@@ -90,6 +91,7 @@
                 "Invalid syntax",
                 "Recursive macro",
                 "Events are only valid in SCD version 1.",
+                "Expected label name."
         };
     }
 }

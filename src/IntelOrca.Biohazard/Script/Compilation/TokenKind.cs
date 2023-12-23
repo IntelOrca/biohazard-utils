@@ -41,6 +41,7 @@
         Default,
         Break,
         Repeat,
+        Goto,
 
         EOF
     }

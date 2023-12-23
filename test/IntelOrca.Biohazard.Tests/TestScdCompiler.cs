@@ -147,6 +147,22 @@ proc init
         }
 
         [Fact]
+        public void TestConditionlessIf()
+        {
+            var expected = "020006000600090A3200080001000400060001000100";
+            AssertScd(expected, @"
+#version 2
+
+proc init
+{
+    if () {
+        sleep(10, 50);
+    }
+}
+");
+        }
+
+        [Fact]
         public void TestWhileStatement()
         {
             var expected = "02000F060A0023001A0504000200100001000400060001000100";
@@ -463,6 +479,22 @@ proc main
     fork {
         sleep(10, 30);
     }
+}
+");
+        }
+
+        [Fact]
+        public void TestGotoLabel()
+        {
+            var expected = "0200020017FFFF00FEFF01000400060001000100";
+            AssertScd(expected, @"
+#version 2
+
+proc init
+{
+start:
+    evt_next();
+    goto start;
 }
 ");
         }

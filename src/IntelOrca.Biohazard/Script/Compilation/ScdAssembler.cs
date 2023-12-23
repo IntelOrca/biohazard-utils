@@ -43,7 +43,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
         {
             var lexer = new Lexer(includer, Errors);
             var tokens = lexer.GetTokens(path).ToArray();
-            if (Errors.Count != 0)
+            if (Errors.ErrorCount != 0)
                 return 1;
 
             _procNames = GetAllProcedureNames(tokens);
@@ -66,11 +66,11 @@ namespace IntelOrca.Biohazard.Script.Compilation
             }
             EndScript();
 
-            if (Errors.Count == 0 && _version == null)
+            if (Errors.ErrorCount == 0 && _version == null)
             {
                 Errors.AddError(path, 0, 0, ErrorCodes.ExpectedScdVersionNumber, ErrorCodes.GetMessage(ErrorCodes.ExpectedScdVersionNumber));
             }
-            return Errors.Count == 0 ? 0 : 1;
+            return Errors.ErrorCount == 0 ? 0 : 1;
         }
 
         private void ProcessToken(in Token token)
@@ -328,7 +328,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
             {
                 FixLabelReferences();
             }
-            if (Errors.Count == 0)
+            if (Errors.ErrorCount == 0)
             {
                 if (_version == BioVersion.Biohazard1)
                 {

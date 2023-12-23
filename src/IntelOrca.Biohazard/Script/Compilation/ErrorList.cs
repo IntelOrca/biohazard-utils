@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace IntelOrca.Biohazard.Script.Compilation
 {
@@ -6,7 +7,8 @@ namespace IntelOrca.Biohazard.Script.Compilation
     {
         public List<Error> Errors { get; } = new List<Error>();
 
-        public int Count => Errors.Count;
+        public int ErrorCount => Errors.Count(x => x.Kind == ErrorKind.Error);
+        public int WarningCount => Errors.Count(x => x.Kind == ErrorKind.Warning);
 
         public void AddError(string path, int line, int column, int code, string message)
         {

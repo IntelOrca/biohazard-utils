@@ -36,7 +36,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 _procedureNames = GetAllProcedureNames(tree);
                 Visit(tree.Root);
                 VisitAnonymousProcedures();
-                if (_errors.Count != 0)
+                if (_errors.ErrorCount != 0)
                 {
                     return 1;
                 }
@@ -193,6 +193,12 @@ namespace IntelOrca.Biohazard.Script.Compilation
                         break;
                     case BreakSyntaxNode breakNode:
                         VisitBreakNode(breakNode);
+                        break;
+                    case GotoSyntaxNode gotoNode:
+                        VisitGotoNode(gotoNode);
+                        break;
+                    case LabelSyntaxNode labelNode:
+                        VisitLabelNode(labelNode);
                         break;
                     case OpcodeSyntaxNode opcodeNode:
                         VisitOpcodeNode(opcodeNode);
@@ -449,6 +455,31 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 _currentProcedure.Write((byte)0);
             }
 
+            private void VisitLabelNode(LabelSyntaxNode labelNode)
+            {
+                _currentProcedure.Align();
+                _currentProcedure.WriteLabel(name: labelNode.LabelToken.Text);
+            }
+
+            private void VisitGotoNode(GotoSyntaxNode gotoNode)
+            {
+                var labelToken = gotoNode.Destination;
+                var labelName = gotoNode.Destination.Text;
+                var label = _currentProcedure.FindLabel(labelName);
+                if (label == null)
+                {
+                    EmitError(in labelToken, ErrorCodes.UnknownLabel, labelName);
+                    return;
+                }
+
+                _currentProcedure.Align();
+                _currentProcedure.Write((byte)OpcodeV2.Goto);
+                _currentProcedure.Write((byte)255);
+                _currentProcedure.Write((byte)255);
+                _currentProcedure.Write((byte)0);
+                _currentProcedure.WriteLabelRef(label.Value, 2, -4);
+            }
+
             private void VisitOpcodeNode(OpcodeSyntaxNode opcodeNode)
             {
                 var opcodeRaw = _constantTable.FindOpcode(opcodeNode.OpcodeToken.Text, isEventOpcode: false);
@@ -654,9 +685,14 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 }
             }
 
-            public Label WriteLabel()
+            public Label? FindLabel(string name)
             {
-                var label = new Label(_labels.Count);
+                return _labels.FirstOrDefault(x => x.Name == name);
+            }
+
+            public Label WriteLabel(string? name = null)
+            {
+                var label = new Label(_labels.Count, name);
                 _labels.Add(label);
                 return WriteLabel(label);
             }
@@ -739,10 +775,12 @@ namespace IntelOrca.Biohazard.Script.Compilation
         private readonly struct Label
         {
             public int Id { get; }
+            public string? Name { get; }
 
-            public Label(int id)
+            public Label(int id, string? name = null)
             {
                 Id = id;
+                Name = name;
             }
         }
 

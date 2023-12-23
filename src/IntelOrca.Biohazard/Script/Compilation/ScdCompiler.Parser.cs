@@ -46,7 +46,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     }
                     if (!foundParser)
                     {
-                        if (_errors.Count == 0)
+                        if (_errors.ErrorCount == 0)
                         {
                             EmitError(in PeekToken(), ErrorCodes.InvalidSyntax);
                         }
@@ -249,8 +249,9 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     ParseRepeatStatement,
                     ParseSwitchStatement,
                     ParseBreakStatement,
+                    ParseGotoStatement,
                     ParseForkStatement,
-                    ParseOpcode,
+                    ParseOpcodeOrLabel
                 };
                 SkipSemicolons();
                 foreach (var parser in parsers)
@@ -259,6 +260,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     {
                         if (node is OpcodeSyntaxNode ||
                             node is BreakSyntaxNode ||
+                            node is GotoSyntaxNode ||
                             (node is ForkSyntaxNode forkNode && !(forkNode.Invocation is BlockSyntaxNode)))
                         {
                             ParseExpected(TokenKind.Semicolon);
@@ -459,6 +461,24 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 return new BreakSyntaxNode();
             }
 
+            private GotoSyntaxNode? ParseGotoStatement()
+            {
+                if (PeekToken().Kind != TokenKind.Goto)
+                    return null;
+
+                ref readonly var gotoToken = ref ReadToken();
+
+                var symbolToken = PeekToken();
+                if (symbolToken.Kind != TokenKind.Symbol)
+                {
+                    EmitError(in gotoToken, ErrorCodes.ExpectedLabelName);
+                    return null;
+                }
+
+                ReadToken();
+                return new GotoSyntaxNode(symbolToken);
+            }
+
             private ConditionalExpressionSyntaxNode? ParseCondition()
             {
                 if (!ParseExpected(TokenKind.OpenParen))
@@ -470,8 +490,8 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     var condition = ParseOpcode();
                     if (condition == null)
                     {
-                        EmitError(in LastToken, ErrorCodes.ExpectedCondition);
-                        return null;
+                        EmitWarning(in LastToken, ErrorCodes.ExpectedCondition);
+                        break;
                     }
                     conditions.Add(condition);
                 } while (ParseToken(TokenKind.AmpersandAmpersand));
@@ -482,13 +502,30 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 return new ConditionalExpressionSyntaxNode(conditions.ToArray());
             }
 
+            private SyntaxNode? ParseOpcodeOrLabel()
+            {
+                var token = PeekToken();
+                if (token.Kind != TokenKind.Symbol)
+                    return null;
+
+                var symbol = ReadToken();
+                if (ParseToken(TokenKind.Colon))
+                    return new LabelSyntaxNode(symbol);
+
+                return ParseOpcodeRemainder();
+            }
+
             private OpcodeSyntaxNode? ParseOpcode()
             {
                 if (!ParseToken(TokenKind.Symbol))
                     return null;
 
-                ref readonly var opcodeToken = ref LastToken;
+                return ParseOpcodeRemainder();
+            }
 
+            private OpcodeSyntaxNode? ParseOpcodeRemainder()
+            {
+                ref readonly var opcodeToken = ref LastToken;
                 if (!ParseToken(TokenKind.OpenParen))
                 {
                     EmitError(in LastToken, ErrorCodes.ExpectedOpenParen);
@@ -918,6 +955,16 @@ namespace IntelOrca.Biohazard.Script.Compilation
         {
         }
 
+        private class GotoSyntaxNode : SyntaxNode
+        {
+            public Token Destination { get; }
+
+            public GotoSyntaxNode(Token destination)
+            {
+                Destination = destination;
+            }
+        }
+
         private class ConditionalExpressionSyntaxNode : SyntaxNode
         {
             public SyntaxNode[] Conditions { get; }
@@ -928,6 +975,16 @@ namespace IntelOrca.Biohazard.Script.Compilation
             }
 
             public override IEnumerable<SyntaxNode> Children => Conditions;
+        }
+
+        private class LabelSyntaxNode : SyntaxNode
+        {
+            public Token LabelToken { get; }
+
+            public LabelSyntaxNode(Token labelToken)
+            {
+                LabelToken = labelToken;
+            }
         }
 
         private class OpcodeSyntaxNode : SyntaxNode

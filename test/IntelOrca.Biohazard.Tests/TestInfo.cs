@@ -9,11 +9,14 @@ namespace IntelOrca.Biohazard.Tests
     {
         public static string GetInstallPath(int game)
         {
+            var fileName = $"re{game + 1}";
+            if (game == 3)
+                fileName = "recvx";
             var places = new[]
             {
-                $@"D:\games\re{game + 1}",
-                $@"F:\games\re{game + 1}",
-                $@"M:\games\re{game + 1}"
+                $@"D:\games\{fileName}",
+                $@"F:\games\{fileName}",
+                $@"M:\games\{fileName}"
             };
 
             foreach (var place in places)

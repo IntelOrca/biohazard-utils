@@ -1,0 +1,90 @@
+﻿using System;
+using System.IO;
+using System.Runtime.InteropServices;
+using IntelOrca.Biohazard.Extensions;
+
+namespace IntelOrca.Biohazard.Room
+{
+    public partial class RdtCv : IRdt
+    {
+        public BioVersion Version => BioVersion.BiohazardCv;
+
+        public ReadOnlyMemory<byte> Data { get; }
+
+        public RdtCv(string path)
+            : this(File.ReadAllBytes(path))
+        {
+        }
+
+        public RdtCv(ReadOnlyMemory<byte> data)
+        {
+            Data = data;
+        }
+
+        public Builder ToBuilder()
+        {
+            var builder = new Builder(Data.ToArray());
+            builder.Doors.AddRange(Doors.ToArray());
+            builder.Items.AddRange(Items.ToArray());
+            return builder;
+        }
+
+        private int ScriptOffsetListOffset => Data.GetSafeSpan<int>(16, 1)[0];
+        private ReadOnlySpan<int> ScriptOffsets => Data.GetSafeSpan<int>(ScriptOffsetListOffset, 9);
+        private ReadOnlySpan<int> ScriptCounts => Data.GetSafeSpan<int>(256, 9);
+
+        public ReadOnlySpan<Item> Items => GetTable<Item>(4);
+        public ReadOnlySpan<Door> Doors => GetTable<Door>(7);
+
+        private ReadOnlySpan<T> GetTable<T>(int index) where T : struct
+        {
+            var offset = ScriptOffsets[index];
+            var count = ScriptCounts[index];
+            return Data.GetSafeSpan<T>(offset, count);
+        }
+
+        IRdtBuilder IRdt.ToBuilder() => ToBuilder();
+
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        public struct Item
+        {
+            public byte Unk00;
+            public byte Unk01;
+            public byte Unk02;
+            public byte Unk03;
+            public int Type;
+            public int Unk08;
+            public int X;
+            public int Y;
+            public int Z;
+            public short XRot;
+            public short YRot;
+            public short ZRot;
+            public short Unk1E;
+            public byte Unk20;
+            public byte Unk21;
+            public byte Unk22;
+            public byte Unk23;
+        }
+
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        public struct Door
+        {
+            public byte Unk00;
+            public byte Unk01;
+            public byte Unk02;
+            public byte Unk03;
+            public int Unk04;
+            public int Unk08;
+            public int Unk0C;
+            public int Unk10;
+            public int Unk14;
+            public int Unk18;
+            public int Unk1C;
+            public byte Stage;
+            public byte Room;
+            public byte ExitId;
+            public byte Transition;
+        }
+    }
+}

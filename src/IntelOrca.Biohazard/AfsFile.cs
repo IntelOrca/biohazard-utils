@@ -21,6 +21,8 @@ namespace IntelOrca.Biohazard
             }
         }
 
+        public int Count => _afsArchive.Files.Count;
+
         public ReadOnlyMemory<byte> GetFileData(int index)
         {
             return _afsArchive.Files[index].Data;

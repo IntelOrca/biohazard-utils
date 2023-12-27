@@ -7,6 +7,15 @@ namespace IntelOrca.Biohazard.Room
 {
     public partial class RdtCv : IRdt
     {
+        // 0x000: header
+        // 0x080: offsets
+        // 0x100: counts
+        //        text
+        //        sysmes
+        //        models
+        //        motion
+        //        texture
+
         public BioVersion Version => BioVersion.BiohazardCv;
 
         public ReadOnlyMemory<byte> Data { get; }
@@ -29,9 +38,9 @@ namespace IntelOrca.Biohazard.Room
             return builder;
         }
 
-        private int ScriptOffsetListOffset => Data.GetSafeSpan<int>(16, 1)[0];
-        private ReadOnlySpan<int> ScriptOffsets => Data.GetSafeSpan<int>(ScriptOffsetListOffset, 9);
-        private ReadOnlySpan<int> ScriptCounts => Data.GetSafeSpan<int>(256, 9);
+        public FileHeader Header => Data.GetSafeSpan<FileHeader>(0, 1)[0];
+        private ReadOnlySpan<int> ScriptOffsets => Data.GetSafeSpan<int>(Header.ScriptsOffset, 14);
+        private ReadOnlySpan<int> ScriptCounts => Data.GetSafeSpan<int>(256, 14);
 
         public ReadOnlySpan<Item> Items => GetTable<Item>(4);
         public ReadOnlySpan<Door> Doors => GetTable<Door>(7);
@@ -44,6 +53,36 @@ namespace IntelOrca.Biohazard.Room
         }
 
         IRdtBuilder IRdt.ToBuilder() => ToBuilder();
+
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        public unsafe struct FileHeader
+        {
+            public int Version;
+            public int Unk04;
+            public int Unk08;
+            public int Unk0C;
+            public int ScriptsOffset;
+            public int ModelOffset;
+            public int MotionOffset;
+            public int Flags;
+            public int TextureOffset;
+            public int Unk24;
+            public int Unk28;
+            public int Unk2C;
+            public int Unk30;
+            public int Unk34;
+            public int Unk38;
+            public int Unk3C;
+            public int Unk40;
+            public int Unk44;
+            public int Unk48;
+            public int Unk4C;
+            public int Unk50;
+            public int Unk54;
+            public int Unk58;
+            public int Unk5C;
+            public fixed byte Author[32];
+        }
 
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
         public struct Item

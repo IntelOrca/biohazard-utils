@@ -11,7 +11,7 @@ namespace IntelOrca.Biohazard.Tests
         {
             var fileName = $"re{game + 1}";
             if (game == 3)
-                fileName = "recvx";
+                fileName = "recv";
             var places = new[]
             {
                 $@"D:\games\{fileName}",

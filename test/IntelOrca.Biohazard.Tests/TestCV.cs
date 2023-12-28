@@ -13,11 +13,11 @@ namespace IntelOrca.Biohazard.Tests
             Assert.Equal(8, rdt.Items.Length);
             Assert.Equal(0x08, rdt.Items[0].Type);
 
-            Assert.Equal(13, rdt.Doors.Length);
-            Assert.Equal(0, rdt.Doors[0].Stage);
-            Assert.Equal(1, rdt.Doors[0].Room);
-            Assert.Equal(0, rdt.Doors[0].ExitId);
-            Assert.Equal(0, rdt.Doors[0].Transition);
+            Assert.Equal(13, rdt.Aots.Length);
+            Assert.Equal(0, rdt.Aots[0].Stage);
+            Assert.Equal(1, rdt.Aots[0].Room);
+            Assert.Equal(0, rdt.Aots[0].ExitId);
+            Assert.Equal(0, rdt.Aots[0].Transition);
         }
 
         [Fact]
@@ -28,15 +28,15 @@ namespace IntelOrca.Biohazard.Tests
             Assert.Equal(0x1F, rdt.Items[0].Type);
             Assert.Equal(0x0C, rdt.Items[1].Type);
 
-            Assert.Equal(5, rdt.Doors.Length);
-            Assert.Equal(0, rdt.Doors[0].Stage);
-            Assert.Equal(2, rdt.Doors[0].Room);
-            Assert.Equal(0, rdt.Doors[0].ExitId);
-            Assert.Equal(1, rdt.Doors[0].Transition);
-            Assert.Equal(0, rdt.Doors[4].Stage);
-            Assert.Equal(0, rdt.Doors[4].Room);
-            Assert.Equal(1, rdt.Doors[4].ExitId);
-            Assert.Equal(0, rdt.Doors[4].Transition);
+            Assert.Equal(5, rdt.Aots.Length);
+            Assert.Equal(0, rdt.Aots[0].Stage);
+            Assert.Equal(2, rdt.Aots[0].Room);
+            Assert.Equal(0, rdt.Aots[0].ExitId);
+            Assert.Equal(1, rdt.Aots[0].Transition);
+            Assert.Equal(0, rdt.Aots[4].Stage);
+            Assert.Equal(0, rdt.Aots[4].Room);
+            Assert.Equal(1, rdt.Aots[4].ExitId);
+            Assert.Equal(0, rdt.Aots[4].Transition);
         }
 
         [Fact]
@@ -55,7 +55,7 @@ namespace IntelOrca.Biohazard.Tests
             var rdtBuilder = GetRdt(1).ToBuilder();
             var item0 = rdtBuilder.Items[0];
             var item1 = rdtBuilder.Items[1];
-            var door0 = rdtBuilder.Doors[0];
+            var door0 = rdtBuilder.Aots[0];
 
             item0.Type = 0x14;
             item1.Type = 0x15;
@@ -63,22 +63,29 @@ namespace IntelOrca.Biohazard.Tests
 
             rdtBuilder.Items[0] = item0;
             rdtBuilder.Items[1] = item1;
-            rdtBuilder.Doors[0] = door0;
+            rdtBuilder.Aots[0] = door0;
             var newRdt = rdtBuilder.ToRdt();
 
             Assert.Equal(2, newRdt.Items.Length);
             Assert.Equal(0x14, newRdt.Items[0].Type);
             Assert.Equal(0x15, newRdt.Items[1].Type);
 
-            Assert.Equal(5, newRdt.Doors.Length);
-            Assert.Equal(0, newRdt.Doors[0].Stage);
-            Assert.Equal(9, newRdt.Doors[0].Room);
-            Assert.Equal(0, newRdt.Doors[0].ExitId);
-            Assert.Equal(1, newRdt.Doors[0].Transition);
-            Assert.Equal(0, newRdt.Doors[4].Stage);
-            Assert.Equal(0, newRdt.Doors[4].Room);
-            Assert.Equal(1, newRdt.Doors[4].ExitId);
-            Assert.Equal(0, newRdt.Doors[4].Transition);
+            Assert.Equal(5, newRdt.Aots.Length);
+            Assert.Equal(0, newRdt.Aots[0].Stage);
+            Assert.Equal(9, newRdt.Aots[0].Room);
+            Assert.Equal(0, newRdt.Aots[0].ExitId);
+            Assert.Equal(1, newRdt.Aots[0].Transition);
+            Assert.Equal(0, newRdt.Aots[4].Stage);
+            Assert.Equal(0, newRdt.Aots[4].Room);
+            Assert.Equal(1, newRdt.Aots[4].ExitId);
+            Assert.Equal(0, newRdt.Aots[4].Transition);
+        }
+
+        [Fact]
+        public void RDT_010()
+        {
+            var rdt = GetRdt(10);
+            var reactions = rdt.Reactions;
         }
 
         private RdtCv GetRdt(int index)

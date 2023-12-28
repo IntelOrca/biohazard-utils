@@ -39,11 +39,22 @@ namespace IntelOrca.Biohazard.Room
         }
 
         public FileHeader Header => Data.GetSafeSpan<FileHeader>(0, 1)[0];
-        private ReadOnlySpan<int> ScriptOffsets => Data.GetSafeSpan<int>(Header.ScriptsOffset, 14);
+        private ReadOnlySpan<int> ScriptOffsets => Data.GetSafeSpan<int>(Header.ScriptsOffset, 15);
         private ReadOnlySpan<int> ScriptCounts => Data.GetSafeSpan<int>(256, 14);
 
         public ReadOnlySpan<Item> Items => GetTable<Item>(4);
         public ReadOnlySpan<Aot> Aots => GetTable<Aot>(7);
+        public ReadOnlySpan<Reaction> Reactions
+        {
+            get
+            {
+                var reactionOffset = ScriptOffsets[13];
+                var textOffset = ScriptOffsets[14];
+                var length = textOffset - reactionOffset;
+                var count = length / 2056;
+                return Data.GetSafeSpan<Reaction>(reactionOffset, count);
+            }
+        }
 
         private ReadOnlySpan<T> GetTable<T>(int index) where T : struct
         {
@@ -124,6 +135,14 @@ namespace IntelOrca.Biohazard.Room
             public byte Room;           // or message id
             public byte ExitId;
             public byte Transition;
+        }
+
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        public unsafe struct Reaction
+        {
+            public uint Unk00;
+            public uint Unk01;
+            public fixed byte Data[2048];
         }
     }
 }

@@ -33,7 +33,7 @@ namespace IntelOrca.Biohazard.Room
         public Builder ToBuilder()
         {
             var builder = new Builder(Data.ToArray());
-            builder.Doors.AddRange(Doors.ToArray());
+            builder.Aots.AddRange(Aots.ToArray());
             builder.Items.AddRange(Items.ToArray());
             return builder;
         }
@@ -43,7 +43,7 @@ namespace IntelOrca.Biohazard.Room
         private ReadOnlySpan<int> ScriptCounts => Data.GetSafeSpan<int>(256, 14);
 
         public ReadOnlySpan<Item> Items => GetTable<Item>(4);
-        public ReadOnlySpan<Door> Doors => GetTable<Door>(7);
+        public ReadOnlySpan<Aot> Aots => GetTable<Aot>(7);
 
         private ReadOnlySpan<T> GetTable<T>(int index) where T : struct
         {
@@ -107,21 +107,21 @@ namespace IntelOrca.Biohazard.Room
         }
 
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
-        public struct Door
+        public struct Aot
         {
             public byte Unk00;
-            public byte Unk01;
+            public byte Kind;
             public byte Unk02;
             public byte Unk03;
-            public int Unk04;
+            public int Flags;
             public int Unk08;
             public int Unk0C;
             public int Unk10;
             public int Unk14;
             public int Unk18;
             public int Unk1C;
-            public byte Stage;
-            public byte Room;
+            public byte Stage;          // or item index
+            public byte Room;           // or message id
             public byte ExitId;
             public byte Transition;
         }

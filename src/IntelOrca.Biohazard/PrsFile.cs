@@ -13,7 +13,7 @@ namespace IntelOrca.Biohazard
         public static PrsFile Compress(ReadOnlyMemory<byte> uncompressed)
         {
             // var bufferSize = 0x1FFF;
-            var bufferSize = 0xFF;
+            var bufferSize = 256 - 1;
             var compressed = csharp_prs.Prs.Compress(uncompressed.ToArray(), bufferSize);
             return new PrsFile(compressed);
         }

@@ -11,7 +11,7 @@ namespace IntelOrca.Biohazard.Room
             private readonly MemoryStream _ms;
 
             public List<Item> Items { get; } = new List<Item>();
-            public List<Door> Doors { get; } = new List<Door>();
+            public List<Aot> Aots { get; } = new List<Aot>();
 
             public Builder(byte[] data)
             {
@@ -31,7 +31,7 @@ namespace IntelOrca.Biohazard.Room
                 var items = br.ReadInt32();
                 br.ReadInt32();
                 br.ReadInt32();
-                var doors = br.ReadInt32();
+                var aots = br.ReadInt32();
 
                 _ms.Position = 256;
                 br.ReadInt32();
@@ -41,12 +41,12 @@ namespace IntelOrca.Biohazard.Room
                 var itemCount = br.ReadInt32();
                 br.ReadInt32();
                 br.ReadInt32();
-                var doorCount = br.ReadInt32();
+                var aotCount = br.ReadInt32();
 
                 if (itemCount != Items.Count)
                     throw new Exception("Changing number of items is not supported");
 
-                if (doorCount != Doors.Count)
+                if (aotCount != Aots.Count)
                     throw new Exception("Changing number of doors is not supported");
 
                 _ms.Position = items;
@@ -55,10 +55,10 @@ namespace IntelOrca.Biohazard.Room
                     bw.Write(item);
                 }
 
-                _ms.Position = doors;
-                foreach (var door in Doors)
+                _ms.Position = aots;
+                foreach (var aot in Aots)
                 {
-                    bw.Write(door);
+                    bw.Write(aot);
                 }
 
                 return new RdtCv(_ms.ToArray());

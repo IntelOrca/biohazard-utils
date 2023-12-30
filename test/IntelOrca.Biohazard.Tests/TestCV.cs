@@ -1,10 +1,11 @@
 ﻿using System.IO;
 using IntelOrca.Biohazard.Room;
 using Xunit;
+using static IntelOrca.Biohazard.Tests.MemoryAssert;
 
 namespace IntelOrca.Biohazard.Tests
 {
-    public class TestCV
+    public class TestCv
     {
         [Fact]
         public void RDT_000()
@@ -44,9 +45,7 @@ namespace IntelOrca.Biohazard.Tests
         {
             var rdt = GetRdt(1);
             var newRdt = rdt.ToBuilder().ToRdt();
-            var a = rdt.Data.CalculateFnv1a();
-            var b = newRdt.Data.CalculateFnv1a();
-            Assert.Equal(a, b);
+            AssertMemory(rdt.Data, newRdt.Data);
         }
 
         [Fact]
@@ -82,10 +81,13 @@ namespace IntelOrca.Biohazard.Tests
         }
 
         [Fact]
-        public void RDT_010()
+        public void RDT_010_Rebuild_Script()
         {
             var rdt = GetRdt(10);
-            var reactions = rdt.Reactions;
+            var s1 = rdt.Script;
+            var sb = s1.ToBuilder();
+            var s2 = sb.ToScript();
+            AssertMemory(s1.Data, s2.Data);
         }
 
         private RdtCv GetRdt(int index)

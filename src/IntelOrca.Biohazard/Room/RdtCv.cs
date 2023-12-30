@@ -35,11 +35,12 @@ namespace IntelOrca.Biohazard.Room
             var builder = new Builder(Data.ToArray());
             builder.Aots.AddRange(Aots.ToArray());
             builder.Items.AddRange(Items.ToArray());
+            builder.Script = Script;
             return builder;
         }
 
         public FileHeader Header => Data.GetSafeSpan<FileHeader>(0, 1)[0];
-        private ReadOnlySpan<int> ScriptOffsets => Data.GetSafeSpan<int>(Header.ScriptsOffset, 15);
+        private ReadOnlySpan<int> ScriptOffsets => Data.GetSafeSpan<int>(Header.TableOffset, 15);
         private ReadOnlySpan<int> ScriptCounts => Data.GetSafeSpan<int>(256, 14);
 
         public ReadOnlySpan<Item> Items => GetTable<Item>(4);
@@ -53,6 +54,15 @@ namespace IntelOrca.Biohazard.Room
                 var length = textOffset - reactionOffset;
                 var count = length / 2056;
                 return Data.GetSafeSpan<Reaction>(reactionOffset, count);
+            }
+        }
+
+        public CvScript Script
+        {
+            get
+            {
+                var mem = Data[Header.ScriptOffset..Header.TextureOffset];
+                return new CvScript(mem);
             }
         }
 
@@ -72,10 +82,10 @@ namespace IntelOrca.Biohazard.Room
             public int Unk04;
             public int Unk08;
             public int Unk0C;
-            public int ScriptsOffset;
+            public int TableOffset;
             public int ModelOffset;
             public int MotionOffset;
-            public int Flags;
+            public int ScriptOffset;
             public int TextureOffset;
             public int Unk24;
             public int Unk28;

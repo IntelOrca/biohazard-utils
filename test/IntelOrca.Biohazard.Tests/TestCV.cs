@@ -45,7 +45,7 @@ namespace IntelOrca.Biohazard.Tests
         {
             var rdt = GetRdt(1);
             var newRdt = rdt.ToBuilder().ToRdt();
-            AssertMemory(rdt.Data, newRdt.Data);
+            AssertAndCompareMemory(rdt.Data, newRdt.Data);
         }
 
         [Fact]

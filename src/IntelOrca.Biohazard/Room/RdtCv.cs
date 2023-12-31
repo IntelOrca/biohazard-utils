@@ -14,11 +14,13 @@ namespace IntelOrca.Biohazard.Room
         //        sysmes
         //        models
         //        motion
+        //        script
         //        texture
 
-        public BioVersion Version => BioVersion.BiohazardCv;
+        private readonly RdtFileData _data;
 
-        public ReadOnlyMemory<byte> Data { get; }
+        public BioVersion Version => BioVersion.BiohazardCv;
+        public ReadOnlyMemory<byte> Data => _data.Data;
 
         public RdtCv(string path)
             : this(File.ReadAllBytes(path))
@@ -27,44 +29,85 @@ namespace IntelOrca.Biohazard.Room
 
         public RdtCv(ReadOnlyMemory<byte> data)
         {
-            Data = data;
+            _data = new RdtFileData(data);
+
+            var header = Header;
+
+            var tableOffsets = ScriptOffsets;
+            for (var i = 0; i < _tableChunkKinds.Length; i++)
+            {
+                var kind = _tableChunkKinds[i];
+                if (kind == RdtFileChunkKinds.RDTCVUnknown2)
+                    continue;
+
+                var offset = tableOffsets[i];
+                if (offset != 0)
+                {
+                    _data.RegisterOffset(kind, tableOffsets[i]);
+                }
+            }
+
+            _data.RegisterOffset(RdtFileChunkKinds.RDTCVModel, header.ModelOffset);
+            _data.RegisterOffset(RdtFileChunkKinds.RDTCVMotion, header.MotionOffset);
+            _data.RegisterOffset(RdtFileChunkKinds.RDTCVScript, header.ScriptOffset);
+            _data.RegisterOffset(RdtFileChunkKinds.RDTCVTexture, header.TextureOffset);
         }
 
         public Builder ToBuilder()
         {
-            var builder = new Builder(Data.ToArray());
-            builder.Aots.AddRange(Aots.ToArray());
+            var builder = new Builder();
+            builder.Header = Header;
+            builder.CameraData = CameraData.ToArray();
+            builder.LightingData = LightingData.ToArray();
+            builder.EnemyData = EnemyData.ToArray();
+            builder.ObjectData = ObjectData.ToArray();
             builder.Items.AddRange(Items.ToArray());
+            builder.EffectData = EffectData.ToArray();
+            builder.BoundaryData = BoundaryData.ToArray();
+            builder.Aots.AddRange(Aots.ToArray());
+            builder.TriggerData = TriggerData.ToArray();
+            builder.PlayerData = PlayerData.ToArray();
+            builder.EventData = EventData.ToArray();
+            builder.Unknown1Data = Unknown1Data.ToArray();
+            builder.Unknown2 = Unknown2;
+            builder.Unknown2Count = Unknown2Count;
+            builder.ReactionCount = ReactionCount;
+            builder.Reactions.AddRange(Reactions.ToArray());
+            builder.TextData = TextData.ToArray();
+            builder.SysmesData = SysmesData.ToArray();
+            builder.ModelData = ModelData.ToArray();
+            builder.MotionData = MotionData.ToArray();
             builder.Script = Script;
+            builder.TextureData = TextureData.ToArray();
             return builder;
         }
 
         public FileHeader Header => Data.GetSafeSpan<FileHeader>(0, 1)[0];
-        private ReadOnlySpan<int> ScriptOffsets => Data.GetSafeSpan<int>(Header.TableOffset, 15);
+        private ReadOnlySpan<int> ScriptOffsets => Data.GetSafeSpan<int>(Header.TableOffset, 16);
         private ReadOnlySpan<int> ScriptCounts => Data.GetSafeSpan<int>(256, 14);
 
+        public ReadOnlyMemory<byte> CameraData => GetChunkMemory(RdtFileChunkKinds.RDTCVCamera);
+        public ReadOnlyMemory<byte> LightingData => GetChunkMemory(RdtFileChunkKinds.RDTCVLighting);
+        public ReadOnlyMemory<byte> EnemyData => GetChunkMemory(RdtFileChunkKinds.RDTCVEnemy);
+        public ReadOnlyMemory<byte> ObjectData => GetChunkMemory(RdtFileChunkKinds.RDTCVObject);
         public ReadOnlySpan<Item> Items => GetTable<Item>(4);
+        public ReadOnlyMemory<byte> EffectData => GetChunkMemory(RdtFileChunkKinds.RDTCVEffect);
+        public ReadOnlyMemory<byte> BoundaryData => GetChunkMemory(RdtFileChunkKinds.RDTCVBoundary);
         public ReadOnlySpan<Aot> Aots => GetTable<Aot>(7);
-        public ReadOnlySpan<Reaction> Reactions
-        {
-            get
-            {
-                var reactionOffset = ScriptOffsets[13];
-                var textOffset = ScriptOffsets[14];
-                var length = textOffset - reactionOffset;
-                var count = length / 2056;
-                return Data.GetSafeSpan<Reaction>(reactionOffset, count);
-            }
-        }
-
-        public CvScript Script
-        {
-            get
-            {
-                var mem = Data[Header.ScriptOffset..Header.TextureOffset];
-                return new CvScript(mem);
-            }
-        }
+        public ReadOnlyMemory<byte> TriggerData => GetChunkMemory(RdtFileChunkKinds.RDTCVTrigger);
+        public ReadOnlyMemory<byte> PlayerData => GetChunkMemory(RdtFileChunkKinds.RDTCVPlayer);
+        public ReadOnlyMemory<byte> EventData => GetChunkMemory(RdtFileChunkKinds.RDTCVEvent);
+        public ReadOnlyMemory<byte> Unknown1Data => GetChunkMemory(RdtFileChunkKinds.RDTCVUnknown1);
+        public int Unknown2 => ScriptOffsets[12];
+        public int Unknown2Count => ScriptCounts[12];
+        public int ReactionCount => ScriptCounts[13];
+        public ReadOnlySpan<Reaction> Reactions => GetChunkTypedSpan<Reaction>(RdtFileChunkKinds.RDTCVAction);
+        public ReadOnlyMemory<byte> TextData => GetChunkMemory(RdtFileChunkKinds.RDTCVText);
+        public ReadOnlyMemory<byte> SysmesData => GetChunkMemory(RdtFileChunkKinds.RDTCVSysmes);
+        public ReadOnlyMemory<byte> ModelData => GetChunkMemory(RdtFileChunkKinds.RDTCVModel);
+        public ReadOnlyMemory<byte> MotionData => GetChunkMemory(RdtFileChunkKinds.RDTCVMotion);
+        public CvScript Script => new CvScript(GetChunkMemory(RdtFileChunkKinds.RDTCVScript));
+        public ReadOnlyMemory<byte> TextureData => GetChunkMemory(RdtFileChunkKinds.RDTCVTexture);
 
         private ReadOnlySpan<T> GetTable<T>(int index) where T : struct
         {
@@ -73,7 +116,39 @@ namespace IntelOrca.Biohazard.Room
             return Data.GetSafeSpan<T>(offset, count);
         }
 
+        private ReadOnlySpan<T> GetChunkTypedSpan<T>(int kind) where T : struct
+        {
+            var memory = GetChunkMemory(kind);
+            return MemoryMarshal.Cast<byte, T>(memory.Span);
+        }
+
+        private ReadOnlyMemory<byte> GetChunkMemory(int kind)
+        {
+            return _data.FindChunkByKind(kind)?.Memory ?? ReadOnlyMemory<byte>.Empty;
+        }
+
         IRdtBuilder IRdt.ToBuilder() => ToBuilder();
+
+        private static readonly int[] _tableChunkKinds = new[]
+        {
+            RdtFileChunkKinds.RDTCVCamera,
+            RdtFileChunkKinds.RDTCVLighting,
+            RdtFileChunkKinds.RDTCVEnemy,
+            RdtFileChunkKinds.RDTCVObject,
+            RdtFileChunkKinds.RDTCVItem,
+            RdtFileChunkKinds.RDTCVEffect,
+            RdtFileChunkKinds.RDTCVBoundary,
+            RdtFileChunkKinds.RDTCVDoor,
+            RdtFileChunkKinds.RDTCVTrigger,
+            RdtFileChunkKinds.RDTCVPlayer,
+            RdtFileChunkKinds.RDTCVEvent,
+            RdtFileChunkKinds.RDTCVUnknown1,
+            RdtFileChunkKinds.RDTCVUnknown2,
+            RdtFileChunkKinds.RDTCVAction,
+            RdtFileChunkKinds.RDTCVText,
+            RdtFileChunkKinds.RDTCVSysmes,
+        };
+
 
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
         public unsafe struct FileHeader

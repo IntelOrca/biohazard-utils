@@ -68,5 +68,26 @@
         public const int RDT2EmbeddedCamMask = 0x0200 | 27;
         public const int RDT2ESPTIMTABLE = 0x0100 | 28;
         public const int RDT3ETD = 0x0200 | 30;
+
+        public const int RDTCVCamera = 0x0300 | 0x00;
+        public const int RDTCVLighting = 0x0300 | 0x01;
+        public const int RDTCVEnemy = 0x0300 | 0x02;
+        public const int RDTCVObject = 0x0300 | 0x03;
+        public const int RDTCVItem = 0x0300 | 0x04;
+        public const int RDTCVEffect = 0x0300 | 0x05;
+        public const int RDTCVBoundary = 0x0300 | 0x06;
+        public const int RDTCVDoor = 0x0300 | 0x07;
+        public const int RDTCVTrigger = 0x0300 | 0x08;
+        public const int RDTCVPlayer = 0x0300 | 0x09;
+        public const int RDTCVEvent = 0x0300 | 0x0A;
+        public const int RDTCVUnknown1 = 0x0300 | 0x0B;
+        public const int RDTCVUnknown2 = 0x0300 | 0x0C;
+        public const int RDTCVAction = 0x0300 | 0x0D;
+        public const int RDTCVText = 0x0300 | 0x0E;
+        public const int RDTCVSysmes = 0x0300 | 0x0F;
+        public const int RDTCVModel = 0x0300 | 0x10;
+        public const int RDTCVMotion = 0x0300 | 0x11;
+        public const int RDTCVScript = 0x0300 | 0x12;
+        public const int RDTCVTexture = 0x0300 | 0x13;
     }
 }

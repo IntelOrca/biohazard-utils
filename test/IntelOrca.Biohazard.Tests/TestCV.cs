@@ -1,12 +1,20 @@
 ﻿using System.IO;
 using IntelOrca.Biohazard.Room;
 using Xunit;
+using Xunit.Abstractions;
 using static IntelOrca.Biohazard.Tests.MemoryAssert;
 
 namespace IntelOrca.Biohazard.Tests
 {
     public class TestCv
     {
+        private readonly ITestOutputHelper _output;
+
+        public TestCv(ITestOutputHelper output)
+        {
+            _output = output;
+        }
+
         [Fact]
         public void RDT_000()
         {
@@ -41,12 +49,7 @@ namespace IntelOrca.Biohazard.Tests
         }
 
         [Fact]
-        public void RDT_001_Rebuild()
-        {
-            var rdt = GetRdt(1);
-            var newRdt = rdt.ToBuilder().ToRdt();
-            AssertAndCompareMemory(rdt.Data, newRdt.Data);
-        }
+        public void RDT_001_Rebuild() => AssertRebuild(1);
 
         [Fact]
         public void RDT_001_Rebuild_WithChange()
@@ -88,6 +91,35 @@ namespace IntelOrca.Biohazard.Tests
             var sb = s1.ToBuilder();
             var s2 = sb.ToScript();
             AssertMemory(s1.Data, s2.Data);
+        }
+
+        [Fact]
+        public void RDT_013_Rebuild() => AssertRebuild(13);
+
+        [Fact(Skip = "Takes too long")]
+        public void RDT_All_Rebuild()
+        {
+            var fail = false;
+            for (var i = 0; i < 205; i++)
+            {
+                try
+                {
+                    AssertRebuild(i);
+                }
+                catch
+                {
+                    fail = true;
+                    _output.WriteLine($"{i}: FAIL");
+                }
+            }
+            Assert.False(fail);
+        }
+
+        private void AssertRebuild(int index)
+        {
+            var rdt = GetRdt(index);
+            var newRdt = rdt.ToBuilder().ToRdt();
+            AssertAndCompareMemory(rdt.Data, newRdt.Data);
         }
 
         private RdtCv GetRdt(int index)

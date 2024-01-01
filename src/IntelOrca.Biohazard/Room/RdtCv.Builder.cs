@@ -9,7 +9,8 @@ namespace IntelOrca.Biohazard.Room
         public class Builder : IRdtBuilder
         {
             public FileHeader Header { get; set; }
-            public byte[] CameraData { get; set; } = new byte[0];
+            public byte[] UnknownDataAfterHeader { get; set; } = new byte[0];
+            public CvCameraList Cameras { get; set; }
             public byte[] LightingData { get; set; } = new byte[0];
             public byte[] EnemyData { get; set; } = new byte[0];
             public byte[] ObjectData { get; set; } = new byte[0];
@@ -21,6 +22,7 @@ namespace IntelOrca.Biohazard.Room
             public byte[] PlayerData { get; set; } = new byte[0];
             public byte[] EventData { get; set; } = new byte[0];
             public byte[] Unknown1Data { get; set; } = new byte[0];
+            public int Unknown1Count { get; set; }
             public int Unknown2 { get; set; }
             public int Unknown2Count { get; set; }
             public int ReactionCount { get; set; }
@@ -41,7 +43,7 @@ namespace IntelOrca.Biohazard.Room
                 bw.Write(header);
 
                 ms.Position = 0x100;
-                bw.Write(CameraData.Length / 680);
+                bw.Write(Cameras.Count);
                 bw.Write(LightingData.Length / 224);
                 bw.Write(EnemyData.Length / 36);
                 bw.Write(ObjectData.Length / 36);
@@ -52,17 +54,20 @@ namespace IntelOrca.Biohazard.Room
                 bw.Write(TriggerData.Length / 36);
                 bw.Write(PlayerData.Length / 16);
                 bw.Write(EventData.Length / 36);
-                bw.Write(Unknown1Data.Length / 94);
+                bw.Write(Unknown1Count);
                 bw.Write(Unknown2Count);
                 bw.Write(ReactionCount);
+
+                ms.Position = 0x180;
+                bw.Write(UnknownDataAfterHeader);
 
                 ms.Position = 0x46C;
 
                 var tableOffsets = new int[16];
-                if (CameraData.Length != 0)
+                if (Cameras.Data.Length != 0)
                 {
                     tableOffsets[0] = (int)ms.Position;
-                    bw.Write(CameraData);
+                    bw.Write(Cameras.Data);
                 }
 
                 if (LightingData.Length != 0)
@@ -127,13 +132,13 @@ namespace IntelOrca.Biohazard.Room
 
                 if (EventData.Length != 0)
                 {
-                    tableOffsets[9] = (int)ms.Position;
+                    tableOffsets[10] = (int)ms.Position;
                     bw.Write(EventData);
                 }
 
                 if (Unknown1Data.Length != 0)
                 {
-                    tableOffsets[10] = (int)ms.Position;
+                    tableOffsets[11] = (int)ms.Position;
                     bw.Write(Unknown1Data);
                 }
 

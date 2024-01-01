@@ -47,6 +47,10 @@ namespace IntelOrca.Biohazard.Room
                 }
             }
 
+            _data.RegisterOffset(RdtFileChunkKinds.RDTCVHeader, 0);
+            _data.RegisterOffset(RdtFileChunkKinds.RDTCVTableOffsets, header.TableOffset);
+            _data.RegisterOffset(RdtFileChunkKinds.RDTCVTableCounts, 0x100);
+            _data.RegisterOffset(RdtFileChunkKinds.RDTCVUDAH, 0x180);
             _data.RegisterOffset(RdtFileChunkKinds.RDTCVModel, header.ModelOffset);
             _data.RegisterOffset(RdtFileChunkKinds.RDTCVMotion, header.MotionOffset);
             _data.RegisterOffset(RdtFileChunkKinds.RDTCVScript, header.ScriptOffset);
@@ -57,7 +61,8 @@ namespace IntelOrca.Biohazard.Room
         {
             var builder = new Builder();
             builder.Header = Header;
-            builder.CameraData = CameraData.ToArray();
+            builder.UnknownDataAfterHeader = UnknownDataAfterHeader.ToArray();
+            builder.Cameras = Cameras;
             builder.LightingData = LightingData.ToArray();
             builder.EnemyData = EnemyData.ToArray();
             builder.ObjectData = ObjectData.ToArray();
@@ -69,6 +74,7 @@ namespace IntelOrca.Biohazard.Room
             builder.PlayerData = PlayerData.ToArray();
             builder.EventData = EventData.ToArray();
             builder.Unknown1Data = Unknown1Data.ToArray();
+            builder.Unknown1Count = Unknown1Count;
             builder.Unknown2 = Unknown2;
             builder.Unknown2Count = Unknown2Count;
             builder.ReactionCount = ReactionCount;
@@ -86,7 +92,8 @@ namespace IntelOrca.Biohazard.Room
         private ReadOnlySpan<int> ScriptOffsets => Data.GetSafeSpan<int>(Header.TableOffset, 16);
         private ReadOnlySpan<int> ScriptCounts => Data.GetSafeSpan<int>(256, 14);
 
-        public ReadOnlyMemory<byte> CameraData => GetChunkMemory(RdtFileChunkKinds.RDTCVCamera);
+        public ReadOnlyMemory<byte> UnknownDataAfterHeader => GetChunkMemory(RdtFileChunkKinds.RDTCVUDAH);
+        public CvCameraList Cameras => new CvCameraList(ScriptCounts[0], GetChunkMemory(RdtFileChunkKinds.RDTCVCamera));
         public ReadOnlyMemory<byte> LightingData => GetChunkMemory(RdtFileChunkKinds.RDTCVLighting);
         public ReadOnlyMemory<byte> EnemyData => GetChunkMemory(RdtFileChunkKinds.RDTCVEnemy);
         public ReadOnlyMemory<byte> ObjectData => GetChunkMemory(RdtFileChunkKinds.RDTCVObject);
@@ -98,6 +105,7 @@ namespace IntelOrca.Biohazard.Room
         public ReadOnlyMemory<byte> PlayerData => GetChunkMemory(RdtFileChunkKinds.RDTCVPlayer);
         public ReadOnlyMemory<byte> EventData => GetChunkMemory(RdtFileChunkKinds.RDTCVEvent);
         public ReadOnlyMemory<byte> Unknown1Data => GetChunkMemory(RdtFileChunkKinds.RDTCVUnknown1);
+        public int Unknown1Count => ScriptCounts[11];
         public int Unknown2 => ScriptOffsets[12];
         public int Unknown2Count => ScriptCounts[12];
         public int ReactionCount => ScriptCounts[13];

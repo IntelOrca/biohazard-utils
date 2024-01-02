@@ -86,7 +86,7 @@ namespace IntelOrca.Biohazard.Script
                 0x03 => 2, // endif
                 0x04 => 6, // ck
                 0x05 => 6, // set
-                0x06 => 0, //
+                0x06 => 4, // cmp
                 0x07 => 0, //
                 0x08 => 4, // inventory_item
                 0x09 => 0, //
@@ -138,7 +138,7 @@ namespace IntelOrca.Biohazard.Script
                 0x03 => "endif:u",
                 0x04 => "ck:uUuu",
                 0x05 => "set:uUuu",
-                0x06 => "",
+                0x06 => "cmp:uuu",
                 0x07 => "",
                 0x08 => "inventory_item:uT",
                 0x09 => "",

@@ -114,7 +114,7 @@ namespace IntelOrca.Biohazard.Room
         public ReadOnlyMemory<byte> SysmesData => GetChunkMemory(RdtFileChunkKinds.RDTCVSysmes);
         public ReadOnlyMemory<byte> ModelData => GetChunkMemory(RdtFileChunkKinds.RDTCVModel);
         public ReadOnlyMemory<byte> MotionData => GetChunkMemory(RdtFileChunkKinds.RDTCVMotion);
-        public CvScript Script => new CvScript(GetChunkMemory(RdtFileChunkKinds.RDTCVScript));
+        public ScdProcedureList Script => new ScdProcedureList(BioVersion.BiohazardCv, GetChunkMemory(RdtFileChunkKinds.RDTCVScript));
         public ReadOnlyMemory<byte> TextureData => GetChunkMemory(RdtFileChunkKinds.RDTCVTexture);
 
         private ReadOnlySpan<T> GetTable<T>(int index) where T : struct

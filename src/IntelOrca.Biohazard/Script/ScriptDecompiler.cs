@@ -52,6 +52,10 @@ namespace IntelOrca.Biohazard.Script
                     _constantTable = new Bio3ConstantTable();
                     versionNumber = 3;
                     break;
+                case BioVersion.BiohazardCv:
+                    _constantTable = new BioCvConstantTable();
+                    versionNumber = 4;
+                    break;
                 default:
                     throw new NotSupportedException();
             }

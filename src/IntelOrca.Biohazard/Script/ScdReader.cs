@@ -44,6 +44,9 @@ namespace IntelOrca.Biohazard.Script
                 case BioVersion.Biohazard3:
                     ReadScript3(br, length, kind, visitor);
                     break;
+                case BioVersion.BiohazardCv:
+                    ReadScriptCv(br, length, kind, visitor);
+                    break;
                 default:
                     throw new NotSupportedException();
             }
@@ -315,6 +318,87 @@ namespace IntelOrca.Biohazard.Script
                             }
                         }
                     }
+                }
+
+                visitor.VisitEndSubroutine(i);
+            }
+
+            visitor.VisitEndScript(kind);
+        }
+
+        private void ReadScriptCv(BinaryReader br, int length, BioScriptKind kind, IBioScriptVisitor visitor)
+        {
+            var constantTable = new BioCvConstantTable();
+
+            visitor.VisitBeginScript(kind);
+
+            var start = (int)br.BaseStream.Position;
+            var functionOffsets = new List<int>();
+            var firstFunctionOffset = br.ReadInt32();
+            functionOffsets.Add(start + firstFunctionOffset);
+            var numFunctions = firstFunctionOffset / 4;
+            for (int i = 1; i < numFunctions; i++)
+            {
+                functionOffsets.Add(start + br.ReadInt32());
+            }
+            functionOffsets.Add(start + length);
+            for (int i = 0; i < numFunctions; i++)
+            {
+                visitor.VisitBeginSubroutine(i);
+
+                var functionOffset = functionOffsets[i];
+                var functionEnd = functionOffsets[i + 1];
+                var functionEndMin = functionOffset;
+                var ifStack = 0;
+                var isEnd = false;
+                br.BaseStream.Position = functionOffset;
+                while (br.BaseStream.Position < functionEnd)
+                {
+                    var instructionPosition = (int)br.BaseStream.Position;
+                    var remainingSize = functionEnd - instructionPosition;
+                    if (isEnd)
+                    {
+                        visitor.VisitTrailingData(BaseOffset + instructionPosition, br.ReadBytes(remainingSize));
+                        break;
+                    }
+
+                    var opcode = br.ReadByte();
+                    var instructionSize = constantTable.GetInstructionSize(opcode, br);
+                    if (instructionSize == 0 || instructionSize > remainingSize)
+                    {
+                        instructionSize = Math.Min(16, remainingSize);
+                    }
+
+                    var opcodeBytes = new byte[instructionSize];
+                    opcodeBytes[0] = opcode;
+                    if (br.Read(opcodeBytes, 1, instructionSize - 1) != instructionSize - 1)
+                    {
+                        throw new Exception("Unable to read opcode");
+                    }
+
+                    visitor.VisitOpcode(BaseOffset + instructionPosition, opcodeBytes);
+
+                    // if (i == numFunctions - 1)
+                    // {
+                    //     switch ((OpcodeV2)opcode)
+                    //     {
+                    //         case OpcodeV2.EvtEnd:
+                    //             if (instructionPosition >= functionEndMin && ifStack == 0)
+                    //                 isEnd = true;
+                    //             break;
+                    //         case OpcodeV2.IfelCk:
+                    //             functionEndMin = instructionPosition + BitConverter.ToUInt16(opcodeBytes, 2);
+                    //             ifStack++;
+                    //             break;
+                    //         case OpcodeV2.ElseCk:
+                    //             ifStack--;
+                    //             functionEndMin = instructionPosition + BitConverter.ToUInt16(opcodeBytes, 2);
+                    //             break;
+                    //         case OpcodeV2.EndIf:
+                    //             ifStack--;
+                    //             break;
+                    //     }
+                    // }
                 }
 
                 visitor.VisitEndSubroutine(i);

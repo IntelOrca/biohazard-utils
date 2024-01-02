@@ -86,10 +86,10 @@ namespace IntelOrca.Biohazard.Tests
         [Fact]
         public void RDT_010_Rebuild_Script()
         {
-            var rdt = GetRdt(10);
+            var rdt = GetRdt(1);
             var s1 = rdt.Script;
             var sb = s1.ToBuilder();
-            var s2 = sb.ToScript();
+            var s2 = sb.ToProcedureList();
             AssertMemory(s1.Data, s2.Data);
         }
 

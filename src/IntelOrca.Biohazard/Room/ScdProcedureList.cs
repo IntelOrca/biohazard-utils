@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using IntelOrca.Biohazard.Extensions;
+using System.Runtime.InteropServices;
 
 namespace IntelOrca.Biohazard.Room
 {
@@ -20,9 +20,18 @@ namespace IntelOrca.Biohazard.Room
         {
             get
             {
-                var firstOffset = Data.GetSafeSpan<ushort>(0, 1)[0];
-                var numOffsets = firstOffset / 2;
-                return numOffsets;
+                if (Version == BioVersion.BiohazardCv)
+                {
+                    if (Data.Length < 4)
+                        return 0;
+                    return GetOffset(0) / 4;
+                }
+                else
+                {
+                    if (Data.Length < 2)
+                        return 0;
+                    return GetOffset(0) / 2;
+                }
             }
         }
 
@@ -31,11 +40,25 @@ namespace IntelOrca.Biohazard.Room
             get
             {
                 var count = Count;
-                var offset = Data.GetSafeSpan<ushort>(0, count)[index];
+                var offset = GetOffset(index);
                 var nextOffset = index == count - 1 ?
                     Data.Length :
-                    Data.GetSafeSpan<ushort>(0, count)[index + 1];
-                return new ScdProcedure(Version, Data.Slice(offset, nextOffset - offset));
+                    GetOffset(index + 1);
+                return new ScdProcedure(Version, Data[offset..nextOffset]);
+            }
+        }
+
+        public int GetOffset(int index)
+        {
+            if (Version == BioVersion.BiohazardCv)
+            {
+                var offsets = MemoryMarshal.Cast<byte, int>(Data.Span);
+                return offsets[index];
+            }
+            else
+            {
+                var offsets = MemoryMarshal.Cast<byte, ushort>(Data.Span);
+                return offsets[index];
             }
         }
 
@@ -64,11 +87,23 @@ namespace IntelOrca.Biohazard.Room
                 var ms = new MemoryStream();
                 var bw = new BinaryWriter(ms);
 
-                var baseOffset = Procedures.Count * 2;
-                foreach (var procedure in Procedures)
+                if (Version == BioVersion.BiohazardCv)
                 {
-                    bw.Write((ushort)baseOffset);
-                    baseOffset += procedure.Data.Length;
+                    var baseOffset = Procedures.Count * 4;
+                    foreach (var procedure in Procedures)
+                    {
+                        bw.Write(baseOffset);
+                        baseOffset += procedure.Data.Length;
+                    }
+                }
+                else
+                {
+                    var baseOffset = Procedures.Count * 2;
+                    foreach (var procedure in Procedures)
+                    {
+                        bw.Write((ushort)baseOffset);
+                        baseOffset += procedure.Data.Length;
+                    }
                 }
                 foreach (var procedure in Procedures)
                 {

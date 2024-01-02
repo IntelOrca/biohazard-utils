@@ -31,7 +31,7 @@ namespace IntelOrca.Biohazard.Room
             public byte[] SysmesData { get; set; } = new byte[0];
             public byte[] ModelData { get; set; } = new byte[0];
             public byte[] MotionData { get; set; } = new byte[0];
-            public CvScript Script { get; set; }
+            public ScdProcedureList Script { get; set; }
             public byte[] TextureData { get; set; } = new byte[0];
 
             public RdtCv ToRdt()

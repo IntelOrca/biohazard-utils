@@ -79,7 +79,7 @@ namespace IntelOrca.Biohazard.Room
             builder.Unknown2Count = Unknown2Count;
             builder.ReactionCount = ReactionCount;
             builder.Reactions.AddRange(Reactions.ToArray());
-            builder.TextData = TextData.ToArray();
+            builder.TextData = TextData;
             builder.SysmesData = SysmesData.ToArray();
             builder.ModelData = ModelData.ToArray();
             builder.MotionData = MotionData.ToArray();
@@ -110,7 +110,7 @@ namespace IntelOrca.Biohazard.Room
         public int Unknown2Count => ScriptCounts[12];
         public int ReactionCount => ScriptCounts[13];
         public ReadOnlySpan<Reaction> Reactions => GetChunkTypedSpan<Reaction>(RdtFileChunkKinds.RDTCVAction);
-        public ReadOnlyMemory<byte> TextData => GetChunkMemory(RdtFileChunkKinds.RDTCVText);
+        public CvMsgList TextData => new CvMsgList(GetChunkMemory(RdtFileChunkKinds.RDTCVText));
         public ReadOnlyMemory<byte> SysmesData => GetChunkMemory(RdtFileChunkKinds.RDTCVSysmes);
         public ReadOnlyMemory<byte> ModelData => GetChunkMemory(RdtFileChunkKinds.RDTCVModel);
         public ReadOnlyMemory<byte> MotionData => GetChunkMemory(RdtFileChunkKinds.RDTCVMotion);

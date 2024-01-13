@@ -26,7 +26,7 @@ namespace IntelOrca.Biohazard.Room
             public int Unknown2Count { get; set; }
             public int ReactionCount { get; set; }
             public List<Reaction> Reactions { get; } = new List<Reaction>();
-            public byte[] TextData { get; set; } = new byte[0];
+            public CvMsgList TextData { get; set; }
             public byte[] SysmesData { get; set; } = new byte[0];
             public byte[] ModelData { get; set; } = new byte[0];
             public byte[] MotionData { get; set; } = new byte[0];
@@ -173,10 +173,10 @@ namespace IntelOrca.Biohazard.Room
                     }
                 }
 
-                if (TextData.Length != 0)
+                if (TextData.Data.Length != 0)
                 {
                     tableOffsets[14] = (int)ms.Position;
-                    bw.Write(TextData);
+                    bw.Write(TextData.Data);
                 }
 
                 if (SysmesData.Length != 0)

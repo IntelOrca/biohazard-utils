@@ -80,7 +80,7 @@
         public const int RDTCVItem = 0x0300 | 0x08;
         public const int RDTCVEffect = 0x0300 | 0x09;
         public const int RDTCVBoundary = 0x0300 | 0x0A;
-        public const int RDTCVDoor = 0x0300 | 0x0B;
+        public const int RDTCVAot = 0x0300 | 0x0B;
         public const int RDTCVTrigger = 0x0300 | 0x0C;
         public const int RDTCVPlayer = 0x0300 | 0x0D;
         public const int RDTCVEvent = 0x0300 | 0x0E;

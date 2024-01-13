@@ -64,15 +64,15 @@ namespace IntelOrca.Biohazard.Room
             builder.UnknownDataAfterHeader = UnknownDataAfterHeader.ToArray();
             builder.Cameras = Cameras;
             builder.LightingData = LightingData.ToArray();
-            builder.EnemyData = EnemyData.ToArray();
-            builder.ObjectData = ObjectData.ToArray();
+            builder.Enemies.AddRange(Enemies.ToArray());
+            builder.Objects.AddRange(Objects.ToArray());
             builder.Items.AddRange(Items.ToArray());
-            builder.EffectData = EffectData.ToArray();
-            builder.BoundaryData = BoundaryData.ToArray();
+            builder.Effects.AddRange(Effects.ToArray());
+            builder.Boundaries.AddRange(Boundaries.ToArray());
             builder.Aots.AddRange(Aots.ToArray());
-            builder.TriggerData = TriggerData.ToArray();
-            builder.PlayerData = PlayerData.ToArray();
-            builder.EventData = EventData.ToArray();
+            builder.Triggers.AddRange(Triggers.ToArray());
+            builder.Players.AddRange(Players.ToArray());
+            builder.Events.AddRange(Events.ToArray());
             builder.Unknown1Data = Unknown1Data.ToArray();
             builder.Unknown1Count = Unknown1Count;
             builder.Unknown2 = Unknown2;
@@ -95,15 +95,15 @@ namespace IntelOrca.Biohazard.Room
         public ReadOnlyMemory<byte> UnknownDataAfterHeader => GetChunkMemory(RdtFileChunkKinds.RDTCVUDAH);
         public CvCameraList Cameras => new CvCameraList(ScriptCounts[0], GetChunkMemory(RdtFileChunkKinds.RDTCVCamera));
         public ReadOnlyMemory<byte> LightingData => GetChunkMemory(RdtFileChunkKinds.RDTCVLighting);
-        public ReadOnlyMemory<byte> EnemyData => GetChunkMemory(RdtFileChunkKinds.RDTCVEnemy);
-        public ReadOnlyMemory<byte> ObjectData => GetChunkMemory(RdtFileChunkKinds.RDTCVObject);
-        public ReadOnlySpan<Item> Items => GetTable<Item>(4);
-        public ReadOnlyMemory<byte> EffectData => GetChunkMemory(RdtFileChunkKinds.RDTCVEffect);
-        public ReadOnlyMemory<byte> BoundaryData => GetChunkMemory(RdtFileChunkKinds.RDTCVBoundary);
-        public ReadOnlySpan<Aot> Aots => GetTable<Aot>(7);
-        public ReadOnlyMemory<byte> TriggerData => GetChunkMemory(RdtFileChunkKinds.RDTCVTrigger);
-        public ReadOnlyMemory<byte> PlayerData => GetChunkMemory(RdtFileChunkKinds.RDTCVPlayer);
-        public ReadOnlyMemory<byte> EventData => GetChunkMemory(RdtFileChunkKinds.RDTCVEvent);
+        public ReadOnlySpan<Enemy> Enemies => GetChunkTypedSpan<Enemy>(RdtFileChunkKinds.RDTCVEnemy);
+        public ReadOnlySpan<RoomObject> Objects => GetChunkTypedSpan<RoomObject>(RdtFileChunkKinds.RDTCVObject);
+        public ReadOnlySpan<Item> Items => GetChunkTypedSpan<Item>(RdtFileChunkKinds.RDTCVItem);
+        public ReadOnlySpan<Effect> Effects => GetChunkTypedSpan<Effect>(RdtFileChunkKinds.RDTCVEffect);
+        public ReadOnlySpan<Boundary> Boundaries => GetChunkTypedSpan<Boundary>(RdtFileChunkKinds.RDTCVBoundary);
+        public ReadOnlySpan<Aot> Aots => GetChunkTypedSpan<Aot>(RdtFileChunkKinds.RDTCVAot);
+        public ReadOnlySpan<AotTrigger> Triggers => GetChunkTypedSpan<AotTrigger>(RdtFileChunkKinds.RDTCVTrigger);
+        public ReadOnlySpan<Player> Players => GetChunkTypedSpan<Player>(RdtFileChunkKinds.RDTCVPlayer);
+        public ReadOnlySpan<AotEvent> Events => GetChunkTypedSpan<AotEvent>(RdtFileChunkKinds.RDTCVEvent);
         public ReadOnlyMemory<byte> Unknown1Data => GetChunkMemory(RdtFileChunkKinds.RDTCVUnknown1);
         public int Unknown1Count => ScriptCounts[11];
         public int Unknown2 => ScriptOffsets[12];
@@ -146,7 +146,7 @@ namespace IntelOrca.Biohazard.Room
             RdtFileChunkKinds.RDTCVItem,
             RdtFileChunkKinds.RDTCVEffect,
             RdtFileChunkKinds.RDTCVBoundary,
-            RdtFileChunkKinds.RDTCVDoor,
+            RdtFileChunkKinds.RDTCVAot,
             RdtFileChunkKinds.RDTCVTrigger,
             RdtFileChunkKinds.RDTCVPlayer,
             RdtFileChunkKinds.RDTCVEvent,
@@ -189,6 +189,26 @@ namespace IntelOrca.Biohazard.Room
         }
 
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        public struct Enemy
+        {
+            public int Type;
+            public int Flags1;
+            public int Flags2;
+            public VectorF Position;
+            public Vector32 Rotation;
+        }
+
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        public struct RoomObject
+        {
+            public int Type;
+            public int Flags1;
+            public int Flags2;
+            public VectorF Position;
+            public Vector32 Rotation;
+        }
+
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
         public struct Item
         {
             public byte Unk00;
@@ -197,17 +217,36 @@ namespace IntelOrca.Biohazard.Room
             public byte Unk03;
             public int Type;
             public int Unk08;
-            public int X;
-            public int Y;
-            public int Z;
-            public short XRot;
-            public short YRot;
-            public short ZRot;
-            public short Unk1E;
-            public byte Unk20;
-            public byte Unk21;
-            public byte Unk22;
-            public byte Unk23;
+            public VectorF Position;
+            public Vector32 Rotation;
+        }
+
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        public struct Effect
+        {
+            public int Type;
+            public int Flags1;
+            public int Flags2;
+            public VectorF Position;
+            public VectorF Size;
+            public int Settings0;
+            public int Settings1;
+            public int Settings2;
+            public int Settings3;
+            public int Settings4;
+            public int Settings5;
+            public int Settings6;
+            public int Settings7;
+        }
+
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        public struct Boundary
+        {
+            public int Type;
+            public int Flags1;
+            public VectorF Position;
+            public VectorF Size;
+            public int Flags2;
         }
 
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -218,16 +257,39 @@ namespace IntelOrca.Biohazard.Room
             public byte Unk02;
             public byte Unk03;
             public int Flags;
-            public int Unk08;
-            public int Unk0C;
-            public int Unk10;
-            public int Unk14;
-            public int Unk18;
-            public int Unk1C;
+            public VectorF Position;
+            public VectorF Size;
             public byte Stage;          // or item index
             public byte Room;           // or message id
             public byte ExitId;
             public byte Transition;
+        }
+
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        public struct AotTrigger
+        {
+            public int Type;
+            public int Attrs1;
+            public VectorF Position;
+            public VectorF Size;
+            public int Attrs2;
+        }
+
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        public struct Player
+        {
+            public VectorF Position;
+            public int RotationY;
+        }
+
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        public struct AotEvent
+        {
+            public int Type;
+            public int Attrs1;
+            public VectorF Position;
+            public VectorF Size;
+            public int Attrs2;
         }
 
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -236,6 +298,22 @@ namespace IntelOrca.Biohazard.Room
             public uint Unk00;
             public uint Unk01;
             public fixed byte Data[2048];
+        }
+
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        public unsafe struct VectorF
+        {
+            public float X;
+            public float Y;
+            public float Z;
+        }
+
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        public unsafe struct Vector32
+        {
+            public int X;
+            public int Y;
+            public int Z;
         }
     }
 }

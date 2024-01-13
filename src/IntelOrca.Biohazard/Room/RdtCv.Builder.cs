@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 
 namespace IntelOrca.Biohazard.Room
@@ -12,15 +11,15 @@ namespace IntelOrca.Biohazard.Room
             public byte[] UnknownDataAfterHeader { get; set; } = new byte[0];
             public CvCameraList Cameras { get; set; }
             public byte[] LightingData { get; set; } = new byte[0];
-            public byte[] EnemyData { get; set; } = new byte[0];
-            public byte[] ObjectData { get; set; } = new byte[0];
+            public List<Enemy> Enemies { get; set; } = new List<Enemy>();
+            public List<RoomObject> Objects { get; set; } = new List<RoomObject>();
             public List<Item> Items { get; } = new List<Item>();
-            public ReadOnlyMemory<byte> EffectData { get; set; }
-            public ReadOnlyMemory<byte> BoundaryData { get; set; }
+            public List<Effect> Effects { get; set; } = new List<Effect>();
+            public List<Boundary> Boundaries { get; set; } = new List<Boundary>();
             public List<Aot> Aots { get; } = new List<Aot>();
-            public byte[] TriggerData { get; set; } = new byte[0];
-            public byte[] PlayerData { get; set; } = new byte[0];
-            public byte[] EventData { get; set; } = new byte[0];
+            public List<AotTrigger> Triggers { get; set; } = new List<AotTrigger>();
+            public List<Player> Players { get; set; } = new List<Player>();
+            public List<AotEvent> Events { get; set; } = new List<AotEvent>();
             public byte[] Unknown1Data { get; set; } = new byte[0];
             public int Unknown1Count { get; set; }
             public int Unknown2 { get; set; }
@@ -45,15 +44,15 @@ namespace IntelOrca.Biohazard.Room
                 ms.Position = 0x100;
                 bw.Write(Cameras.Count);
                 bw.Write(LightingData.Length / 224);
-                bw.Write(EnemyData.Length / 36);
-                bw.Write(ObjectData.Length / 36);
+                bw.Write(Enemies.Count);
+                bw.Write(Objects.Count);
                 bw.Write(Items.Count);
-                bw.Write(EffectData.Length / 68);
-                bw.Write(BoundaryData.Length / 36);
+                bw.Write(Effects.Count);
+                bw.Write(Boundaries.Count);
                 bw.Write(Aots.Count);
-                bw.Write(TriggerData.Length / 36);
-                bw.Write(PlayerData.Length / 16);
-                bw.Write(EventData.Length / 36);
+                bw.Write(Triggers.Count);
+                bw.Write(Players.Count);
+                bw.Write(Events.Count);
                 bw.Write(Unknown1Count);
                 bw.Write(Unknown2Count);
                 bw.Write(ReactionCount);
@@ -76,16 +75,22 @@ namespace IntelOrca.Biohazard.Room
                     bw.Write(LightingData);
                 }
 
-                if (EnemyData.Length != 0)
+                if (Enemies.Count != 0)
                 {
                     tableOffsets[2] = (int)ms.Position;
-                    bw.Write(EnemyData);
+                    foreach (var enemy in Enemies)
+                    {
+                        bw.Write(enemy);
+                    }
                 }
 
-                if (ObjectData.Length != 0)
+                if (Objects.Count != 0)
                 {
                     tableOffsets[3] = (int)ms.Position;
-                    bw.Write(ObjectData);
+                    foreach (var obj in Objects)
+                    {
+                        bw.Write(obj);
+                    }
                 }
 
                 if (Items.Count != 0)
@@ -97,16 +102,22 @@ namespace IntelOrca.Biohazard.Room
                     }
                 }
 
-                if (EffectData.Length != 0)
+                if (Effects.Count != 0)
                 {
                     tableOffsets[5] = (int)ms.Position;
-                    bw.Write(EffectData);
+                    foreach (var effect in Effects)
+                    {
+                        bw.Write(effect);
+                    }
                 }
 
-                if (BoundaryData.Length != 0)
+                if (Boundaries.Count != 0)
                 {
                     tableOffsets[6] = (int)ms.Position;
-                    bw.Write(BoundaryData);
+                    foreach (var b in Boundaries)
+                    {
+                        bw.Write(b);
+                    }
                 }
 
                 if (Aots.Count != 0)
@@ -118,22 +129,31 @@ namespace IntelOrca.Biohazard.Room
                     }
                 }
 
-                if (TriggerData.Length != 0)
+                if (Triggers.Count != 0)
                 {
                     tableOffsets[8] = (int)ms.Position;
-                    bw.Write(TriggerData);
+                    foreach (var trigger in Triggers)
+                    {
+                        bw.Write(trigger);
+                    }
                 }
 
-                if (PlayerData.Length != 0)
+                if (Players.Count != 0)
                 {
                     tableOffsets[9] = (int)ms.Position;
-                    bw.Write(PlayerData);
+                    foreach (var p in Players)
+                    {
+                        bw.Write(p);
+                    }
                 }
 
-                if (EventData.Length != 0)
+                if (Events.Count != 0)
                 {
                     tableOffsets[10] = (int)ms.Position;
-                    bw.Write(EventData);
+                    foreach (var evt in Events)
+                    {
+                        bw.Write(evt);
+                    }
                 }
 
                 if (Unknown1Data.Length != 0)

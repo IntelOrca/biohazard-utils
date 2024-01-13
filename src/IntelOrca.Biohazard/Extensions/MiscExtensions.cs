@@ -70,6 +70,15 @@ namespace IntelOrca.Biohazard
             }
         }
 
+        public static void Align(this BinaryWriter bw, int value)
+        {
+            var stream = bw.BaseStream;
+            while ((stream.Position % value) != 0)
+            {
+                bw.Write((byte)0);
+            }
+        }
+
         public static unsafe T ReadStruct<T>(this BinaryReader br) where T : struct
         {
             var bytes = br.ReadBytes(Marshal.SizeOf<T>());

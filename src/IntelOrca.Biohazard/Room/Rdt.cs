@@ -11,6 +11,7 @@ namespace IntelOrca.Biohazard.Room
                 BioVersion.Biohazard1 => new Rdt1(data),
                 BioVersion.Biohazard2 => new Rdt2(version, data),
                 BioVersion.Biohazard3 => new Rdt2(version, data),
+                BioVersion.BiohazardCv => new RdtCv(data),
                 _ => throw new NotSupportedException()
             };
         }
@@ -22,6 +23,7 @@ namespace IntelOrca.Biohazard.Room
                 BioVersion.Biohazard1 => new Rdt1(path),
                 BioVersion.Biohazard2 => new Rdt2(version, path),
                 BioVersion.Biohazard3 => new Rdt2(version, path),
+                BioVersion.BiohazardCv => new RdtCv(path),
                 _ => throw new NotSupportedException()
             };
         }

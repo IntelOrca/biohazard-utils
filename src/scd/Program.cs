@@ -35,8 +35,8 @@ namespace IntelOrca.Scd
             public string ScriptPath { get; set; }
 
             [CommandOption("--game")]
-            [Description("Version of Resident Evil/Biohazard. E.g. 1, 2 or 3")]
-            public int Game { get; set; }
+            [Description("Version of Resident Evil/Biohazard. E.g. 1, 2, 3, or CV")]
+            public string Game { get; set; }
 
             [CommandOption("-x")]
             [Description("Extract SCD data")]
@@ -79,15 +79,25 @@ namespace IntelOrca.Scd
             var version = settings.Game;
             if (version != null)
             {
-                if (version == 1)
-                    bioVersion = BioVersion.Biohazard1;
-                else if (version == 3)
-                    bioVersion = BioVersion.Biohazard3;
+                if (version == "cv" || version == "cvx")
+                {
+                    bioVersion = BioVersion.BiohazardCv;
+                }
+                else
+                {
+                    if (int.TryParse(version, out var intVersion))
+                    {
+                        if (intVersion == 1)
+                            bioVersion = BioVersion.Biohazard1;
+                        else if (intVersion == 3)
+                            bioVersion = BioVersion.Biohazard3;
+                    }
+                }
             }
 
             if (settings.Extract)
             {
-                var rdtFile = Biohazard.Room.Rdt.FromFile(bioVersion, rdtPath);
+                var rdtFile = Rdt.FromFile(bioVersion, rdtPath);
                 if (bioVersion == BioVersion.Biohazard1)
                 {
                     var rdt1 = (Rdt1)rdtFile;
@@ -96,6 +106,11 @@ namespace IntelOrca.Scd
                     {
                         eventScd[i].Data.WriteToFile($"event_{i:X2}.scd");
                     }
+                }
+                else if (bioVersion == BioVersion.BiohazardCv)
+                {
+                    var rdtCv = (RdtCv)rdtFile;
+                    rdtCv.Script.Data.WriteToFile("main.scd");
                 }
                 else
                 {
@@ -108,20 +123,7 @@ namespace IntelOrca.Scd
             }
             else if (settings.Disassemble)
             {
-                if (rdtPath.EndsWith(".rdt", StringComparison.OrdinalIgnoreCase))
-                {
-                    var rdtFile = Biohazard.Room.Rdt.FromFile(bioVersion, rdtPath);
-                    foreach (var listing in new[] { false, true })
-                    {
-                        if (listing && !settings.Listing)
-                            continue;
-
-                        var script = rdtFile.DisassembleScd(listing);
-                        var extension = listing ? ".lst" : ".s";
-                        File.WriteAllText(Path.ChangeExtension(Path.GetFileName(rdtPath), extension), script);
-                    }
-                }
-                else if (rdtPath.EndsWith(".scd", StringComparison.OrdinalIgnoreCase))
+                if (rdtPath.EndsWith(".scd", StringComparison.OrdinalIgnoreCase))
                 {
                     var kind = settings.MainInput != null ? BioScriptKind.Main : BioScriptKind.Init;
                     var scd = new ScdProcedureList(bioVersion, File.ReadAllBytes(rdtPath));
@@ -132,14 +134,27 @@ namespace IntelOrca.Scd
                     var lstPath = Path.ChangeExtension(rdtPath, ".lst");
                     File.WriteAllText(lstPath, lst);
                 }
+                else
+                {
+                    var rdtFile = Rdt.FromFile(bioVersion, rdtPath);
+                    foreach (var listing in new[] { false, true })
+                    {
+                        if (listing && !settings.Listing)
+                            continue;
+
+                        var script = rdtFile.DisassembleScd(listing);
+                        var extension = listing ? ".lst" : ".s";
+                        File.WriteAllText(Path.ChangeExtension(Path.GetFileName(rdtPath), extension), script);
+                    }
+                }
                 return 0;
             }
             else if (settings.Decompile)
             {
                 if (rdtPath.EndsWith(".rdt", StringComparison.OrdinalIgnoreCase))
                 {
-                    var rdtFile = Biohazard.Room.Rdt.FromFile(bioVersion, rdtPath);
-                    var script = IntelOrca.Biohazard.Extensions.RdtExtensions.DisassembleScd(rdtFile);
+                    var rdtFile = Rdt.FromFile(bioVersion, rdtPath);
+                    var script = RdtExtensions.DisassembleScd(rdtFile);
                     File.WriteAllText(Path.ChangeExtension(Path.GetFileName(rdtPath), ".bio"), script);
                     return 0;
                 }
@@ -183,7 +198,7 @@ namespace IntelOrca.Scd
                 }
                 else
                 {
-                    var rdtFile = Biohazard.Room.Rdt.FromFile(bioVersion, rdtPath).ToBuilder();
+                    var rdtFile = Rdt.FromFile(bioVersion, rdtPath).ToBuilder();
                     if (!string.IsNullOrEmpty(settings.ScriptPath))
                     {
                         var inPath = Path.GetFullPath(settings.ScriptPath);

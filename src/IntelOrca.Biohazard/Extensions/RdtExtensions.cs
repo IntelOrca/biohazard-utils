@@ -37,11 +37,18 @@ namespace IntelOrca.Biohazard.Extensions
         public static void ReadScript(this IRdt rdt, BioScriptVisitor visitor)
         {
             visitor.VisitVersion(rdt.Version);
-            ReadScript(rdt, BioScriptKind.Init, visitor);
-            if (rdt.Version != BioVersion.Biohazard3)
+            if (rdt.Version == BioVersion.BiohazardCv)
+            {
                 ReadScript(rdt, BioScriptKind.Main, visitor);
-            if (rdt.Version == BioVersion.Biohazard1)
-                ReadScript(rdt, BioScriptKind.Event, visitor);
+            }
+            else
+            {
+                ReadScript(rdt, BioScriptKind.Init, visitor);
+                if (rdt.Version != BioVersion.Biohazard3)
+                    ReadScript(rdt, BioScriptKind.Main, visitor);
+                if (rdt.Version == BioVersion.Biohazard1)
+                    ReadScript(rdt, BioScriptKind.Event, visitor);
+            }
         }
 
         private static void ReadScript(this IRdt rdt, BioScriptKind kind, BioScriptVisitor visitor)
@@ -99,6 +106,13 @@ namespace IntelOrca.Biohazard.Extensions
                 {
                     throw new NotSupportedException();
                 }
+            }
+            else if (rdt is RdtCv rdtCv)
+            {
+                var scd = rdtCv.Script;
+                var scdReader = new ScdReader();
+                scdReader.BaseOffset = rdtCv.ScriptOffset;
+                scdReader.ReadScript(scd.Data, rdt.Version, kind, visitor);
             }
         }
     }

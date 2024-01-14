@@ -89,6 +89,7 @@ namespace IntelOrca.Biohazard.Room
         }
 
         public FileHeader Header => Data.GetSafeSpan<FileHeader>(0, 1)[0];
+        public int ScriptOffset => _data.FindChunkByKind(RdtFileChunkKinds.RDTCVScript)?.Offset ?? throw new Exception();
         private ReadOnlySpan<int> ScriptOffsets => Data.GetSafeSpan<int>(Header.TableOffset, 16);
         private ReadOnlySpan<int> ScriptCounts => Data.GetSafeSpan<int>(256, 14);
 

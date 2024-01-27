@@ -79,13 +79,8 @@ namespace IntelOrca.Biohazard.Script
                 0x0A => 4, //
                 0x0B => 4, //
                 0x0C => 4, //
-<<<<<<< Updated upstream
                 0x0D => 4, //
-                0x0E => 6, // set item flag
-=======
-                0x0D => 0, //
                 0x0E => 6, // item_check
->>>>>>> Stashed changes
                 0x0F => 0, //
                 0x14 => 4, //
                 0x18 => 2, //
@@ -106,11 +101,7 @@ namespace IntelOrca.Biohazard.Script
                 0x69 => 6, //
                 0x72 => 14, //
                 0x75 => 4, //
-<<<<<<< Updated upstream
-                0x86 => 14, //
-=======
                 0x86 => 16, //
->>>>>>> Stashed changes
                 0x8B => 4, //
                 0x92 => 2, //
                 0x94 => 4, //
@@ -129,7 +120,6 @@ namespace IntelOrca.Biohazard.Script
 
         public string GetOpcodeSignature(byte opcode, bool isEventOpcode = false)
         {
-<<<<<<< Updated upstream
             return opcode switch
             {
                 0x00 => "end",
@@ -166,9 +156,6 @@ namespace IntelOrca.Biohazard.Script
                 0xFF => "end_of_script",
                 _ => "",
             };
-=======
-            return g_instructionSignatures[opcode];
->>>>>>> Stashed changes
         }
 
         public bool IsOpcodeCondition(byte opcode)

@@ -31,7 +31,7 @@ namespace IntelOrca.Biohazard.Script.Opcodes
         public byte LockType { get; set; }
         public byte Free { get; set; }
 
-        public byte Re1UnkA { get; set; }
+        public byte Special { get; set; }
         public byte Re1UnkB { get; set; }
         public byte Re1UnkC { get; set; }
 
@@ -60,7 +60,7 @@ namespace IntelOrca.Biohazard.Script.Opcodes
                 op.Z = br.ReadInt16();
                 op.W = br.ReadUInt16();
                 op.D = br.ReadUInt16();
-                op.Re1UnkA = br.ReadByte();
+                op.Special = br.ReadByte();
                 op.Re1UnkB = br.ReadByte();
                 op.Animation = br.ReadByte();
                 op.Re1UnkC = br.ReadByte();
@@ -129,7 +129,7 @@ namespace IntelOrca.Biohazard.Script.Opcodes
                 bw.Write(Z);
                 bw.Write(W);
                 bw.Write(D);
-                bw.Write(Re1UnkA);
+                bw.Write(Special);
                 bw.Write(Re1UnkB);
                 bw.Write(Animation);
                 bw.Write(Re1UnkC);

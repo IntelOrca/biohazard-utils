@@ -34,6 +34,13 @@ namespace IntelOrca.Biohazard.Extensions
             return scriptDecompiler.GetScript();
         }
 
+        public static string DecompileScd(this IRdt rdt)
+        {
+            var scriptDecompiler = new ScriptDecompiler(false, false);
+            ReadScript(rdt, scriptDecompiler);
+            return scriptDecompiler.GetScript();
+        }
+
         public static void ReadScript(this IRdt rdt, BioScriptVisitor visitor)
         {
             visitor.VisitVersion(rdt.Version);

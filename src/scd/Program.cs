@@ -154,7 +154,7 @@ namespace IntelOrca.Scd
                 if (rdtPath.EndsWith(".rdt", StringComparison.OrdinalIgnoreCase))
                 {
                     var rdtFile = Rdt.FromFile(bioVersion, rdtPath);
-                    var script = RdtExtensions.DisassembleScd(rdtFile);
+                    var script = RdtExtensions.DecompileScd(rdtFile);
                     File.WriteAllText(Path.ChangeExtension(Path.GetFileName(rdtPath), ".bio"), script);
                     return 0;
                 }

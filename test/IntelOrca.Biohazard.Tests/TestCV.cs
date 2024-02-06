@@ -49,6 +49,9 @@ namespace IntelOrca.Biohazard.Tests
         }
 
         [Fact]
+        public void RDT_000_Rebuild() => AssertRebuild(0);
+
+        [Fact]
         public void RDT_001_Rebuild() => AssertRebuild(1);
 
         [Fact]

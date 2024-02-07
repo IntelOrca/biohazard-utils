@@ -185,28 +185,28 @@ namespace IntelOrca.Biohazard.Room
                     bw.Write(SysmesData);
                 }
 
-                bw.Align(8);
+                bw.Align(4);
                 if (ModelData.Length != 0)
                 {
                     header.ModelOffset = (int)ms.Position;
                     bw.Write(ModelData);
                 }
 
-                bw.Align(8);
+                bw.Align(4);
                 if (MotionData.Length != 0)
                 {
                     header.MotionOffset = (int)ms.Position;
                     bw.Write(MotionData);
                 }
 
-                bw.Align(8);
+                bw.Align(4);
                 if (Script.Data.Length != 0)
                 {
                     header.ScriptOffset = (int)ms.Position;
                     bw.Write(Script.Data);
                 }
 
-                bw.Align(8);
+                bw.Align(4);
                 if (TextureData.Length != 0)
                 {
                     header.TextureOffset = (int)ms.Position;

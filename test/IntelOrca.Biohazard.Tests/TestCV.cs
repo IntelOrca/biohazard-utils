@@ -55,6 +55,9 @@ namespace IntelOrca.Biohazard.Tests
         public void RDT_001_Rebuild() => AssertRebuild(1);
 
         [Fact]
+        public void RDT_006_Rebuild() => AssertRebuild(6);
+
+        [Fact]
         public void RDT_001_Rebuild_WithChange()
         {
             var rdtBuilder = GetRdt(1).ToBuilder();

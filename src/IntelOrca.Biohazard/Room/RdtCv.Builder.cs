@@ -31,7 +31,7 @@ namespace IntelOrca.Biohazard.Room
             public byte[] ModelData { get; set; } = new byte[0];
             public byte[] MotionData { get; set; } = new byte[0];
             public ScdProcedureList Script { get; set; }
-            public byte[] TextureData { get; set; } = new byte[0];
+            public CvTextureList Textures { get; set; }
 
             public RdtCv ToRdt()
             {
@@ -207,10 +207,11 @@ namespace IntelOrca.Biohazard.Room
                 }
 
                 bw.Align(4);
-                if (TextureData.Length != 0)
+                if (Textures.Count != 0)
                 {
                     header.TextureOffset = (int)ms.Position;
-                    bw.Write(TextureData);
+                    var newTextureList = Textures.WithNewBaseOffset(header.TextureOffset);
+                    bw.Write(newTextureList.Data);
                 }
 
                 ms.Position = 0x80;

@@ -84,7 +84,7 @@ namespace IntelOrca.Biohazard.Room
             builder.ModelData = ModelData.ToArray();
             builder.MotionData = MotionData.ToArray();
             builder.Script = Script;
-            builder.TextureData = TextureData.ToArray();
+            builder.Textures = Textures;
             return builder;
         }
 
@@ -117,7 +117,17 @@ namespace IntelOrca.Biohazard.Room
         public ReadOnlyMemory<byte> MotionData => GetChunkMemory(RdtFileChunkKinds.RDTCVMotion);
         public ScdProcedureList Script => new ScdProcedureList(BioVersion.BiohazardCv, GetChunkMemory(RdtFileChunkKinds.RDTCVScript));
         public ReadOnlyMemory<byte> TextureData => GetChunkMemory(RdtFileChunkKinds.RDTCVTexture);
+        public CvTextureList Textures
+        {
+            get
+            {
+                var chunk = _data.FindChunkByKind(RdtFileChunkKinds.RDTCVTexture);
+                if (chunk == null)
+                    throw new NotImplementedException();
 
+                return new CvTextureList(chunk.Value.Offset, chunk.Value.Memory);
+            }
+        }
         private ReadOnlySpan<T> GetTable<T>(int index) where T : struct
         {
             var offset = ScriptOffsets[index];

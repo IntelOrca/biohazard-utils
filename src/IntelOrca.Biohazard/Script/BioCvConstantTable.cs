@@ -35,8 +35,19 @@ namespace IntelOrca.Biohazard.Script
             };
         }
 
-        public string? GetConstant(byte opcode, int pIndex, BinaryReader br)
+        public string? GetConstant(byte opcode, int pIndex, BinaryReader reader)
         {
+            using var br = reader.Fork();
+            if (opcode == 0x08)
+            {
+                if (pIndex == 1)
+                {
+                    var var = br.ReadByte();
+                    var value = br.ReadByte();
+                    if (var == 8)
+                        return GetConstant('t', value);
+                }
+            }
             return null;
         }
 
@@ -64,58 +75,86 @@ namespace IntelOrca.Biohazard.Script
 
         public int GetInstructionSize(byte opcode, BinaryReader? br, bool isEventOpcode = false)
         {
-            var result = opcode switch
+            if (opcode == 0x64 || opcode == 0x66 || opcode == 0x67 || opcode == 0x69)
             {
-                0x00 => 2, // end
-                0x01 => 2, // if
-                0x02 => 2, // else
-                0x03 => 2, // endif
-                0x04 => 6, // ck
-                0x05 => 6, // set
-                0x06 => 4, // cmp
-                0x07 => 6, //
-                0x08 => 4, // sv
-                0x09 => 0, //
-                0x0A => 4, //
-                0x0B => 4, //
-                0x0C => 4, //
-                0x0D => 4, //
-                0x0E => 6, // item_check
-                0x0F => 0, //
-                0x14 => 4, //
-                0x18 => 2, //
-                0x23 => 6, //
-                0x24 => 4, //
-                0x25 => 10, // set_door
-                0x2F => 4, //
-                0x32 => 12, //
-                0x33 => 8, //
-                0x34 => 4, //
-                0x3B => 6, //
-                0x42 => 4, //
-                0x43 => 4, //
-                0x5B => 2, // play_sound_1
-                0x5F => 2, // play_sound_2
-                0x63 => 2, //
-                0x65 => 4, //
-                0x69 => 6, //
-                0x72 => 14, //
-                0x75 => 4, //
-                0x86 => 16, //
-                0x8B => 4, //
-                0x92 => 2, //
-                0x94 => 4, //
-                0x95 => 4, //
-                0x9C => 2, //
-                0xA0 => 2, //
-                0xA6 => 10, //
-                0xBC => 2, //
-                0xCD => 2, //
-                0xD1 => 10, //
-                0xFF => 4, //
-                _ => 0,
-            };
-            return result == 0 ? 2 : result;
+                if (br == null)
+                    return 1;
+
+                if (br.BaseStream.Position == br.BaseStream.Length)
+                    return 1;
+
+                var byte2 = br.ReadByte();
+                br.BaseStream.Position--;
+                var opcode2 = (ushort)((opcode << 8) | byte2);
+                return opcode2 switch
+                {
+                    0x6407 => 8,
+                    0x640D => 6,
+                    0x6434 => 2,
+                    0x6480 => 2,
+                    0x6481 => 12,
+                    0x6482 => 2,
+                    0x6483 => 4,
+                    0x6489 => 4,
+                    0x648B => 2,
+                    0x648E => 2,
+                    0x6496 => 4,
+                    0x6601 => 2,
+                    0x6608 => 2,
+                    0x660C => 6,
+                    0x6614 => 4,
+                    0x6780 => 2,
+                    0x678F => 6,
+                    0x6793 => 8,
+                    0x6794 => 4,
+                    0x6900 => 5,
+                    0x6902 => 3,
+                    0x6903 => 3,
+                    0x6904 => 3,
+                    0x6905 => 6,
+                    0x6906 => 6,
+                    0x6907 => 8,
+                    0x6908 => 8,
+                    0x6909 => 6,
+                    0x690A => 6,
+                    0x690B => 6,
+                    0x690C => 6,
+                    0x690D => 6,
+                    0x690F => 6,
+                    0x6910 => 6,
+                    0x6911 => 4,
+                    0x6912 => 4,
+                    0x6913 => 4,
+                    0x6917 => 4,
+                    0x6918 => 8,
+                    0x6919 => 8,
+                    0x691A => 10,
+                    0x691B => 8,
+                    0x691C => 6,
+                    0x691D => 3,
+                    0x691E => 3,
+                    0x691F => 3,
+                    0x6920 => 3,
+                    0x6921 => 3,
+                    0x6922 => 10,
+                    0x6924 => 2,
+                    0x6926 => 10,
+                    0x6928 => 4,
+                    0x6929 => 4,
+                    0x692A => 4,
+                    0x692C => 5,
+                    0x692E => 4,
+                    0x692F => 2,
+                    0x6930 => 4,
+                    0x6931 => 4,
+                    0x6932 => 4,
+                    0x6933 => 6,
+                    0x6934 => 4,
+                    0x6935 => 4,
+                    _ => 1,
+                };
+            }
+            return _opcodeSizes[opcode];
         }
 
         public string GetOpcodeSignature(byte opcode, bool isEventOpcode = false)
@@ -128,20 +167,107 @@ namespace IntelOrca.Biohazard.Script
                 0x03 => "endif:u",
                 0x04 => "ck:uUuu",
                 0x05 => "set:uUuu",
-                0x06 => "cmp:uuu",
-                0x07 => "",
-                0x08 => "inventory_item:uT",
-                0x09 => "",
-                0x0A => "",
-                0x0B => "",
-                0x0C => "",
-                0x0D => "enemy_set_flag:uU",
-                0x0E => "item_set_flag:0UU",
-                0x0F => "",
-                0x25 => "set_door",
-                0x5B => "play_sound_1",
-                0x5F => "play_sound_2",
-                0x65 => "disable_input",
+                0x06 => "cmpb:uuu",
+                0x07 => "cmpw:uuuU",
+                0x08 => "setb:uuu",
+                0x09 => "setw:uU",
+                0x0A => "set_wall_atari:uuu",
+                0x0B => "set_etc_atari:uuu",
+                0x0C => "set_floor_atari:uuu",
+                0x0D => "ck_death:uU",
+                0x0E => "ck_item:0UU",
+                0x0F => "clr_use_item:u",
+                0x10 => "ck_use_item:t",
+                0x11 => "ck_player_item:u",
+                0x12 => "set_cinematic:u",
+                0x13 => "set_camera:uuu",
+                0x14 => "event_on:uU",
+                0x15 => "bgm_on:uuu",
+                0x16 => "bgm_off:u",
+                0x17 => "se_on:uuuUuu",
+                0x18 => "se_off:u",
+                0x19 => "voice_on:uUuuuu",
+                0x1A => "voice_off:u",
+                0x1B => "ck_adx:uuuuu",
+                0x1C => "bg_se_on:uUuu",
+                0x1D => "bg_se_off:uuu",
+                0x1E => "ck_adx_time:uUuu",
+                0x1F => "set_message:uuu",
+                0x20 => "set_display_object:uuu",
+                0x21 => "ck_death_event:uUuu",
+                0x22 => "set_ck_enemy:uU",
+                0x23 => "set_ck_item:uUuu",
+                0x24 => "set_init_model",
+                0x25 => "set_etc_atari2:uUuuuuuu",
+                0x26 => "ck_arms_item",
+                0x27 => "change_arms_item",
+                0x28 => "sub_status",
+                0x29 => "set_camera_pause",
+                0x2A => "set_camera_2",
+                0x2B => "set_motion_pause",
+                0x2C => "set_effect:uU",
+                0x2D => "init_motion_pause",
+                0x2E => "set_player_motion_pause",
+                0x2F => "init_set_kage",
+                0x30 => "init_motion_pause_ex",
+                0x31 => "player_item_lost:t",
+                0x32 => "set_object_link:uuuuuUUU",
+                0x33 => "set_door_call:uUuuuu",
+                0x34 => "set_player_object_link:uuuuuUUU",
+                0x35 => "set_light",
+                0x36 => "set_fade",
+                0x37 => "room_case_no",
+                0x38 => "ck_frame:uuuU",
+                0x39 => "set_camera_info",
+                0x3A => "set_player_muteki",
+                0x3B => "set_default_model",
+                0x3C => "set_mask",
+                0x3D => "set_lip",
+                0x3E => "start_mask",
+                0x3F => "start_lip",
+                0x40 => "set_player_start_look_g:uUUU",
+                0x41 => "set_player_stop_look_g",
+                0x42 => "set_item_aspd:uuu",
+                0x43 => "set_effect_display:uuu",
+                0x44 => "set_effect_amb",
+                0x45 => "delete_object_se",
+                0x46 => "set_next_room_bgm:uuuUuu",
+                0x47 => "set_next_room_bg_se:uuuUUuu",
+                0x48 => "call_foot_se",
+                0x49 => "call_weapon_se",
+                0x4A => "set_yakkyou",
+                0x4B => "set_light_type",
+                0x4C => "set_fog_color",
+                0x4D => "ck_player_item_block",
+                0x4E => "set_effect_blood:uuuUUUuuuu",
+                0x4F => "set_cyouten_henkei",
+                0x50 => "set_object_motion",
+                0x51 => "set_object_enemy_link:uuuuuUUU",
+                0x52 => "set_object_item_link:uuuuuUUU",
+                0x53 => "set_enemy_item_link:uuuuuUUU",
+                0x54 => "set_enemy_enemy_link:uuuuuUUU",
+                0x55 => "start_cyouten_henkei",
+                0x56 => "set_effect_blood_pool:uuuU",
+                0x57 => "fix_event_camera_player",
+                0x58 => "set_effect_blood_pool_2:uUUUuuuuU",
+                0x59 => "set_object_object_link:uuuuuUUU",
+                0x5A => "set_camera_yure:uU",
+                0x5B => "set_init_camera",
+                0x5C => "set_message_display_end",
+                0x5D => "check_pad",
+                0x5E => "start_movie",
+                0x5F => "stop_movie",
+                0x60 => "check_t_frame:uuuU",
+                0x61 => "check_event_timer",
+                0x62 => "check_camera",
+                0x63 => "set_random",
+                0x65 => "load_work",
+                0x68 => "load_work_2",
+                0x6A => "set_event_skip",
+                0x6B => "delete_yakkyou",
+                0x6F => "set_object_player_link:uuuuuUUU",
+                0x7B => "set_wall_atari_2:uUtuuuuu",
+                0x7C => "set_floor_atari_2:uUtuuuuu",
                 0x95 => "play_bgm",
                 0xA0 => "show_map",
                 0xA1 => "reduce_health",
@@ -150,10 +276,24 @@ namespace IntelOrca.Biohazard.Script
                 0xA4 => "animation",
                 0xA6 => "play_bgm_A6",
                 0xA7 => "play_bgm_A7",
+                0xB2 => "get_item",
+                0xB7 => "item_to_box:t",
+                0xB8 => "item_from_box:t",
+                0xBF => "player_item_lost_ex",
+                0xC2 => "get_item_ex:uuuU",
                 0xCB => "countdown",
                 0xCD => "main_menu",
                 0xCE => "enable_first_person",
-                0xFF => "end_of_script",
+                0xCF => "init_game_item_ex",
+                0xF3 => "ewhile2",
+                0xF8 => "sleep:uU",
+                0xF9 => "sleeping:uu",
+                0xFA => "for:uU",
+                0xFB => "next:u",
+                0xFC => "while:u",
+                0xFD => "ewhile",
+                0xFE => "event_next",
+                0xFF => "event_end:u",
                 _ => "",
             };
         }
@@ -162,6 +302,28 @@ namespace IntelOrca.Biohazard.Script
         {
             return opcode == 4;
         }
+
+        private byte[] _opcodeSizes = new byte[]
+        {
+            2, 2, 2, 2, 6, 6, 4, 6, 4, 4, 4, 4, 4, 4, 6, 2, 2,
+            2, 2, 4, 4, 4, 2, 8, 2, 8, 2, 6, 6, 4,
+            6, 4, 4, 6, 4, 6, 4, 10, 2, 2, 2, 2, 4,
+            2, 4, 2, 2, 4, 4, 2, 12, 8, 12, 4, 6, 2,
+            6, 4, 2, 6, 4, 4, 4, 4, 8, 2, 4, 4,
+            6, 2, 8, 10, 6, 10, 8, 4, 6, 4, 14, 6, 2, 12,
+            12, 12, 12, 2, 6, 2, 14, 12, 4, 2, 2, 6, 4, 2,
+            6, 2, 6, 2, 0, 4, 0, 0, 6, 0, 2, 2, 8, 22, 22, 12,
+            2, 2, 14, 22, 4, 4, 4, 6, 14, 6, 2, 10, 10,
+            4, 4, 6, 4, 2, 4, 2, 8, 4, 16, 2, 10, 2,
+            2, 12, 6, 2, 4, 4, 2, 4, 2, 2, 4, 4, 2, 8, 12,
+            4, 4, 6, 2, 4, 2, 2, 6, 2, 4, 12, 4, 4,
+            4, 4, 10, 2, 10, 6, 6, 4, 2, 4, 22, 6, 4, 8, 4,
+            4, 2, 2, 2, 10, 16, 2, 2, 2, 6, 4, 28, 2, 6, 4, 8,
+            2, 2, 4, 8, 4, 2, 2, 4, 2, 2, 2, 4, 10, 10,
+            2, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 4, 3, 4, 2, 2, 1, 1, 2,
+        };
 
         private static string[] g_instructionSignatures = new string[]
         {

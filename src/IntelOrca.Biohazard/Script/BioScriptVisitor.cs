@@ -111,7 +111,7 @@ namespace IntelOrca.Biohazard.Script
                         _ => UnknownOpcode.Read(br, offset, length),
                     };
                 default:
-                    throw new NotSupportedException();
+                    return UnknownOpcode.Read(br, offset, length);
             }
         }
     }

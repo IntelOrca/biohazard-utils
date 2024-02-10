@@ -181,7 +181,7 @@ namespace IntelOrca.Biohazard.Script
                 0x11 => "ck_player_item:u",
                 0x12 => "set_cinematic:u",
                 0x13 => "set_camera:uuu",
-                0x14 => "event_on:uU",
+                0x14 => "event_on:uuu",
                 0x15 => "bgm_on:uuu",
                 0x16 => "bgm_off:u",
                 0x17 => "se_on:uuuUuu",
@@ -300,7 +300,13 @@ namespace IntelOrca.Biohazard.Script
 
         public bool IsOpcodeCondition(byte opcode)
         {
-            return opcode == 4;
+            return opcode switch
+            {
+                0x04 => true,
+                0x06 => true,
+                0x07 => true,
+                _ => false,
+            };
         }
 
         private byte[] _opcodeSizes = new byte[]

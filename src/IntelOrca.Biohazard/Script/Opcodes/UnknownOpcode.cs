@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.IO;
 
 namespace IntelOrca.Biohazard.Script.Opcodes
@@ -32,12 +33,24 @@ namespace IntelOrca.Biohazard.Script.Opcodes
 
         public void NopOut(BioVersion version)
         {
-            var code = version == BioVersion.Biohazard1 ? (byte)OpcodeV1.Nop : (byte)OpcodeV2.Nop;
+            var code = GetNopOpcode(version);
             Opcode = code;
             for (int i = 0; i < Data.Length; i++)
             {
                 Data[i] = code;
             }
+        }
+
+        private static byte GetNopOpcode(BioVersion version)
+        {
+            return version switch
+            {
+                BioVersion.Biohazard1 => (byte)OpcodeV1.Nop,
+                BioVersion.Biohazard2 => (byte)OpcodeV2.Nop,
+                BioVersion.Biohazard3 => (byte)OpcodeV3.Nop,
+                BioVersion.BiohazardCv => (byte)0xF4,
+                _ => throw new NotImplementedException()
+            };
         }
     }
 }

@@ -253,6 +253,10 @@ namespace IntelOrca.Biohazard.Script
                         if (VisitOpcode(offset, (OpcodeV3)opcode, br))
                             return;
                         break;
+                    case BioVersion.BiohazardCv:
+                        if (VisitOpcode(offset, opcode, br))
+                            return;
+                        break;
                 }
                 br.BaseStream.Position = backupPosition;
             }
@@ -816,6 +820,47 @@ namespace IntelOrca.Biohazard.Script
             }
             return true;
         }
+
+        private bool VisitOpcode(int offset, byte opcode, BinaryReader br)
+        {
+            var sb = _sb;
+            br.ReadByte();
+            switch (opcode)
+            {
+                default:
+                    return false;
+                case 0x00:
+                {
+                    br.ReadByte();
+                    _lastReturnLine = sb.LineCount;
+                    sb.WriteLine($"evt_end(0);");
+                    break;
+                }
+                case 0x01:
+                {
+                    sb.Write("if (");
+                    _constructingBinaryExpression = true;
+                    _expressionCount = 0;
+                    break;
+                }
+                case 0x02:
+                {
+                    var blockLen = br.ReadByte();
+                    _sb.CloseBlock();
+                    _blockEnds.Push(((byte)opcode, offset + blockLen));
+                    sb.WriteLine("else");
+                    _sb.OpenBlock();
+                    break;
+                }
+                case 0x03:
+                    _sb.CloseBlock();
+                    break;
+                case 0xF4:
+                    break;
+            }
+            return true;
+        }
+
 
         private void DiassembleGeneralOpcode(BinaryReader br, int offset, byte opcode, int instructionLength, bool isEventOpcode = false)
         {

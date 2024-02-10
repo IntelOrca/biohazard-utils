@@ -175,7 +175,7 @@ namespace IntelOrca.Biohazard.Script
                 0x0B => "set_etc_atari:uuu",
                 0x0C => "set_floor_atari:uuu",
                 0x0D => "ck_death:uU",
-                0x0E => "ck_item:0UU",
+                0x0E => "ck_item:0Uuu",
                 0x0F => "clr_use_item:u",
                 0x10 => "ck_use_item:t",
                 0x11 => "ck_player_item:u",

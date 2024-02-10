@@ -305,6 +305,13 @@ namespace IntelOrca.Biohazard.Script
                 0x04 => true,
                 0x06 => true,
                 0x07 => true,
+                0x10 => true,
+                0x11 => true,
+                0x21 => true,
+                0x26 => true,
+                0x5D => true,
+                0x72 => true,
+                0x81 => true,
                 _ => false,
             };
         }

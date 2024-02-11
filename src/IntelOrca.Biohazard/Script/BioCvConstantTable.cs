@@ -29,6 +29,7 @@ namespace IntelOrca.Biohazard.Script
             return kind switch
             {
                 '0' => $"ID_ITEM_{value}",
+                'p' => GetProcedureName(value),
                 'T' => GetItemName((byte)value),
                 't' => GetItemName((byte)value),
                 _ => null
@@ -38,7 +39,18 @@ namespace IntelOrca.Biohazard.Script
         public string? GetConstant(byte opcode, int pIndex, BinaryReader reader)
         {
             using var br = reader.Fork();
-            if (opcode == 0x08)
+            if (opcode == 0x06)
+            {
+                if (pIndex == 2)
+                {
+                    var var = br.ReadByte();
+                    br.ReadByte();
+                    var value = br.ReadByte();
+                    if (var == 8)
+                        return GetConstant('t', value);
+                }
+            }
+            else if (opcode == 0x08)
             {
                 if (pIndex == 1)
                 {
@@ -54,6 +66,11 @@ namespace IntelOrca.Biohazard.Script
         public int? GetConstantValue(string symbol)
         {
             return null;
+        }
+
+        private string GetProcedureName(int value)
+        {
+            return $"main_{value + 2:X2}";
         }
 
         public string GetEnemyName(byte kind)
@@ -178,10 +195,10 @@ namespace IntelOrca.Biohazard.Script
                 0x0E => "ck_item:0Uuu",
                 0x0F => "clr_use_item:u",
                 0x10 => "ck_use_item:t",
-                0x11 => "ck_player_item:u",
+                0x11 => "ck_player_item:t",
                 0x12 => "set_cinematic:u",
                 0x13 => "set_camera:uuu",
-                0x14 => "event_on:uuu",
+                0x14 => "event_on:uup",
                 0x15 => "bgm_on:uuu",
                 0x16 => "bgm_off:u",
                 0x17 => "se_on:uuuUuu",
@@ -196,7 +213,7 @@ namespace IntelOrca.Biohazard.Script
                 0x20 => "set_display_object:uuu",
                 0x21 => "ck_death_event:uUuu",
                 0x22 => "set_ck_enemy:uU",
-                0x23 => "set_ck_item:uUuu",
+                0x23 => "set_ck_item:0Uuu",
                 0x24 => "set_init_model",
                 0x25 => "set_etc_atari2:uUuuuuuu",
                 0x26 => "ck_arms_item",
@@ -360,7 +377,7 @@ namespace IntelOrca.Biohazard.Script
             "player_item_check:t",
             "cinematic_set",
             "camera_set",
-            "event_on",
+            "event_on:uup",
             "bgm_on",
             "bgm_on",
             "se_on",

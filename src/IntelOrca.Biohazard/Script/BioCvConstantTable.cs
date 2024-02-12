@@ -294,6 +294,7 @@ namespace IntelOrca.Biohazard.Script
                 0xA6 => "play_bgm_A6",
                 0xA7 => "play_bgm_A7",
                 0xB2 => "get_item",
+                0xB6 => "room_sound_case",
                 0xB7 => "item_to_box:t",
                 0xB8 => "item_from_box:t",
                 0xBF => "player_item_lost_ex",

@@ -7,21 +7,31 @@ namespace IntelOrca.Biohazard
     {
         public int Stage { get; }
         public int Room { get; }
+        public int? Variant { get; }
 
-        public RdtId(int stage, int room) : this()
+        public RdtId(int stage, int room) : this(stage, room, null)
+        {
+        }
+
+        public RdtId(int stage, int room, int? variant) : this()
         {
             Stage = stage;
             Room = room;
+            Variant = variant;
         }
 
         public override bool Equals(object? obj) => obj is RdtId id && Equals(id);
-        public bool Equals(RdtId other) => Stage == other.Stage && Room == other.Room;
+        public bool Equals(RdtId other) =>
+            Stage == other.Stage &&
+            Room == other.Room &&
+            Variant == other.Variant;
 
         public override int GetHashCode()
         {
             int hash = 17;
             hash = hash * 23 + Stage;
             hash = hash * 23 + Room;
+            hash = hash * 23 + Variant ?? 0;
             return hash;
         }
 
@@ -31,7 +41,9 @@ namespace IntelOrca.Biohazard
                 return -1;
             if (Stage > other.Stage)
                 return 1;
-            return Room - other.Room;
+            if (Room != other.Room)
+                return Room - other.Room;
+            return (Variant ?? 0) - (other.Variant ?? 0);
         }
 
         public static bool operator ==(RdtId left, RdtId right) => left.Equals(right);
@@ -52,36 +64,45 @@ namespace IntelOrca.Biohazard
         public static bool TryParse(string s, out RdtId id)
         {
             id = default(RdtId);
-            if (s.Length < 2)
+            if (s.Length < 2 || s.Length > 4)
                 return false;
-            var c = char.ToUpper(s[0]);
 
-            int stage;
-            if (c >= '0' && c <= '9')
+            var stage = ParseHex(s[0]);
+            if (stage == null)
+                return false;
+
+            if (!int.TryParse(s.Substring(1, 2), NumberStyles.HexNumber, null, out var room))
+                return false;
+
+            if (s.Length == 4)
             {
-                stage = c - '0';
-            }
-            else if (c >= 'A' && c <= 'G')
-            {
-                stage = 10 + (c - 'A');
+                var variant = ParseHex(s[3]);
+                id = new RdtId(stage.Value - 1, room, variant);
             }
             else
             {
-                return false;
+                id = new RdtId(stage.Value - 1, room);
             }
-
-            if (!int.TryParse(s.Substring(1), NumberStyles.HexNumber, null, out var room))
-                return false;
-
-            id = new RdtId(stage - 1, room);
             return true;
+        }
+
+        private static int? ParseHex(char c)
+        {
+            c = char.ToUpper(c);
+            if (c >= '0' && c <= '9')
+                return c - '0';
+            else if (c >= 'A' && c <= 'G')
+                return 10 + (c - 'A');
+            else
+                return null;
         }
 
         public override string ToString()
         {
+            var var = Variant == null ? "" : Variant.Value.ToString("X");
             if (Stage == 15)
-                return $"G{Room:X2}";
-            return $"{Stage + 1:X}{Room:X2}";
+                return $"G{Room:X2}{var}";
+            return $"{Stage + 1:X}{Room:X2}{var}";
         }
     }
 }

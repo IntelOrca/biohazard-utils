@@ -10,6 +10,7 @@ namespace IntelOrca.Biohazard.Script
                 BioVersion.Biohazard1 => new Bio1ConstantTable(),
                 BioVersion.Biohazard2 => new Bio2ConstantTable(),
                 BioVersion.Biohazard3 => new Bio3ConstantTable(),
+                BioVersion.BiohazardCv => new BioCvConstantTable(),
                 _ => throw new NotSupportedException()
             };
     }

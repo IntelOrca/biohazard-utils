@@ -29,6 +29,8 @@ namespace IntelOrca.Biohazard.Script
             return kind switch
             {
                 '0' => $"ID_ITEM_{value}",
+                '1' => $"ID_AOT_{value}",
+                'f' => GetFlagName(value),
                 'p' => GetProcedureName(value),
                 'T' => GetItemName((byte)value),
                 't' => GetItemName((byte)value),
@@ -39,7 +41,18 @@ namespace IntelOrca.Biohazard.Script
         public string? GetConstant(byte opcode, int pIndex, BinaryReader reader)
         {
             using var br = reader.Fork();
-            if (opcode == 0x06)
+            if (opcode == 0x04 || opcode == 0x05)
+            {
+                if (pIndex == 2)
+                {
+                    var a = br.ReadByte();
+                    var b = br.ReadUInt16();
+                    var c = br.ReadByte();
+                    if (a == 10 && b == 23)
+                        return GetConstant('1', c);
+                }
+            }
+            else if (opcode == 0x06)
             {
                 if (pIndex == 2)
                 {
@@ -66,6 +79,19 @@ namespace IntelOrca.Biohazard.Script
         public int? GetConstantValue(string symbol)
         {
             return null;
+        }
+
+        private string GetFlagName(int value)
+        {
+            return value switch
+            {
+                1 => "FG_COMMON",
+                3 => "FG_ENEMY",
+                4 => "FG_LOCAL",
+                7 => "FG_ITEM",
+                10 => "FG_AOT",
+                _ => $"FG_{value}"
+            };
         }
 
         private string GetProcedureName(int value)
@@ -225,17 +251,17 @@ namespace IntelOrca.Biohazard.Script
             "if:\'",
             "else:l",
             "endif:u",
-            "ck:uUuu",
-            "set:uUuu",
+            "ck:fUuu",
+            "set:fUuu",
             "cmpb:uuu",
             "cmpw:uuuU",
             "setb:uuu",
             "setw:uU",
             "set_wall_atari:uuu",
-            "set_etc_atari:uuu",
+            "set_etc_atari:1uu",
             "set_floor_atari:uuu",
             "ck_death:uU",
-            "ck_item:0Uuu",
+            "ck_item:0U1u",
             "clr_use_item:u",
             "ck_use_item:t",
             "ck_player_item:t",
@@ -256,9 +282,9 @@ namespace IntelOrca.Biohazard.Script
             "set_display_object:uuu",
             "ck_death_event:uUuu",
             "set_ck_enemy:uU",
-            "set_ck_item:0Uuu",
+            "set_ck_item:0U1u",
             "set_init_model",
-            "set_etc_atari2:uUuuuuuu",
+            "set_etc_atari2:1Uuuuuuu",
             "ck_arms_item",
             "change_arms_item",
             "sub_status",

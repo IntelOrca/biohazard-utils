@@ -222,6 +222,7 @@ namespace IntelOrca.Scd
                                 {
                                     Console.WriteLine(error);
                                 }
+                                return 1;
                             }
                         }
                     }

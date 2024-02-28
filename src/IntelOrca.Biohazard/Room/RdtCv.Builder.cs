@@ -28,8 +28,8 @@ namespace IntelOrca.Biohazard.Room
             public List<Reaction> Reactions { get; } = new List<Reaction>();
             public CvMsgList TextData { get; set; }
             public byte[] SysmesData { get; set; } = new byte[0];
-            public byte[] ModelData { get; set; } = new byte[0];
-            public byte[] MotionData { get; set; } = new byte[0];
+            public CvModelList Models { get; set; }
+            public CvMotionList Motions { get; set; }
             public ScdProcedureList Script { get; set; }
             public CvTextureList Textures { get; set; }
 
@@ -186,17 +186,19 @@ namespace IntelOrca.Biohazard.Room
                 }
 
                 bw.Align(4);
-                if (ModelData.Length != 0)
+                if (Models.Data.Length != 0)
                 {
                     header.ModelOffset = (int)ms.Position;
-                    bw.Write(ModelData);
+                    var newModelList = Models.WithNewBaseOffset(header.ModelOffset);
+                    bw.Write(newModelList.Data);
                 }
 
                 bw.Align(4);
-                if (MotionData.Length != 0)
+                if (Motions.Data.Length != 0)
                 {
                     header.MotionOffset = (int)ms.Position;
-                    bw.Write(MotionData);
+                    var newMotionList = Motions.WithNewBaseOffset(header.MotionOffset);
+                    bw.Write(newMotionList.Data);
                 }
 
                 bw.Align(4);
@@ -207,7 +209,7 @@ namespace IntelOrca.Biohazard.Room
                 }
 
                 bw.Align(4);
-                if (Textures.Count != 0)
+                if (Textures.Data.Length != 0)
                 {
                     header.TextureOffset = (int)ms.Position;
                     var newTextureList = Textures.WithNewBaseOffset(header.TextureOffset);

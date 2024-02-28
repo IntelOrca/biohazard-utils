@@ -100,6 +100,9 @@ namespace IntelOrca.Biohazard.Tests
         }
 
         [Fact]
+        public void RDT_012_Rebuild() => AssertRebuild(12);
+
+        [Fact]
         public void RDT_013_Rebuild() => AssertRebuild(13);
 
         [Fact(Skip = "Takes too long")]

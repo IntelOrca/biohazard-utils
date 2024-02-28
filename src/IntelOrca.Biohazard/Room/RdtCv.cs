@@ -81,8 +81,8 @@ namespace IntelOrca.Biohazard.Room
             builder.Reactions.AddRange(Reactions.ToArray());
             builder.TextData = TextData;
             builder.SysmesData = SysmesData.ToArray();
-            builder.ModelData = ModelData.ToArray();
-            builder.MotionData = MotionData.ToArray();
+            builder.Models = Models;
+            builder.Motions = Motions;
             builder.Script = Script;
             builder.Textures = Textures;
             return builder;
@@ -113,10 +113,29 @@ namespace IntelOrca.Biohazard.Room
         public ReadOnlySpan<Reaction> Reactions => GetChunkTypedSpan<Reaction>(RdtFileChunkKinds.RDTCVAction);
         public CvMsgList TextData => new CvMsgList(GetChunkMemory(RdtFileChunkKinds.RDTCVText));
         public ReadOnlyMemory<byte> SysmesData => GetChunkMemory(RdtFileChunkKinds.RDTCVSysmes);
-        public ReadOnlyMemory<byte> ModelData => GetChunkMemory(RdtFileChunkKinds.RDTCVModel);
-        public ReadOnlyMemory<byte> MotionData => GetChunkMemory(RdtFileChunkKinds.RDTCVMotion);
+        public CvMotionList Motions
+        {
+            get
+            {
+                var chunk = _data.FindChunkByKind(RdtFileChunkKinds.RDTCVMotion);
+                if (chunk == null)
+                    throw new NotImplementedException();
+
+                return new CvMotionList(chunk.Value.Offset, chunk.Value.Memory);
+            }
+        }
+        public CvModelList Models
+        {
+            get
+            {
+                var chunk = _data.FindChunkByKind(RdtFileChunkKinds.RDTCVModel);
+                if (chunk == null)
+                    throw new NotImplementedException();
+
+                return new CvModelList(chunk.Value.Offset, chunk.Value.Memory);
+            }
+        }
         public ScdProcedureList Script => new ScdProcedureList(BioVersion.BiohazardCv, GetChunkMemory(RdtFileChunkKinds.RDTCVScript));
-        public ReadOnlyMemory<byte> TextureData => GetChunkMemory(RdtFileChunkKinds.RDTCVTexture);
         public CvTextureList Textures
         {
             get

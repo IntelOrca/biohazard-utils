@@ -31,23 +31,28 @@ namespace IntelOrca.Biohazard
             return header;
         }
 
-        public ReadOnlySpan<byte> GetPixelData(int index)
+        public ReadOnlyMemory<byte> GetPixelData(int index)
         {
             var offset = GetPictureOffset(index);
             var header = GetHeader(index);
             var pixelOffset = offset + header.HeaderSize;
             var pixelLength = header.ImageSize;
-            return Data.Span.Slice(pixelOffset, pixelLength);
+            return Data.Slice(pixelOffset, pixelLength);
         }
 
-        public ReadOnlySpan<byte> GetPaletteData(int index)
+        public ReadOnlyMemory<byte> GetPaletteData(int index)
         {
             var offset = GetPictureOffset(index);
             var header = GetHeader(index);
             var paletteOffset = offset + header.HeaderSize + header.ImageSize;
             var paletteLength = header.ClutSize;
-            return Data.Span.Slice(paletteOffset, paletteLength);
+            return Data.Slice(paletteOffset, paletteLength);
         }
+
+        public Picture Picture0 => new Picture(
+            GetHeader(0),
+            GetPaletteData(0),
+            GetPixelData(0));
 
         [StructLayout(LayoutKind.Sequential)]
         public struct PictureHeader
@@ -67,6 +72,95 @@ namespace IntelOrca.Biohazard
             public long GsTex1;
             public int GsFlags;
             public int GsClut;
+        }
+
+        public readonly struct Picture
+        {
+            private readonly PictureHeader _header;
+
+            public PictureHeader Header => _header;
+            public ReadOnlyMemory<byte> PaletteData { get; }
+            public ReadOnlyMemory<byte> PixelData { get; }
+
+            public Picture(PictureHeader header, ReadOnlyMemory<byte> paletteData, ReadOnlyMemory<byte> pixelData)
+            {
+                _header = header;
+                PaletteData =
+                    header.ImageColourType == 5 ?
+                        FixPalette(paletteData) :
+                        paletteData;
+                PixelData = pixelData;
+            }
+
+            public int Width => _header.Width;
+            public int Height => _header.Height;
+
+            public int GetColour(int paletteIndex)
+            {
+                var palette = MemoryMarshal.Cast<byte, int>(PaletteData.Span);
+                return palette[paletteIndex];
+            }
+
+            public byte GetPixelRaw(int x, int y)
+            {
+                ref readonly var header = ref _header;
+                var pixelData = PixelData.Span;
+                if (header.ImageColourType == 5)
+                {
+                    return pixelData[y * header.Width + x];
+                }
+                else
+                {
+                    var byteIndex = y * (header.Width / 2) + (x / 2);
+                    var bb = pixelData[byteIndex];
+                    if ((x & 1) == 0)
+                        return (byte)(bb & 0x0F);
+                    else
+                        return (byte)(bb >> 4);
+                }
+            }
+
+            public int GetPixel(int x, int y)
+            {
+                var raw = GetPixelRaw(x, y);
+                return Rgba2Argb(GetColour(raw));
+            }
+
+            private static ReadOnlyMemory<byte> FixPalette(ReadOnlyMemory<byte> paletteData)
+            {
+                var colours = MemoryMarshal.Cast<byte, int>(paletteData.Span);
+                var resultData = new byte[colours.Length * 4];
+                var result = MemoryMarshal.Cast<byte, int>(resultData);
+                var parts = colours.Length / 32;
+                var stripes = 2;
+                var colors = 8;
+                var blocks = 2;
+                var startIndex = 0;
+                var i = 0;
+                for (var part = 0; part < parts; part++)
+                {
+                    for (var block = 0; block < blocks; block++)
+                    {
+                        for (var stripe = 0; stripe < stripes; stripe++)
+                        {
+                            for (var color = 0; color < colors; color++)
+                            {
+                                result[i++] = colours[startIndex + part * colors * stripes * blocks + block * colors + stripe * stripes * colors + color];
+                            }
+                        }
+                    }
+                }
+                return resultData;
+            }
+
+            private static int Rgba2Argb(int value)
+            {
+                int r = (value & 0xFF);
+                int g = (value >> 8) & 0xFF;
+                int b = (value >> 16) & 0xFF;
+                int a = (value >> 24) & 0xFF;
+                return (a << 24) | (r << 16) | (g << 8) | b;
+            }
         }
     }
 }

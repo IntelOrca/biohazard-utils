@@ -223,61 +223,22 @@ namespace IntelOrca.Biohazard
                 return (a << 24) | (b << 16) | (g << 8) | r;
             }
 
-            public byte[] ToBitmapBuffer()
+            public int[] GetArgb()
             {
-                var stride = (((Width * 3) + 3) / 4) * 4;
-                var padding = stride - (Width * 3);
-                var rawDataLength = stride * Height;
-
-                var ms = new MemoryStream();
-                var bw = new BinaryWriter(ms);
-
-                // BMP header
-                bw.Write((byte)0x42);
-                bw.Write((byte)0x4D);
-                bw.Write(0);
-                bw.Write((ushort)0);
-                bw.Write((ushort)0);
-                bw.Write((uint)54);
-
-                // DIB header
-                bw.Write((uint)40);
-                bw.Write((uint)Width);
-                bw.Write((uint)Height);
-                bw.Write((ushort)1);
-                bw.Write((ushort)24);
-                bw.Write((uint)0);
-                bw.Write((uint)rawDataLength);
-                bw.Write((uint)0x0B13); // DPI X
-                bw.Write((uint)0x0B13); // DPI Y
-                bw.Write((uint)0);
-                bw.Write((uint)0);
-
+                var result = new int[Width * Height];
                 for (var y = 0; y < Height; y++)
                 {
                     for (var x = 0; x < Width; x++)
                     {
-                        var p = GetPixel(x, Height - y - 1);
-                        bw.Write((byte)((p >> 0) & 0xFF));
-                        bw.Write((byte)((p >> 8) & 0xFF));
-                        bw.Write((byte)((p >> 16) & 0xFF));
-                    }
-                    for (var i = 0; i < padding; i++)
-                    {
-                        bw.Write(0);
+                        result[y * Width + x] = GetPixel(x, y);
                     }
                 }
-
-                ms.Position = 2;
-                bw.Write((uint)ms.Length);
-
-                return ms.ToArray();
+                return result;
             }
 
-            public Builder ToBuilder()
-            {
-                return new Builder(_header, _paletteData.ToArray(), _pixelData.ToArray());
-            }
+            public Bmp ToBmp() => Bmp.FromArgb(Width, Height, GetArgb());
+
+            public Builder ToBuilder() => new Builder(_header, _paletteData.ToArray(), _pixelData.ToArray());
 
             public class Builder
             {

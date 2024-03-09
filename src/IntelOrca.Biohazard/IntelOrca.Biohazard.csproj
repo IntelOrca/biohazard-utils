@@ -24,4 +24,7 @@
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
+  <ItemGroup>
+    <NativeLibs Remove="Bmp.cs" />
+  </ItemGroup>
 </Project>

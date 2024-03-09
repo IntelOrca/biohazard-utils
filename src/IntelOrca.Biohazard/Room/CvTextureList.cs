@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using IntelOrca.Biohazard.Extensions;
 
@@ -17,6 +18,7 @@ namespace IntelOrca.Biohazard.Room
 
         public int Count => Data.GetSafeSpan<int>(0, 1)[0];
         public ReadOnlySpan<int> Offsets => Data.GetSafeSpan<int>(4, Count);
+        public int HeaderSize => Offsets[0] - BaseOffset;
 
         public ReadOnlySpan<CvTextureEntryGroup> Groups
         {
@@ -45,19 +47,60 @@ namespace IntelOrca.Biohazard.Room
 
         public CvTextureList WithNewBaseOffset(int baseOffset)
         {
-            var ms = new MemoryStream();
-            var bw = new BinaryWriter(ms);
+            var builder = ToBuilder();
+            builder.BaseOffset = baseOffset;
+            return builder.ToTextureList();
+        }
 
-            bw.Write(Count);
+        public CvTextureList WithNewTexture(int groupIndex, int entryIndex, Tim2 value)
+        {
+            var builder = ToBuilder();
+            var groupBuilder = builder.Groups[groupIndex].ToBuilder();
+            groupBuilder.Entries[entryIndex] = new CvTextureEntry(value);
+            builder.Groups[groupIndex] = groupBuilder.ToGroup();
+            return builder.ToTextureList();
+        }
 
-            var originalOffsets = Offsets;
-            for (var i = 0; i < Count; i++)
+        public Builder ToBuilder()
+        {
+            var builder = new Builder();
+            builder.BaseOffset = BaseOffset;
+            builder.HeaderSize = HeaderSize;
+            foreach (var g in Groups)
             {
-                bw.Write(baseOffset + (originalOffsets[i] - BaseOffset));
+                builder.Groups.Add(g);
             }
+            return builder;
+        }
 
-            bw.Write(Data.Slice((int)ms.Length));
-            return new CvTextureList(baseOffset, ms.ToArray());
+        public class Builder
+        {
+            public int BaseOffset { get; set; }
+            public int HeaderSize { get; set; }
+            public List<CvTextureEntryGroup> Groups { get; } = new List<CvTextureEntryGroup>();
+
+            public CvTextureList ToTextureList()
+            {
+                var ms = new MemoryStream();
+                var bw = new BinaryWriter(ms);
+                bw.Write(Groups.Count);
+
+                var firstOffset = HeaderSize;
+                var offset = BaseOffset + firstOffset;
+                foreach (var group in Groups)
+                {
+                    bw.Write(offset);
+                    offset += group.Data.Length;
+                }
+
+                ms.Position = firstOffset;
+                foreach (var group in Groups)
+                {
+                    bw.Write(group.Data);
+                }
+
+                return new CvTextureList(BaseOffset, ms.ToArray());
+            }
         }
     }
 
@@ -123,6 +166,32 @@ namespace IntelOrca.Biohazard.Room
             }
             return offset;
         }
+
+        public Builder ToBuilder()
+        {
+            var builder = new Builder();
+            foreach (var e in Entries)
+            {
+                builder.Entries.Add(e);
+            }
+            return builder;
+        }
+
+        public class Builder
+        {
+            public List<CvTextureEntry> Entries { get; } = new List<CvTextureEntry>();
+
+            public CvTextureEntryGroup ToGroup()
+            {
+                var ms = new MemoryStream();
+                var bw = new BinaryWriter(ms);
+                foreach (var entry in Entries)
+                {
+                    bw.Write(entry.Data);
+                }
+                return new CvTextureEntryGroup(ms.ToArray());
+            }
+        }
     }
 
     public readonly struct CvTextureEntry
@@ -135,6 +204,20 @@ namespace IntelOrca.Biohazard.Room
         public CvTextureEntry(ReadOnlyMemory<byte> data)
         {
             Data = data;
+        }
+
+        public CvTextureEntry(Tim2 tim2)
+        {
+            var ms = new MemoryStream();
+            var bw = new BinaryWriter(ms);
+            bw.Write(0x324D4954);
+            bw.Write(tim2.Data.Length);
+            for (var i = 0; i < 32 - 8; i++)
+            {
+                bw.Write((byte)0x00);
+            }
+            bw.Write(tim2.Data);
+            Data = ms.ToArray();
         }
 
         public CvTextureEntryKind Kind

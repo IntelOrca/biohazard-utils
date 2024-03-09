@@ -150,6 +150,34 @@ namespace IntelOrca.Biohazard.Tests
             Assert.False(fail);
         }
 
+        [Fact]
+        public void RDT_208_Texture_Rebuild()
+        {
+            var rdts = new[] { 0, 1, 22 };
+            foreach (var rdtNum in rdts)
+            {
+                var rdt = GetRdt(rdtNum);
+
+                // Check texture list
+                var oldT = rdt.Textures;
+                var newT = oldT.ToBuilder().ToTextureList();
+                AssertAndCompareMemory(oldT.Data, newT.Data);
+
+                var oldG = rdt.Textures.Groups[0];
+                var newG = oldG.ToBuilder().ToGroup();
+                AssertAndCompareMemory(oldG.Data, newG.Data);
+
+                foreach (var oldE in oldG.Entries)
+                {
+                    if (oldE.Kind != CvTextureEntryKind.TIM2)
+                        continue;
+
+                    var newE = new CvTextureEntry(oldE.Tim2);
+                    AssertAndCompareMemory(oldE.Tim2.Data, newE.Tim2.Data);
+                }
+            }
+        }
+
         private void AssertRebuild(int index)
         {
             var rdt = GetRdt(index);

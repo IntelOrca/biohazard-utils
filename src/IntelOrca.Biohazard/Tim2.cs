@@ -146,6 +146,8 @@ namespace IntelOrca.Biohazard
             public PictureHeader Header => _header;
             public int Width => _header.Width;
             public int Height => _header.Height;
+            public ReadOnlyMemory<byte> PixelData => _pixelData;
+            public int Depth => _header.ImageColourType == 5 ? 8 : 4;
 
             public int GetColour(int paletteIndex)
             {

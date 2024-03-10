@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using IntelOrca.Biohazard.Room;
 using Xunit;
 using Xunit.Abstractions;
@@ -105,31 +104,6 @@ namespace IntelOrca.Biohazard.Tests
 
         [Fact]
         public void RDT_013_Rebuild() => AssertRebuild(13);
-
-        private int[] FixPalette(ReadOnlySpan<int> colours)
-        {
-            var result = new int[colours.Length];
-            var parts = colours.Length / 32;
-            var stripes = 2;
-            var colors = 8;
-            var blocks = 2;
-            var startIndex = 0;
-            var i = 0;
-            for (var part = 0; part < parts; part++)
-            {
-                for (var block = 0; block < blocks; block++)
-                {
-                    for (var stripe = 0; stripe < stripes; stripe++)
-                    {
-                        for (var color = 0; color < colors; color++)
-                        {
-                            result[i++] = colours[startIndex + part * colors * stripes * blocks + block * colors + stripe * stripes * colors + color];
-                        }
-                    }
-                }
-            }
-            return result;
-        }
 
         [Fact(Skip = "Takes too long")]
         public void RDT_All_Rebuild()

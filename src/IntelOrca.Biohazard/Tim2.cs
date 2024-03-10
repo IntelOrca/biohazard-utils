@@ -138,7 +138,7 @@ namespace IntelOrca.Biohazard
                 _header = MemoryMarshal.Cast<byte, PictureHeader>(Data.Span)[0];
                 _paletteData = Data.Slice(_header.HeaderSize + _header.ImageSize, _header.ClutSize);
                 _pixelData = Data.Slice(_header.HeaderSize, _header.ImageSize);
-                _fixedPalette = _header.ImageColourType == 5 ?
+                _fixedPalette = (_header.ClutColourType & 0x80) == 0 && _header.ImageColourType == 5 ?
                     FixPalette(_paletteData.Span) :
                     _paletteData;
             }
@@ -284,7 +284,7 @@ namespace IntelOrca.Biohazard
                         pixelData[i] = paletteIndex;
                     }
 
-                    var palette = new int[paletteSize];
+                    var palette = new int[256];
                     foreach (var kvp in colours)
                     {
                         palette[kvp.Value] = kvp.Key;

@@ -23,7 +23,7 @@ namespace IntelOrca.Biohazard.RoomViewer
     public partial class MainWindow : Window
     {
         private string _cutsceneJsonPath = @"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\cutscene.json";
-        private string _enemyJsonPath = @"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\enemy.json";
+        // private string _enemyJsonPath = @"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\enemy.json";
 
         private readonly Dictionary<RdtId, CutsceneRoomInfo> _cutsceneRoomInfoMap = new Dictionary<RdtId, CutsceneRoomInfo>();
         private Point _origin;
@@ -127,6 +127,7 @@ namespace IntelOrca.Biohazard.RoomViewer
             return a + ((b - a) * t);
         }
 
+#pragma warning disable 649
         private unsafe struct SCAEntry
         {
             public short X;
@@ -140,6 +141,7 @@ namespace IntelOrca.Biohazard.RoomViewer
             public byte unk_0E;
             public byte unk_0F;
         }
+#pragma warning restore 649
 
         private void AddAots()
         {

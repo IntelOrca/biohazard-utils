@@ -41,8 +41,15 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     return 1;
                 }
 
-                _operations.Add(new ScdRdtEditOperation(BioScriptKind.Init, GenerateScd("init")));
-                _operations.Add(new ScdRdtEditOperation(BioScriptKind.Main, GenerateScd("main", "aot")));
+                if (_version == BioVersion.Biohazard3)
+                {
+                    _operations.Add(new ScdRdtEditOperation(BioScriptKind.Init, GenerateScd("main", "aot")));
+                }
+                else
+                {
+                    _operations.Add(new ScdRdtEditOperation(BioScriptKind.Init, GenerateScd("init")));
+                    _operations.Add(new ScdRdtEditOperation(BioScriptKind.Main, GenerateScd("main", "aot")));
+                }
                 return 0;
             }
 
@@ -279,7 +286,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 _currentProcedure = new ProcedureBuilder(procedureNode.NameToken.Text);
                 VisitChildren(procedureNode);
                 _currentProcedure.Align();
-                _currentProcedure.Write((byte)OpcodeV2.EvtEnd);
+                _currentProcedure.Write(ConvertOpcode(OpcodeV2.EvtEnd));
                 _currentProcedure.Write((byte)0);
                 _currentProcedure.FixLabels();
                 _procedures.Add(_currentProcedure);
@@ -290,7 +297,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 _currentProcedure = new ProcedureBuilder(GetAnonymousProcedureName(index));
                 VisitChildren(blockNode);
                 _currentProcedure.Align();
-                _currentProcedure.Write((byte)OpcodeV2.EvtEnd);
+                _currentProcedure.Write(ConvertOpcode(OpcodeV2.EvtEnd));
                 _currentProcedure.Write((byte)0);
                 _currentProcedure.FixLabels();
                 _procedures.Add(_currentProcedure);
@@ -299,9 +306,9 @@ namespace IntelOrca.Biohazard.Script.Compilation
             private void VisitForkNode(ForkSyntaxNode forkNode)
             {
                 _currentProcedure.Align();
-                _currentProcedure.Write((byte)OpcodeV2.EvtExec);
+                _currentProcedure.Write(ConvertOpcode(OpcodeV2.EvtExec));
                 _currentProcedure.Write((byte)0xFF);
-                _currentProcedure.Write((byte)0x18);
+                _currentProcedure.Write(ConvertOpcode(OpcodeV2.Gosub));
                 if (forkNode.Invocation is LiteralSyntaxNode literal)
                 {
                     _currentProcedure.WriteProcedureRef(literal.LiteralToken);
@@ -316,7 +323,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
             private void VisitIfNode(IfSyntaxNode ifNode)
             {
                 _currentProcedure.Align();
-                _currentProcedure.Write((byte)OpcodeV2.IfelCk);
+                _currentProcedure.Write(ConvertOpcode(OpcodeV2.IfelCk));
                 _currentProcedure.Write((byte)0);
                 var elseLabel = _currentProcedure.WriteLabelRef(2, 2);
                 var endIfLabel = elseLabel;
@@ -330,7 +337,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 if (ifNode.ElseBlock != null)
                 {
                     _currentProcedure.Align();
-                    _currentProcedure.Write((byte)OpcodeV2.ElseCk);
+                    _currentProcedure.Write(ConvertOpcode(OpcodeV2.ElseCk));
                     _currentProcedure.Write((byte)0);
                     endIfLabel = _currentProcedure.WriteLabelRef(2, -2);
                     _currentProcedure.WriteLabel(elseLabel);
@@ -339,7 +346,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 else
                 {
                     _currentProcedure.Align();
-                    _currentProcedure.Write((byte)OpcodeV2.EndIf);
+                    _currentProcedure.Write(ConvertOpcode(OpcodeV2.EndIf));
                     _currentProcedure.Write((byte)0);
                 }
                 _currentProcedure.Align();
@@ -349,7 +356,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
             private void VisitWhileNode(WhileSyntaxNode whileNode)
             {
                 _currentProcedure.Align();
-                _currentProcedure.Write((byte)OpcodeV2.While);
+                _currentProcedure.Write(ConvertOpcode(OpcodeV2.While));
                 var bodyLabel = _currentProcedure.WriteLabelRef(1, 3);
                 var endLabel = _currentProcedure.WriteLabelRef(2, 2);
 
@@ -361,7 +368,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 }
 
                 _currentProcedure.Align();
-                _currentProcedure.Write((byte)OpcodeV2.Ewhile);
+                _currentProcedure.Write(ConvertOpcode(OpcodeV2.Ewhile));
                 _currentProcedure.Write((byte)0);
                 _currentProcedure.WriteLabel(endLabel);
             }
@@ -369,7 +376,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
             private void VisitDoWhileNode(DoWhileSyntaxNode whileNode)
             {
                 _currentProcedure.Align();
-                _currentProcedure.Write((byte)OpcodeV2.Do);
+                _currentProcedure.Write(ConvertOpcode(OpcodeV2.Do));
                 _currentProcedure.Write((byte)0);
                 var endLabel = _currentProcedure.WriteLabelRef(2, 2);
                 if (whileNode.Block != null)
@@ -378,7 +385,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 }
 
                 _currentProcedure.Align();
-                _currentProcedure.Write((byte)OpcodeV2.Edwhile);
+                _currentProcedure.Write(ConvertOpcode(OpcodeV2.Edwhile));
                 _currentProcedure.WriteLabelRef(endLabel, 1, 1);
                 Visit(whileNode.Condition);
                 _currentProcedure.Align();
@@ -393,7 +400,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     var beginLabel = _currentProcedure.WriteLabel();
                     Visit(repeatNode.Block);
                     _currentProcedure.Align();
-                    _currentProcedure.Write((byte)OpcodeV2.Goto);
+                    _currentProcedure.Write(ConvertOpcode(OpcodeV2.Goto));
                     _currentProcedure.Write((byte)0xFF);
                     _currentProcedure.Write((byte)0xFF);
                     _currentProcedure.Write((byte)0x00);
@@ -401,13 +408,13 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 }
                 else
                 {
-                    _currentProcedure.Write((byte)OpcodeV2.For);
+                    _currentProcedure.Write(ConvertOpcode(OpcodeV2.For));
                     _currentProcedure.Write((byte)0);
                     var endLabel = _currentProcedure.WriteLabelRef(2, 4);
                     _currentProcedure.Write((ushort)ProcessOperand(repeatNode.Count));
                     Visit(repeatNode.Block);
                     _currentProcedure.Align();
-                    _currentProcedure.Write((byte)OpcodeV2.Next);
+                    _currentProcedure.Write(ConvertOpcode(OpcodeV2.Next));
                     _currentProcedure.Write((byte)0);
                     _currentProcedure.WriteLabel(endLabel);
                 }
@@ -416,7 +423,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
             private void VisitSwitchNode(SwitchSyntaxNode switchNode)
             {
                 _currentProcedure.Align();
-                _currentProcedure.Write((byte)OpcodeV2.Switch);
+                _currentProcedure.Write(ConvertOpcode(OpcodeV2.Switch));
                 _currentProcedure.Write((byte)ProcessOperand(switchNode.Variable));
                 var endLabel = _currentProcedure.WriteLabelRef(2, 2);
 
@@ -424,7 +431,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 {
                     if (caseNode.Value is ExpressionSyntaxNode valueNode)
                     {
-                        _currentProcedure.Write((byte)OpcodeV2.Case);
+                        _currentProcedure.Write(ConvertOpcode(OpcodeV2.Case));
                         _currentProcedure.Write((byte)0);
                         var endCaseLabel = _currentProcedure.WriteLabelRef(2, 4);
                         _currentProcedure.Write((byte)ProcessOperand(valueNode));
@@ -435,7 +442,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     else
                     {
                         _currentProcedure.Align();
-                        _currentProcedure.Write((byte)OpcodeV2.Default);
+                        _currentProcedure.Write(ConvertOpcode(OpcodeV2.Default));
                         _currentProcedure.Write((byte)0);
                         Visit(caseNode.Block);
                         _currentProcedure.Align();
@@ -443,7 +450,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 }
 
                 _currentProcedure.Align();
-                _currentProcedure.Write((byte)OpcodeV2.Eswitch);
+                _currentProcedure.Write(ConvertOpcode(OpcodeV2.Eswitch));
                 _currentProcedure.Write((byte)0);
                 _currentProcedure.WriteLabel(endLabel);
             }
@@ -451,7 +458,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
             private void VisitBreakNode(BreakSyntaxNode breakNode)
             {
                 _currentProcedure.Align();
-                _currentProcedure.Write((byte)OpcodeV2.Break);
+                _currentProcedure.Write(ConvertOpcode(OpcodeV2.Break));
                 _currentProcedure.Write((byte)0);
             }
 
@@ -473,7 +480,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 }
 
                 _currentProcedure.Align();
-                _currentProcedure.Write((byte)OpcodeV2.Goto);
+                _currentProcedure.Write(ConvertOpcode(OpcodeV2.Goto));
                 _currentProcedure.Write((byte)255);
                 _currentProcedure.Write((byte)255);
                 _currentProcedure.Write((byte)0);
@@ -487,7 +494,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 {
                     if (opcodeNode.Operands.Length == 0)
                     {
-                        _currentProcedure.Write((byte)OpcodeV2.Gosub);
+                        _currentProcedure.Write(ConvertOpcode(OpcodeV2.Gosub));
                         var procName = opcodeNode.OpcodeToken.Text;
                         if (!_procedureNames.Contains(procName))
                         {
@@ -654,6 +661,35 @@ namespace IntelOrca.Biohazard.Script.Compilation
             internal static string GetAnonymousProcedureName(int index)
             {
                 return $"<anon>_{index}";
+            }
+
+            private byte ConvertOpcode(OpcodeV2 opcode)
+            {
+                if (_version == BioVersion.Biohazard2)
+                    return (byte)opcode;
+
+                return opcode switch
+                {
+                    OpcodeV2.EvtExec => (byte)OpcodeV3.EvtExec,
+                    OpcodeV2.EvtEnd => (byte)OpcodeV3.EvtEnd,
+                    OpcodeV2.IfelCk => (byte)OpcodeV3.IfelCk,
+                    OpcodeV2.ElseCk => (byte)OpcodeV3.ElseCk,
+                    OpcodeV2.EndIf => (byte)OpcodeV3.EndIf,
+                    OpcodeV2.Gosub => (byte)OpcodeV3.Gosub,
+                    OpcodeV2.For => (byte)OpcodeV3.For,
+                    OpcodeV2.Next => (byte)OpcodeV3.EndFor,
+                    OpcodeV2.Do => (byte)OpcodeV3.Do,
+                    OpcodeV2.While => (byte)OpcodeV3.While,
+                    OpcodeV2.Ewhile => (byte)OpcodeV3.Ewhile,
+                    OpcodeV2.Edwhile => (byte)OpcodeV3.Edwhile,
+                    OpcodeV2.Switch => (byte)OpcodeV3.Switch,
+                    OpcodeV2.Case => (byte)OpcodeV3.Case,
+                    OpcodeV2.Default => (byte)OpcodeV3.Default,
+                    OpcodeV2.Eswitch => (byte)OpcodeV3.Eswitch,
+                    OpcodeV2.Goto => (byte)OpcodeV3.Goto,
+                    OpcodeV2.Break => (byte)OpcodeV3.Break,
+                    _ => throw new NotImplementedException(),
+                };
             }
         }
 

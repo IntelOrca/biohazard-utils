@@ -304,69 +304,6 @@ namespace IntelOrca.Biohazard.Script
                 case OpcodeV1.EndIf:
                     _sb.CloseBlock();
                     break;
-                // case OpcodeV1.Ck:
-                // {
-                //     var obj = br.ReadByte();
-                //     var temp = br.ReadByte();
-                //     var bitArray = temp >> 5;
-                //     var number = temp & 0b11111;
-                //     var value = br.ReadByte();
-                //     if (_constructingBinaryExpression)
-                //     {
-                //         if (_expressionCount != 0)
-                //         {
-                //             sb.Write(" && ");
-                //         }
-                //         sb.Write($"{GetBitsString(obj, bitArray, number)} == {value}");
-                //         _expressionCount++;
-                //     }
-                //     break;
-                // }
-                // case OpcodeV1.Set:
-                // {
-                //     var obj = br.ReadByte();
-                //     var temp = br.ReadByte();
-                //     var bitArray = temp >> 5;
-                //     var number = temp & 0b11111;
-                //     var opChg = br.ReadByte();
-                //     sb.Write(GetBitsString(obj, bitArray, number));
-                //     if (opChg == 0)
-                //         sb.WriteLine(" = 0;");
-                //     else if (opChg == 1)
-                //         sb.WriteLine(" = 1;");
-                //     else if (opChg == 7)
-                //         sb.WriteLine(" ^= 1;");
-                //     else
-                //         sb.WriteLine(" (INVALID);");
-                //     break;
-                // }
-                // case OpcodeV1.Cmp6:
-                // case OpcodeV1.Cmp7:
-                // {
-                //     var index = br.ReadByte();
-                //     var op = br.ReadByte();
-                //     var value = opcode == OpcodeV1.Cmp6 ? br.ReadByte() : br.ReadInt16();
-                //     if (_constructingBinaryExpression)
-                //     {
-                //         if (_expressionCount != 0)
-                //         {
-                //             sb.Write(" && ");
-                //         }
-                // 
-                //         var ops = new[] { "==", "<", "<=", ">", ">=", "!=" };
-                //         var opS = ops.Length > op ? ops[op] : "?";
-                //         sb.Write($"arr[{index}] {opS} {value}");
-                //         _expressionCount++;
-                //     }
-                //     break;
-                // }
-                // case OpcodeV1.Set8:
-                // {
-                //     var src = br.ReadByte();
-                //     var value = br.ReadByte();
-                //     sb.WriteLine($"$${src} = {value};");
-                //     break;
-                // }
                 case OpcodeV1.End:
                 {
                     br.ReadByte();
@@ -426,8 +363,8 @@ namespace IntelOrca.Biohazard.Script
                     _blockEnds.Push(((byte)opcode, offset + blockLen));
                     sb.WriteLine("else");
                     _sb.OpenBlock();
+                    break;
                 }
-                break;
                 case OpcodeV2.EndIf:
                     _sb.CloseBlock();
                     break;
@@ -519,112 +456,6 @@ namespace IntelOrca.Biohazard.Script
                 case OpcodeV2.Break:
                     sb.WriteLine("break;");
                     break;
-#if false
-                case OpcodeV2.Cmp:
-                {
-                    br.ReadByte();
-                    var index = br.ReadByte();
-                    var op = br.ReadByte();
-                    var value = br.ReadInt16();
-                    if (_constructingBinaryExpression)
-                    {
-                        if (_expressionCount != 0)
-                        {
-                            sb.Write(" && ");
-                        }
-
-                        var ops = new[] { "==", ">", ">=", "<", "<=", "!=" };
-                        var opS = ops.Length > op ? ops[op] : "?";
-                        if (index == 27)
-                            sb.Write($"{GetVariableName(index)} {opS} 0x{value:X3}");
-                        else
-                            sb.Write($"{GetVariableName(index)} {opS} {value}");
-                        _expressionCount++;
-                    }
-                    break;
-                }
-                case OpcodeV2.Ck:
-                {
-                    var bitArray = br.ReadByte();
-                    var number = br.ReadByte();
-                    var value = br.ReadByte();
-                    if (_constructingBinaryExpression)
-                    {
-                        if (_expressionCount != 0)
-                        {
-                            sb.Write(" && ");
-                        }
-                        sb.Write($"{GetBitsString(bitArray, number)} == {value}");
-                        _expressionCount++;
-                    }
-                    break;
-                }
-                case OpcodeV2.Set:
-                {
-                    var bitArray = br.ReadByte();
-                    var number = br.ReadByte();
-                    var opChg = br.ReadByte();
-                    sb.Write(GetBitsString(bitArray, number));
-                    if (opChg == 0)
-                        sb.WriteLine(" = 0;");
-                    else if (opChg == 1)
-                        sb.WriteLine(" = 1;");
-                    else if (opChg == 7)
-                        sb.WriteLine(" ^= 1;");
-                    else
-                        sb.WriteLine(" (INVALID);");
-                    break;
-                }
-                case OpcodeV2.Calc:
-                {
-                    br.ReadByte();
-                    var op = br.ReadByte();
-                    var var = br.ReadByte();
-                    var src = br.ReadInt16();
-                    var ops = new string[] { "+", "-", "*", "/", "%", "|", "&", "^", "~", "<<", ">>", ">>>" };
-                    var opS = ops.Length > op ? ops[op] : "?";
-                    sb.WriteLine($"{GetVariableName(var)} {opS}= {src:X2};");
-                    break;
-                }
-                case OpcodeV2.DirCk:
-                {
-                    br.ReadByte();
-                    var x = br.ReadInt16();
-                    var y = br.ReadInt16();
-                    var add = br.ReadInt16();
-                    if (_constructingBinaryExpression)
-                    {
-                        if (_expressionCount != 0)
-                        {
-                            sb.Write(" && ");
-                        }
-
-                        sb.Write($"dir_ck({x}, {y}, {add})");
-                        _expressionCount++;
-                    }
-                    break;
-                }
-                case OpcodeV2.MemberCmp:
-                {
-                    br.ReadByte();
-                    var flag = br.ReadByte();
-                    var op = br.ReadByte();
-                    var value = br.ReadInt16();
-                    if (_constructingBinaryExpression)
-                    {
-                        if (_expressionCount != 0)
-                        {
-                            sb.Write(" && ");
-                        }
-
-                        var ops = new[] { "==", ">", ">=", "<", "<=", "!=" };
-                        var opS = ops.Length > op ? ops[op] : "?";
-                        sb.Write($"&{flag} {opS} {value}");
-                        _expressionCount++;
-                    }
-                    break;
-                }
-#endif
             }
             return true;
         }
@@ -643,7 +474,22 @@ namespace IntelOrca.Biohazard.Script
                 {
                     br.ReadByte();
                     _lastReturnLine = sb.LineCount;
-                    sb.WriteLine($"return;");
+                    sb.WriteLine($"evt_end(0);");
+                    break;
+                }
+                case OpcodeV3.EvtExec:
+                {
+                    var p0 = br.ReadByte();
+                    var p1 = br.ReadByte();
+                    if (p0 == 0xFF && p1 == 0x18)
+                    {
+                        var p2 = br.ReadByte();
+                        sb.WriteLine($"fork {GetProcedureName(p2)};");
+                    }
+                    else
+                    {
+                        return false;
+                    }
                     break;
                 }
                 case OpcodeV3.IfelCk:
@@ -661,8 +507,8 @@ namespace IntelOrca.Biohazard.Script
                     _blockEnds.Push(((byte)opcode, offset + blockLen));
                     sb.WriteLine("else");
                     _sb.OpenBlock();
+                    break;
                 }
-                break;
                 case OpcodeV3.EndIf:
                     _sb.CloseBlock();
                     break;
@@ -682,8 +528,9 @@ namespace IntelOrca.Biohazard.Script
                 {
                     br.ReadByte();
                     var blockLen = br.ReadUInt16();
-                    sb.WriteLine($"while (");
-                    _sb.OpenBlock();
+                    sb.Write($"while (");
+                    _constructingBinaryExpression = true;
+                    _expressionCount = 0;
                     break;
                 }
                 case OpcodeV3.Ewhile:
@@ -700,11 +547,12 @@ namespace IntelOrca.Biohazard.Script
                 }
                 case OpcodeV3.Edwhile:
                 {
+                    _endDoWhile = true;
+                    CloseCurrentBlock();
                     sb.Unindent();
                     sb.Write("} while (");
                     _constructingBinaryExpression = true;
                     _expressionCount = 0;
-                    _endDoWhile = true;
                     break;
                 }
                 case OpcodeV3.Switch:
@@ -751,72 +599,6 @@ namespace IntelOrca.Biohazard.Script
                 case OpcodeV3.Break:
                     sb.WriteLine("break;");
                     break;
-                case OpcodeV3.Cmp:
-                {
-                    br.ReadByte();
-                    var index = br.ReadByte();
-                    var op = br.ReadByte();
-                    var value = br.ReadInt16();
-                    if (_constructingBinaryExpression)
-                    {
-                        if (_expressionCount != 0)
-                        {
-                            sb.Write(" && ");
-                        }
-
-                        var ops = new[] { "==", ">", ">=", "<", "<=", "!=" };
-                        var opS = ops.Length > op ? ops[op] : "?";
-                        if (index == 27)
-                            sb.Write($"game.last_room {opS} 0x{value:X3}");
-                        else
-                            sb.Write($"{GetVariableName(index)} {opS} {value}");
-                        _expressionCount++;
-                    }
-                    break;
-                }
-                case OpcodeV3.Ck:
-                {
-                    var bitArray = br.ReadByte();
-                    var number = br.ReadByte();
-                    var value = br.ReadByte();
-                    if (_constructingBinaryExpression)
-                    {
-                        if (_expressionCount != 0)
-                        {
-                            sb.Write(" && ");
-                        }
-                        sb.Write($"{GetBitsString(bitArray, number)} == {value}");
-                        _expressionCount++;
-                    }
-                    break;
-                }
-                case OpcodeV3.Set3:
-                {
-                    var bitArray = br.ReadByte();
-                    var number = br.ReadByte();
-                    var opChg = br.ReadByte();
-                    sb.Write(GetBitsString(bitArray, number));
-                    if (opChg == 0)
-                        sb.WriteLine(" = 0;");
-                    else if (opChg == 1)
-                        sb.WriteLine(" = 1;");
-                    else if (opChg == 7)
-                        sb.WriteLine(" ^= 1;");
-                    else
-                        sb.WriteLine(" (INVALID);");
-                    break;
-                }
-                case OpcodeV3.Calc:
-                {
-                    br.ReadByte();
-                    var op = br.ReadByte();
-                    var var = br.ReadByte();
-                    var src = br.ReadInt16();
-                    var ops = new string[] { "+", "-", "*", "/", "%", "|", "&", "^", "~", "<<", ">>", ">>>" };
-                    var opS = ops.Length > op ? ops[op] : "?";
-                    sb.WriteLine($"{GetVariableName(var)} {opS}= {src:X2};");
-                    break;
-                }
             }
             return true;
         }
@@ -1030,19 +812,6 @@ namespace IntelOrca.Biohazard.Script
             if (name != null)
                 return name;
             return $"var[{id}]";
-        }
-
-        private static string GetBitsString(int obj, int bitArray, int number)
-        {
-            return $"${obj}[{bitArray}][{number}]";
-        }
-
-        private string GetBitsString(int bitArray, int number)
-        {
-            var name = _constantTable.GetNamedFlag(bitArray, number);
-            if (name != null)
-                return name;
-            return $"bits[{bitArray}][{number}]";
         }
     }
 }

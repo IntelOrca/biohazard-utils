@@ -77,10 +77,13 @@ namespace IntelOrca.Biohazard.Room
             var originalOffsets = Offsets;
             for (var i = 0; i < PageCount; i++)
             {
-                bw.Write(baseOffset + (originalOffsets[i] - BaseOffset));
+                var offset = originalOffsets[i];
+                if (offset != 0)
+                    offset = baseOffset + (originalOffsets[i] - BaseOffset);
+                bw.Write(offset);
             }
 
-            bw.Write(Data.Slice((int)ms.Length));
+            bw.Write(Data[(PageCount * 4)..]);
             return new CvMotionList(baseOffset, ms.ToArray());
         }
     }

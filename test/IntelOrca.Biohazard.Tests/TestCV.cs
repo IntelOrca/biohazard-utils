@@ -152,6 +152,38 @@ namespace IntelOrca.Biohazard.Tests
             }
         }
 
+        [Fact]
+        public void RDT_10C_Motion_Rebuild()
+        {
+            var rdt = GetRdt(14);
+            var m = rdt.Motions;
+            var newBaseOffset = m.BaseOffset + (4 * 6);
+            var m2 = m.WithNewBaseOffset(newBaseOffset);
+
+            Assert.Equal(newBaseOffset, m2.BaseOffset);
+            Assert.Equal(m.PageCount, m2.PageCount);
+            for (var i = 0; i < m2.PageCount; i++)
+            {
+                Assert.Equal(m.Pages[i].Data.Length, m2.Pages[i].Data.Length);
+            }
+        }
+
+        [Fact]
+        public void RDT_10C_Models_Rebuild()
+        {
+            var rdt = GetRdt(14);
+            var m = rdt.Models;
+            var newBaseOffset = m.BaseOffset + (4 * 6);
+            var m2 = m.WithNewBaseOffset(newBaseOffset);
+
+            Assert.Equal(newBaseOffset, m2.BaseOffset);
+            Assert.Equal(m.PageCount, m2.PageCount);
+            for (var i = 0; i < m2.PageCount; i++)
+            {
+                Assert.Equal(m.Pages[i].Data.Length, m2.Pages[i].Data.Length);
+            }
+        }
+
         private void AssertRebuild(int index)
         {
             var rdt = GetRdt(index);

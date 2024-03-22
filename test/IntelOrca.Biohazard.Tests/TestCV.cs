@@ -172,16 +172,31 @@ namespace IntelOrca.Biohazard.Tests
         public void RDT_10C_Models_Rebuild()
         {
             var rdt = GetRdt(14);
-            var m = rdt.Models;
-            var newBaseOffset = m.BaseOffset + (4 * 6);
-            var m2 = m.WithNewBaseOffset(newBaseOffset);
+            var list = rdt.Models;
 
-            Assert.Equal(newBaseOffset, m2.BaseOffset);
-            Assert.Equal(m.PageCount, m2.PageCount);
-            for (var i = 0; i < m2.PageCount; i++)
+            // Test WithNewBaseOffset
             {
-                Assert.Equal(m.Pages[i].Data.Length, m2.Pages[i].Data.Length);
+                var newBaseOffset = list.BaseOffset + (4 * 6);
+                var m2 = list.WithNewBaseOffset(newBaseOffset);
+                Assert.Equal(newBaseOffset, m2.BaseOffset);
+                Assert.Equal(list.PageCount, m2.PageCount);
+                for (var i = 0; i < m2.PageCount; i++)
+                {
+                    Assert.Equal(list.Pages[i].Data.Length, m2.Pages[i].Data.Length);
+                }
             }
+
+            // Test page builder
+            for (var i = 0; i < list.Pages.Length; i++)
+            {
+                var page = list.Pages[i];
+                var rebuilt = page.ToBuilder().ToCvModelListPage();
+                AssertAndCompareMemory(page.Data, rebuilt.Data);
+            }
+
+            // Test list builder
+            var rebuiltList = list.ToBuilder().ToCvModelList();
+            AssertAndCompareMemory(list.Data, rebuiltList.Data);
         }
 
         private void AssertRebuild(int index)

@@ -185,7 +185,7 @@ namespace IntelOrca.Biohazard.Room
                     bw.Write(SysmesData);
                 }
 
-                bw.Align(16);
+                bw.Align(64);
                 if (Models.Data.Length != 0)
                 {
                     header.ModelOffset = (int)ms.Position;
@@ -193,7 +193,7 @@ namespace IntelOrca.Biohazard.Room
                     bw.Write(newModelList.Data);
                 }
 
-                bw.Align(16);
+                bw.Align(64);
                 if (Motions.Data.Length != 0)
                 {
                     header.MotionOffset = (int)ms.Position;

@@ -104,6 +104,15 @@ namespace IntelOrca.Biohazard.Room
                 var ms = new MemoryStream();
                 var bw = new BinaryWriter(ms);
 
+                while (Pages.Count != 0 && Pages[^1].Data.Length == 0)
+                {
+                    Pages.RemoveAt(Pages.Count - 1);
+                }
+                while ((Pages.Count % 16) != 0)
+                {
+                    Pages.Add(new CvModelListPage());
+                }
+
                 var offset = BaseOffset + (Pages.Count * 4);
                 foreach (var page in Pages)
                 {

@@ -221,9 +221,11 @@ namespace IntelOrca.Biohazard.Room
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
         public struct Enemy
         {
-            public int Type;
-            public int Flags1;
-            public int Flags2;
+            public int Header;
+            public short Type;
+            public short Effect;
+            public short Variant;
+            public short Index;
             public VectorF Position;
             public Vector32 Rotation;
         }
@@ -336,6 +338,13 @@ namespace IntelOrca.Biohazard.Room
             public float X;
             public float Y;
             public float Z;
+
+            public VectorF(float x, float y, float z)
+            {
+                X = x;
+                Y = y;
+                Z = z;
+            }
         }
 
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -344,6 +353,13 @@ namespace IntelOrca.Biohazard.Room
             public int X;
             public int Y;
             public int Z;
+
+            public Vector32(int x, int y, int z)
+            {
+                X = x;
+                Y = y;
+                Z = z;
+            }
         }
     }
 }

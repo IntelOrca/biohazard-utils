@@ -349,7 +349,6 @@ namespace IntelOrca.Biohazard.Script
                 var functionOffset = functionOffsets[i];
                 var functionEnd = functionOffsets[i + 1];
                 var functionEndMin = functionOffset;
-                var ifStack = 0;
                 var isEnd = false;
                 br.BaseStream.Position = functionOffset;
                 while (br.BaseStream.Position < functionEnd)

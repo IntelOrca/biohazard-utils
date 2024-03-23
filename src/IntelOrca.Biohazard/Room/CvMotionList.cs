@@ -86,6 +86,47 @@ namespace IntelOrca.Biohazard.Room
             bw.Write(Data[(PageCount * 4)..]);
             return new CvMotionList(baseOffset, ms.ToArray());
         }
+
+        public Builder ToBuilder()
+        {
+            var result = new Builder();
+            result.BaseOffset = BaseOffset;
+            result.Pages.AddRange(Pages.ToArray());
+            return result;
+        }
+
+        public class Builder
+        {
+            public int BaseOffset { get; set; }
+            public List<CvMotionListPage> Pages { get; } = new List<CvMotionListPage>();
+
+            public CvMotionList ToCvMotionList()
+            {
+                var ms = new MemoryStream();
+                var bw = new BinaryWriter(ms);
+
+                var offset = BaseOffset + (Pages.Count * 4);
+                foreach (var page in Pages)
+                {
+                    if (page.Data.Length == 0)
+                    {
+                        bw.Write(0);
+                    }
+                    else
+                    {
+                        bw.Write(offset);
+                        offset += page.Data.Length;
+                    }
+                }
+
+                foreach (var page in Pages)
+                {
+                    bw.Write(page.Data);
+                }
+
+                return new CvMotionList(BaseOffset, ms.ToArray());
+            }
+        }
     }
 
     public readonly struct CvMotionListPage

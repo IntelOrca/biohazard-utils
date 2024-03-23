@@ -15,7 +15,7 @@ namespace IntelOrca.Biohazard.Survey
         [DllImport("kernel32.dll")]
         private extern static bool ReadProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, IntPtr lpBuffer, IntPtr nSize, out IntPtr lpNumberOfBytesRead);
 
-        private static string _jsonPath = @"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\enemy.json";
+        private static string _jsonPath = @"M:\git\rer\IntelOrca.Biohazard.BioRand\data\recv\enemy.json";
 
         private static bool _exit;
         private static byte[] _buffer = new byte[64];
@@ -66,20 +66,25 @@ namespace IntelOrca.Biohazard.Survey
                 var p = pAll.FirstOrDefault(x => x.ProcessName.StartsWith("Bio"));
                 if (p != null)
                 {
-                    Spy(p);
+                    Spy(p, 0x0500, 500);
                 }
                 p = pAll.FirstOrDefault(x => x.ProcessName.StartsWith("bio2"));
                 if (p != null)
                 {
-                    Spy(p);
+                    Spy(p, 0x2300, 500);
                 }
                 p = pAll.FirstOrDefault(x => x.ProcessName.StartsWith("BIOHAZARD(R) 3"));
                 if (p != null)
                 {
-                    Spy(p);
+                    Spy(p, 0x2300, 500);
+                }
+                p = pAll.FirstOrDefault(x => x.ProcessName.StartsWith("pcsx2"));
+                if (p != null)
+                {
+                    Spy(p, 0x0080, 5);
                 }
 
-                Console.WriteLine("Waiting for RE 1, RE 2 or RE 3 to start...");
+                Console.WriteLine("Waiting for RE 1, RE 2, RE 3 or RE CV to start...");
                 Thread.Sleep(4000);
             }
         }
@@ -114,7 +119,7 @@ namespace IntelOrca.Biohazard.Survey
             _exit = true;
         }
 
-        private static void Spy(Process p)
+        private static void Spy(Process p, int expectedKey, int distance)
         {
             var lastGameState = new GameState();
             var gameState = new GameState();
@@ -125,7 +130,7 @@ namespace IntelOrca.Biohazard.Survey
                 {
                     Console.CursorTop = 0;
                     Console.WriteLine($"Key: {gameState.Key,6:X4}");
-                    Console.WriteLine($"Room:   {gameState.Stage + 1:X}{gameState.Room:X2}");
+                    Console.WriteLine($"Room:   {gameState.Stage + 1:X}{gameState.Room:X2}{gameState.Variant}");
                     Console.WriteLine($"Cut: {gameState.Cut,6}");
                     Console.WriteLine($"X: {gameState.X,8}");
                     Console.WriteLine($"Y: {gameState.Y,8}");
@@ -133,10 +138,9 @@ namespace IntelOrca.Biohazard.Survey
                     Console.WriteLine($"D: {gameState.D,8}");
                     Console.WriteLine($"F: {gameState.Floor,8}");
 
-                    var expectedKey = p.ProcessName.StartsWith("Bio") ? 0x0500 : 0x2300;
                     if (gameState.Key == expectedKey)
                     {
-                        AddEnemyPosition(gameState);
+                        AddEnemyPosition(gameState, distance);
                         // RemoveEnemyPositions(gameState, 2000);
                     }
 
@@ -156,7 +160,7 @@ namespace IntelOrca.Biohazard.Survey
             }
         }
 
-        private static void AddEnemyPosition(GameState state)
+        private static void AddEnemyPosition(GameState state, int distance)
         {
             var pos = new EnemyPosition()
             {
@@ -169,7 +173,7 @@ namespace IntelOrca.Biohazard.Survey
             };
 
             var closeBy = _enemyPositions
-                .Where(x => x.IsVeryClose(pos))
+                .Where(x => x.IsVeryClose(pos, distance))
                 .ToArray();
             if (closeBy.Length != 0)
                 return;
@@ -245,7 +249,7 @@ namespace IntelOrca.Biohazard.Survey
                 gameState.Cut = buffer[4];
                 gameState.LastCut = buffer[6];
             }
-            else
+            else if (p.ProcessName.StartsWith("BIOHAZARD(R) 3"))
             {
                 ReadMemory(p, 0x00A61C84, buffer, 0, 2);
                 gameState.Key = BitConverter.ToUInt16(buffer, 0);
@@ -265,6 +269,26 @@ namespace IntelOrca.Biohazard.Survey
                 gameState.Cut = buffer[4];
                 gameState.LastCut = buffer[6];
             }
+            else
+            {
+                ReadMemory(p, 0x2044E1B0, buffer, 0, 4);
+                gameState.Key = (ushort)BitConverter.ToUInt32(buffer, 0);
+
+                ReadMemory(p, 0x204F6EE8, buffer, 0, 12);
+                gameState.X = (short)BitConverter.ToSingle(buffer, 0);
+                gameState.Y = (short)BitConverter.ToSingle(buffer, 4);
+                gameState.Z = (short)BitConverter.ToSingle(buffer, 8);
+
+                ReadMemory(p, 0x204322FC, buffer, 0, 12);
+                gameState.D = (short)(BitConverter.ToInt32(buffer, 4) & 0xFFFF);
+
+                gameState.Floor = 0;
+
+                ReadMemory(p, 0x204339B4, buffer, 0, 3);
+                gameState.Stage = buffer[0];
+                gameState.Room = buffer[1];
+                gameState.Variant = buffer[3];
+            }
         }
 
         private unsafe static bool ReadMemory(Process process, int address, byte[] buffer, int offset, int length)
@@ -282,6 +306,7 @@ namespace IntelOrca.Biohazard.Survey
             public ushort Key { get; set; }
             public byte Stage { get; set; }
             public byte Room { get; set; }
+            public byte? Variant { get; set; }
             public byte Cut { get; set; }
             public byte LastCut { get; set; }
             public short X { get; set; }
@@ -290,7 +315,7 @@ namespace IntelOrca.Biohazard.Survey
             public short D { get; set; }
             public byte Floor { get; set; }
 
-            public string RtdId => $"{Stage + 1:X}{Room:X2}";
+            public string RtdId => $"{Stage + 1:X}{Room:X2}{Variant}";
 
             public override bool Equals(object obj)
             {
@@ -394,7 +419,7 @@ namespace IntelOrca.Biohazard.Survey
 
             public int DistanceTo(GameState other) => DistanceTo(other.RtdId, other.X, other.Y, other.Z);
             public int DistanceTo(EnemyPosition other) => DistanceTo(other.Room, other.X, other.Y, other.Z);
-            public bool IsVeryClose(EnemyPosition other) => DistanceTo(other) <= 500;
+            public bool IsVeryClose(EnemyPosition other, int distance) => DistanceTo(other) <= distance;
 
             public override string ToString()
             {

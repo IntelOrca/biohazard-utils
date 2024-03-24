@@ -22,7 +22,9 @@ namespace IntelOrca.Biohazard.Script.Opcodes
         public byte Action { get; set; }
 
         public ulong Re1Unk0C { get; set; }
-        public uint Re1Unk14 { get; set; }
+        public byte Re1Unk14 { get; set; }
+        public byte Re1Unk15 { get; set; }
+        public byte Re1Unk17 { get; set; }
         public byte TakeAnimation { get; set; }
         public uint Re1Unk19 { get; set; }
 
@@ -44,7 +46,10 @@ namespace IntelOrca.Biohazard.Script.Opcodes
                 op.Type = br.ReadByte();
                 op.Amount = br.ReadByte();
                 op.Re1Unk0C = br.ReadUInt64();
-                op.Re1Unk14 = br.ReadUInt32();
+                op.Re1Unk14 = br.ReadByte();
+                op.Re1Unk15 = br.ReadByte();
+                op.GlobalId = br.ReadByte();
+                op.Re1Unk17 = br.ReadByte();
                 op.TakeAnimation = br.ReadByte();
                 op.Re1Unk19 = br.ReadByte();
                 return op;
@@ -89,8 +94,11 @@ namespace IntelOrca.Biohazard.Script.Opcodes
                 bw.Write((byte)Amount);
                 bw.Write(Re1Unk0C);
                 bw.Write(Re1Unk14);
+                bw.Write(Re1Unk15);
+                bw.Write((byte)GlobalId);
+                bw.Write(Re1Unk17);
                 bw.Write(TakeAnimation);
-                bw.Write(Re1Unk19);
+                bw.Write((byte)Re1Unk19);
             }
             else
             {

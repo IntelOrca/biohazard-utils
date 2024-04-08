@@ -249,6 +249,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     ParseRepeatStatement,
                     ParseSwitchStatement,
                     ParseBreakStatement,
+                    ParseReturnStatement,
                     ParseGotoStatement,
                     ParseForkStatement,
                     ParseOpcodeOrLabel
@@ -260,6 +261,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     {
                         if (node is OpcodeSyntaxNode ||
                             node is BreakSyntaxNode ||
+                            node is ReturnSyntaxNode ||
                             node is GotoSyntaxNode ||
                             (node is ForkSyntaxNode forkNode && !(forkNode.Invocation is BlockSyntaxNode)))
                         {
@@ -459,6 +461,15 @@ namespace IntelOrca.Biohazard.Script.Compilation
 
                 ReadToken();
                 return new BreakSyntaxNode();
+            }
+
+            private ReturnSyntaxNode? ParseReturnStatement()
+            {
+                if (PeekToken().Kind != TokenKind.Return)
+                    return null;
+
+                ReadToken();
+                return new ReturnSyntaxNode();
             }
 
             private GotoSyntaxNode? ParseGotoStatement()
@@ -952,6 +963,10 @@ namespace IntelOrca.Biohazard.Script.Compilation
         }
 
         private class BreakSyntaxNode : SyntaxNode
+        {
+        }
+
+        private class ReturnSyntaxNode : SyntaxNode
         {
         }
 

@@ -484,7 +484,7 @@ proc main
         }
 
         [Fact]
-        public void TestGotoLabel()
+        public void TestGotoPastLabel()
         {
             var expected = "0200020017FFFF00FEFF01000400060001000100";
             AssertScd(expected, @"
@@ -495,6 +495,57 @@ proc init
 start:
     evt_next();
     goto start;
+}
+");
+        }
+
+        [Fact]
+        public void TestGotoFutureLabel()
+        {
+            var expected = "02000D0016000300020006000E0023001A00020017FFFF000A0008000E00020001000400060001000100";
+            AssertScd(expected, @"
+#version 2
+
+proc init
+{
+    repeat (3)
+    {
+        evt_next();
+        if (cmp(0, V_CUT, CMP_EQ, 2))
+        {
+            goto loopend;
+        }
+    }
+loopend:
+    evt_next();
+}
+");
+        }
+
+        [Fact]
+        public void TestGotoUnknownLabel()
+        {
+            AssertScd(null, @"
+#version 2
+
+proc init
+{
+    evt_next();
+    goto start;
+}
+");
+        }
+
+        [Fact]
+        public void TestReturn()
+        {
+            var expected = "0200190001000400060001000100";
+            AssertScd(expected, @"
+#version 2
+
+proc init
+{
+    return;
 }
 ");
         }
@@ -518,19 +569,26 @@ start:
         {
             var scdCompiler = new ScdCompiler();
             var result = scdCompiler.Generate(includer, path);
-            Assert.Equal(0, result);
+            if (expected == null)
+            {
+                Assert.NotEqual(0, result);
+            }
+            else
+            {
+                Assert.Equal(0, result);
 
-            var scdInit = GetScd(scdCompiler, BioScriptKind.Init);
-            var scdMain = GetScd(scdCompiler, BioScriptKind.Main);
-            var sInit = Disassemble(scdInit, BioScriptKind.Init);
-            var sMain = Disassemble(scdMain, BioScriptKind.Main);
+                var scdInit = GetScd(scdCompiler, BioScriptKind.Init);
+                var scdMain = GetScd(scdCompiler, BioScriptKind.Main);
+                var sInit = Disassemble(scdInit, BioScriptKind.Init);
+                var sMain = Disassemble(scdMain, BioScriptKind.Main);
 
-            var actual = string.Concat(scdInit.Data
-                .ToArray()
-                .Concat(scdMain.Data.ToArray())
-                .Select(x => x.ToString("X2"))
-                .ToArray());
-            Assert.Equal(expected, actual);
+                var actual = string.Concat(scdInit.Data
+                    .ToArray()
+                    .Concat(scdMain.Data.ToArray())
+                    .Select(x => x.ToString("X2"))
+                    .ToArray());
+                Assert.Equal(expected, actual);
+            }
         }
 
         private string Disassemble(ScdProcedureList scd, BioScriptKind kind)

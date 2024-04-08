@@ -42,6 +42,7 @@
         Break,
         Repeat,
         Goto,
+        Return,
 
         EOF
     }

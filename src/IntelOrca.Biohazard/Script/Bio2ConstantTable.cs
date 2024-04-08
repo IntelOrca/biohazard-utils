@@ -383,6 +383,8 @@ namespace IntelOrca.Biohazard.Script
                 case OpcodeV2.MemberCmp:
                 case OpcodeV2.KeepItemCk:
                 case OpcodeV2.WorkCopy:
+                case OpcodeV2.SceKeyCk:
+                case OpcodeV2.SceTrgCk:
                     return true;
             }
             return false;

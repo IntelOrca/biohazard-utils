@@ -201,6 +201,9 @@ namespace IntelOrca.Biohazard.Script.Compilation
                     case BreakSyntaxNode breakNode:
                         VisitBreakNode(breakNode);
                         break;
+                    case ReturnSyntaxNode returnNode:
+                        VisitReturnNode(returnNode);
+                        break;
                     case GotoSyntaxNode gotoNode:
                         VisitGotoNode(gotoNode);
                         break;
@@ -285,17 +288,25 @@ namespace IntelOrca.Biohazard.Script.Compilation
             {
                 _currentProcedure = new ProcedureBuilder(procedureNode.NameToken.Text);
                 VisitChildren(procedureNode);
-                _currentProcedure.Align();
-                _currentProcedure.Write(ConvertOpcode(OpcodeV2.EvtEnd));
-                _currentProcedure.Write((byte)0);
-                _currentProcedure.FixLabels();
-                _procedures.Add(_currentProcedure);
+                WriteCurrentProcedure();
             }
 
             private void VisitAnonymousProcedureNode(int index, BlockSyntaxNode blockNode)
             {
                 _currentProcedure = new ProcedureBuilder(GetAnonymousProcedureName(index));
                 VisitChildren(blockNode);
+                WriteCurrentProcedure();
+            }
+
+            private void WriteCurrentProcedure()
+            {
+                var missingLabels = _currentProcedure.GetMissingLabels();
+                foreach (var labelToken in missingLabels)
+                {
+                    EmitError(in labelToken, ErrorCodes.UnknownLabel, labelToken.Text);
+                    return;
+                }
+
                 _currentProcedure.Align();
                 _currentProcedure.Write(ConvertOpcode(OpcodeV2.EvtEnd));
                 _currentProcedure.Write((byte)0);
@@ -462,6 +473,13 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 _currentProcedure.Write((byte)0);
             }
 
+            private void VisitReturnNode(ReturnSyntaxNode returnNode)
+            {
+                _currentProcedure.Align();
+                _currentProcedure.Write(ConvertOpcode(OpcodeV2.Return));
+                _currentProcedure.Write((byte)0);
+            }
+
             private void VisitLabelNode(LabelSyntaxNode labelNode)
             {
                 _currentProcedure.Align();
@@ -470,21 +488,13 @@ namespace IntelOrca.Biohazard.Script.Compilation
 
             private void VisitGotoNode(GotoSyntaxNode gotoNode)
             {
-                var labelToken = gotoNode.Destination;
-                var labelName = gotoNode.Destination.Text;
-                var label = _currentProcedure.FindLabel(labelName);
-                if (label == null)
-                {
-                    EmitError(in labelToken, ErrorCodes.UnknownLabel, labelName);
-                    return;
-                }
-
+                var label = _currentProcedure.FindOrPromiseLabel(gotoNode.Destination);
                 _currentProcedure.Align();
                 _currentProcedure.Write(ConvertOpcode(OpcodeV2.Goto));
                 _currentProcedure.Write((byte)255);
                 _currentProcedure.Write((byte)255);
                 _currentProcedure.Write((byte)0);
-                _currentProcedure.WriteLabelRef(label.Value, 2, -4);
+                _currentProcedure.WriteLabelRef(label, 2, -4);
             }
 
             private void VisitOpcodeNode(OpcodeSyntaxNode opcodeNode)
@@ -501,6 +511,13 @@ namespace IntelOrca.Biohazard.Script.Compilation
                             EmitError(opcodeNode.OpcodeToken, ErrorCodes.UnknownProcedure, procName);
                         }
                         _currentProcedure.WriteProcedureRef(opcodeNode.OpcodeToken);
+                    }
+                    else if (opcodeNode.OpcodeToken.Text == "unk")
+                    {
+                        foreach (var operand in opcodeNode.Operands)
+                        {
+                            WriteOperand('u', operand);
+                        }
                     }
                     else
                     {
@@ -540,30 +557,34 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 var numOperands = Math.Min(operands.Length, numArguments);
                 for (var i = 0; i < numOperands; i++)
                 {
-                    var arg = opcodeSignature[i];
-                    var argLen = char.IsUpper(arg) || arg == '@' || arg == '~' ? 2 : 1;
-                    if (ProcessProcedureRef(operands[i], out var procRefToken))
+                    WriteOperand(opcodeSignature[i], operands[i]);
+                }
+            }
+
+            private void WriteOperand(char argType, SyntaxNode operand)
+            {
+                var argLen = char.IsUpper(argType) || argType == '@' || argType == '~' ? 2 : 1;
+                if (ProcessProcedureRef(operand, out var procRefToken))
+                {
+                    if (argLen == 2)
                     {
-                        if (argLen == 2)
-                        {
-                            EmitError(in procRefToken, ErrorCodes.InvalidOperand);
-                        }
-                        else
-                        {
-                            _currentProcedure.WriteProcedureRef(in procRefToken);
-                        }
+                        EmitError(in procRefToken, ErrorCodes.InvalidOperand);
                     }
                     else
                     {
-                        var value = ProcessOperand(operands[i]);
-                        if (argLen == 2)
-                        {
-                            _currentProcedure.Write((short)value);
-                        }
-                        else
-                        {
-                            _currentProcedure.Write((byte)value);
-                        }
+                        _currentProcedure.WriteProcedureRef(in procRefToken);
+                    }
+                }
+                else
+                {
+                    var value = ProcessOperand(operand);
+                    if (argLen == 2)
+                    {
+                        _currentProcedure.Write((short)value);
+                    }
+                    else
+                    {
+                        _currentProcedure.Write((byte)value);
                     }
                 }
             }
@@ -702,6 +723,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
             private readonly List<LabelReference> _labelReferences = new List<LabelReference>();
             private readonly List<int> _labelOffsets = new List<int>();
             private readonly List<ProcedureReference> _procedureReferences = new List<ProcedureReference>();
+            private readonly Dictionary<int, Token> _promisedLabels = new Dictionary<int, Token>();
 
             public string Name { get; }
             public int Offset => (int)_ms.Position;
@@ -723,11 +745,33 @@ namespace IntelOrca.Biohazard.Script.Compilation
 
             public Label? FindLabel(string name)
             {
-                return _labels.FirstOrDefault(x => x.Name == name);
+                var index = _labels.FindIndex(x => x.Name == name);
+                return index == -1 ? null : (Label?)_labels[index];
+            }
+
+            public Label FindOrPromiseLabel(Token labelToken)
+            {
+                var foundLabel = FindLabel(labelToken.Text);
+                if (foundLabel != null)
+                    return foundLabel.Value;
+
+                var label = new Label(_labels.Count, labelToken.Text);
+                _labels.Add(label);
+                _promisedLabels.Add(label.Id, labelToken);
+                return label;
             }
 
             public Label WriteLabel(string? name = null)
             {
+                if (name != null)
+                {
+                    var foundLabel = FindLabel(name);
+                    if (foundLabel.HasValue)
+                    {
+                        return WriteLabel(foundLabel.Value);
+                    }
+                }
+
                 var label = new Label(_labels.Count, name);
                 _labels.Add(label);
                 return WriteLabel(label);
@@ -738,6 +782,7 @@ namespace IntelOrca.Biohazard.Script.Compilation
                 while (_labelOffsets.Count <= label.Id)
                     _labelOffsets.Add(0);
                 _labelOffsets[label.Id] = Offset;
+                _promisedLabels.Remove(label.Id);
                 return label;
             }
 
@@ -770,6 +815,11 @@ namespace IntelOrca.Biohazard.Script.Compilation
             {
                 _procedureReferences.Add(new ProcedureReference(anonymousProcedureIndex, Offset));
                 Write((byte)0);
+            }
+
+            public Token[] GetMissingLabels()
+            {
+                return _promisedLabels.Values.ToArray();
             }
 
             public void FixLabels()

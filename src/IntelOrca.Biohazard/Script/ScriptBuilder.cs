@@ -169,26 +169,42 @@ namespace IntelOrca.Biohazard.Script
         {
             var offsetMap = new Dictionary<int, int>();
             var sb = new StringBuilder();
+            var lastOffset = -1;
             foreach (var line in _lines)
             {
                 if (line.Offset != 0)
                 {
-                    var labelRequired = false;
-                    var offsets = _labelOffsets.GetViewBetween(line.Offset, line.EndOffset - 1);
-                    foreach (var offset in offsets)
+                    if (AssemblyFormat)
                     {
-                        labelRequired = true;
-                        if (offset != line.Offset)
+                        var labelRequired = false;
+                        var offsets = _labelOffsets.GetViewBetween(line.Offset, line.EndOffset - 1);
+                        foreach (var offset in offsets)
                         {
-                            offsetMap[offset] = line.Offset;
+                            labelRequired = true;
+                            if (offset != line.Offset)
+                            {
+                                offsetMap[offset] = line.Offset;
+                            }
+                        }
+                        if (labelRequired)
+                        {
+                            sb.Append('\n');
+                            sb.Append(GetLabelName(line.Offset));
+                            sb.Append(':');
+                            sb.Append('\n');
                         }
                     }
-                    if (labelRequired)
+                    else
                     {
-                        sb.Append('\n');
-                        sb.Append(GetLabelName(line.Offset));
-                        sb.Append(':');
-                        sb.Append('\n');
+                        var offsets = _labelOffsets.GetViewBetween(lastOffset + 1, line.Offset);
+                        foreach (var offset in offsets)
+                        {
+                            sb.Append('\n');
+                            sb.Append(GetLabelName(offset));
+                            sb.Append(':');
+                            sb.Append('\n');
+                        }
+                        lastOffset = line.Offset;
                     }
                 }
 

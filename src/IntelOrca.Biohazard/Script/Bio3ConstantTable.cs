@@ -630,7 +630,7 @@ namespace IntelOrca.Biohazard.Script
             "nop",
             "evt_end",
             "sleep_1",
-            "evt_chain:ugp",
+            "evt_chain",
             "evt_exec:ugp",
             "evt_kill",
             "if:uL",

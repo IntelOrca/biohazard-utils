@@ -109,9 +109,10 @@
             <Grid Grid.Column="2">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*" />
-                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="4" />
+                    <RowDefinition Height="300" />
                 </Grid.RowDefinitions>
-                <Grid>
+                <Grid Grid.Row="0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="*" />
@@ -123,24 +124,33 @@
                         <local:SceneViewport x:Name="viewport1" />
                     </GroupBox>
                 </Grid>
+                
+                <GridSplitter Grid.Row="1" HorizontalAlignment="Stretch" />
 
-                <Grid Grid.Row="1" >
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition />
-                    </Grid.ColumnDefinitions>
-                    <GroupBox Grid.Column="0" Header="Texture">
-                        <local:TimView Grid.Column="0" x:Name="timImage" TimUpdated="timImage_TimUpdated" />
-                    </GroupBox>
-                    <GroupBox Grid.Column="1" Header="Texture">
-                        <StackPanel>
-                            <Label>Animation:</Label>
-                            <ComboBox x:Name="animationDropdown" />
-                            <Label>Time:</Label>
-                            <TextBlock x:Name="timeTextBlock">0.0</TextBlock>
-                        </StackPanel>
-                    </GroupBox>
-                </Grid>
+                <TabControl Grid.Row="2" x:Name="workflowTabControl">
+                    <TabItem Header="Texture">
+                        <Grid Grid.Row="1" >
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition />
+                            </Grid.ColumnDefinitions>
+                            <GroupBox Grid.Column="0" Header="Texture">
+                                <local:TimView Grid.Column="0" x:Name="timImage" TimUpdated="timImage_TimUpdated" />
+                            </GroupBox>
+                            <GroupBox Grid.Column="1" Header="Texture">
+                                <StackPanel>
+                                    <Label>Animation:</Label>
+                                    <ComboBox x:Name="animationDropdown" />
+                                    <Label>Time:</Label>
+                                    <TextBlock x:Name="timeTextBlock">0.0</TextBlock>
+                                </StackPanel>
+                            </GroupBox>
+                        </Grid>
+                    </TabItem>
+                    <TabItem Header="Animation">
+                        <local:TimelineView x:Name="animationTimeline" />
+                    </TabItem>
+                </TabControl>
             </Grid>
         </Grid>
     </DockPanel>

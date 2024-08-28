@@ -33,7 +33,7 @@ namespace IntelOrca.Biohazard.Model
             return result;
         }
 
-        public AnimationBuilder(IEdd edd, Emr emr)
+        private AnimationBuilder(IEdd edd, Emr emr)
         {
             _edd = edd;
             _emr = emr;
@@ -67,10 +67,10 @@ namespace IntelOrca.Biohazard.Model
                     });
                 }
 
-                eddBuilder.Animations.Add(new Edd1.Builder.Animation()
-                {
-                    Frames = frames.ToArray()
-                });
+                var newAnimation = new Edd1.Builder.Animation();
+                newAnimation.Frames.Clear();
+                newAnimation.Frames.AddRange(frames);
+                eddBuilder.Animations.Add(newAnimation);
             }
 
             return (eddBuilder.ToEdd(), emrBuilder.ToEmr());
@@ -145,6 +145,15 @@ namespace IntelOrca.Biohazard.Model
 
                 Frames.Clear();
                 Frames.AddRange(newFrames);
+            }
+
+            public void Insert(int time)
+            {
+                var frames = Frames;
+                var left = frames[time];
+                var right = time == frames.Count - 1 ? frames[0] : frames[time + 1];
+                var mid = Lerp(left.EmrFrame, right.EmrFrame, 0.5);
+                frames.Insert(time + 1, new Frame(0, mid));
             }
 
             private static EmrFrame Lerp(EmrFrame a, EmrFrame b, double t)

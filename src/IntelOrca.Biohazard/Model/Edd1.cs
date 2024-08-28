@@ -52,10 +52,10 @@ namespace IntelOrca.Biohazard.Model
             var builder = new Builder(Version);
             for (var i = 0; i < AnimationCount; i++)
             {
-                builder.Animations.Add(new Builder.Animation()
-                {
-                    Frames = GetFrames(i).ToArray()
-                });
+                var newAnimation = new Builder.Animation();
+                newAnimation.Frames.Clear();
+                newAnimation.Frames.AddRange(GetFrames(i).ToArray());
+                builder.Animations.Add(newAnimation);
             }
             return builder;
         }

@@ -25,9 +25,9 @@ namespace IntelOrca.Biohazard.Model
                 for (var i = 0; i < Animations.Count; i++)
                 {
                     var animation = Animations[i];
-                    bw.Write((ushort)animation.Frames.Length);
+                    bw.Write((ushort)animation.Frames.Count);
                     bw.Write((ushort)offset);
-                    offset += animation.Frames.Length * 4;
+                    offset += animation.Frames.Count * 4;
                 }
 
                 foreach (var animation in Animations)
@@ -45,7 +45,7 @@ namespace IntelOrca.Biohazard.Model
 
             public class Animation
             {
-                public Frame[] Frames { get; set; } = new Frame[0];
+                public List<Frame> Frames { get; } = new List<Frame>();
             }
         }
     }

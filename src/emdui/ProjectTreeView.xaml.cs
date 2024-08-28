@@ -439,7 +439,7 @@ namespace emdui
 
         private Edd1.Frame[] StretchFrames(Edd1.Builder.Animation animation, double speed)
         {
-            var count = animation.Frames.Length;
+            var count = animation.Frames.Count;
 
             var keyFrames = new List<int>();
             for (var i = 0; i < count; i++)

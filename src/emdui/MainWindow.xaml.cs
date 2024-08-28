@@ -28,6 +28,8 @@ namespace emdui
         private ModelScene _scene;
         private DispatcherTimer _timer;
 
+        private AnimationController _animationController;
+        private bool _animationPlaying;
         private int _animationIndex;
         private double _time;
         private int _selectedPartIndex;
@@ -47,6 +49,9 @@ namespace emdui
 
             projectTreeView.MainWindow = this;
             Instance = this;
+
+            _animationController = new AnimationController(this);
+            animationTimeline.Controller = _animationController;
         }
 
         private void _timer_Tick(object sender, EventArgs e)
@@ -91,7 +96,10 @@ namespace emdui
             timeTextBlock.Text = _time.ToString("0.00");
             _scene.SetKeyframe(emrKeyframeIndex);
 
-            _time++;
+            _animationController.InvokeStateChanged();
+
+            if (_animationPlaying)
+                _time++;
         }
 
         private void SetTimFile(TimFile timFile)
@@ -434,6 +442,7 @@ namespace emdui
         {
             _emr = _baseEmr.WithKeyframes(emr);
             _edd = edd;
+            _animationPlaying = true;
             _animationIndex = index;
             _time = 0;
             _selectedPartIndex = -1;
@@ -621,5 +630,106 @@ namespace emdui
             model.SetEdd(0, newEdd);
             model.SetEmr(0, newEmr);
         }
+
+        private class AnimationController : IAnimationController
+        {
+            private MainWindow _instance;
+
+            public bool Playing
+            {
+                get => _instance._animationPlaying;
+                set => _instance._animationPlaying = value;
+            }
+            public int Duration => _instance._edd?.GetAnimationDuration(_instance._animationIndex) ?? 0;
+            public double Time
+            {
+                get => _instance._time;
+                set => _instance._time = value;
+            }
+            public int KeyFrame
+            {
+                get => (int)Time;
+                set
+                {
+                    if (Duration == 0)
+                        Time = 0;
+                    else
+                        Time = Math.Max(0, Math.Min(Duration - 1, value));
+                }
+            }
+
+            public event EventHandler StateChanged;
+
+            public AnimationController(MainWindow instance)
+            {
+                _instance = instance;
+            }
+
+            public void Insert()
+            {
+                var animationIndex = _instance._animationIndex;
+                var keyFrame = KeyFrame;
+
+                var animationBuilder = AnimationBuilder.FromEddEmr(_instance._edd, _instance._emr);
+                var animation = animationBuilder.Animations[animationIndex];
+                animation.Insert(keyFrame);
+                var (newEdd, newEmr) = animationBuilder.ToEddEmr();
+
+                _instance._project.MainModel.SetEdd(0, newEdd);
+                _instance._project.MainModel.SetEmr(0, newEmr);
+                _instance._edd = newEdd;
+                _instance._emr = newEmr;
+                _instance._baseEmr = newEmr;
+                _instance.RefreshModelView();
+            }
+
+            public void Duplicate()
+            {
+                var animationIndex = _instance._animationIndex;
+                var frameIndex = KeyFrame;
+
+                var edd = (Edd1.Builder)_instance._edd.ToBuilder();
+                var animation = edd.Animations[animationIndex];
+                if (animation.Frames.Count > frameIndex)
+                {
+                    animation.Frames.Insert(frameIndex + 1, animation.Frames[frameIndex]);
+                    var newEdd = edd.ToEdd();
+                    _instance._project.MainModel.SetEdd(0, newEdd);
+                    _instance._edd = newEdd;
+                }
+            }
+
+            public void Delete()
+            {
+                var animationIndex = _instance._animationIndex;
+                var frameIndex = KeyFrame;
+
+                var edd = (Edd1.Builder)_instance._edd.ToBuilder();
+                var animation = edd.Animations[animationIndex];
+                if (animation.Frames.Count > frameIndex)
+                {
+                    animation.Frames.RemoveAt(frameIndex);
+                    var newEdd = edd.ToEdd();
+                    _instance._project.MainModel.SetEdd(0, newEdd);
+                    _instance._edd = newEdd;
+                }
+            }
+
+            public void InvokeStateChanged() => StateChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    public interface IAnimationController
+    {
+        event EventHandler StateChanged;
+
+        bool Playing { get; set; }
+        int Duration { get; }
+        double Time { get; set; }
+        int KeyFrame { get; set; }
+
+        void Insert();
+        void Duplicate();
+        void Delete();
     }
 }

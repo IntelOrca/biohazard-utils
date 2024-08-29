@@ -56,6 +56,14 @@ namespace emdui
 
         private void _timer_Tick(object sender, EventArgs e)
         {
+            if (_animationPlaying)
+                _time += 1;
+
+            RefreshKeyframe();
+        }
+
+        private void RefreshKeyframe()
+        {
             if (_mesh == null || _animationIndex == -1)
                 return;
 
@@ -97,9 +105,6 @@ namespace emdui
             _scene.SetKeyframe(emrKeyframeIndex);
 
             _animationController.InvokeStateChanged();
-
-            if (_animationPlaying)
-                _time++;
         }
 
         private void SetTimFile(TimFile timFile)
@@ -179,6 +184,8 @@ namespace emdui
 
             RefreshHighlightedPart();
             RefreshStatusBar();
+
+            RefreshKeyframe();
         }
 
         private void RefreshHighlightedPart()
@@ -657,12 +664,107 @@ namespace emdui
                         Time = Math.Max(0, Math.Min(Duration - 1, value));
                 }
             }
+            public int EntityCount
+            {
+                get
+                {
+                    var emr = _instance._emr;
+                    if (emr.KeyFrames.Length == 0)
+                        return 0;
+
+                    var firstKeyFrame = emr.KeyFrames[0];
+                    return firstKeyFrame.NumAngles * 3;
+                }
+            }
+
 
             public event EventHandler StateChanged;
 
             public AnimationController(MainWindow instance)
             {
                 _instance = instance;
+            }
+
+            public string GetEntityName(int i)
+            {
+                var iF = i / 3;
+                var iC = i % 3;
+
+                var emr = _instance._emr;
+                var version = emr.Version;
+                var partName = PartName.GetPartName(version, iF);
+                string componentName;
+                switch (iC)
+                {
+                    case 0: componentName = "x"; break;
+                    case 1: componentName = "y"; break;
+                    case 2: componentName = "z"; break;
+                    default: throw new Exception();
+                }
+                return $"{partName}.{componentName}";
+            }
+
+            public double? GetEntity(int i, int t)
+            {
+                var iF = i / 3;
+                var iC = i % 3;
+
+                var animationIndex = _instance._animationIndex;
+                var edd = _instance._edd;
+                var emr = _instance._emr;
+                var duration = edd.GetAnimationDuration(animationIndex);
+                if (t < 0 || t >= duration)
+                    return null;
+
+                var frameIndex = edd.GetFrameIndex(animationIndex, t);
+                if (frameIndex < 0 || frameIndex >= emr.KeyFrames.Length)
+                    return null;
+
+                var frame = emr.KeyFrames[frameIndex];
+                if (iF < 0 || iF >= frame.NumAngles)
+                    return null;
+
+                var result = frame.GetAngle(i / 3);
+                if (iC == 0) return result.x / 4096.0f;
+                if (iC == 1) return result.y / 4096.0f;
+                if (iC == 2) return result.z / 4096.0f;
+                throw new Exception();
+            }
+
+            public void SetEntity(int i, int t, double value)
+            {
+                var iF = i / 3;
+                var iC = i % 3;
+
+                var animationIndex = _instance._animationIndex;
+                var edd = _instance._edd;
+                var emr = _instance._emr.ToBuilder();
+                var duration = edd.GetAnimationDuration(animationIndex);
+                if (t < 0 || t >= duration)
+                    return;
+
+                var frameIndex = edd.GetFrameIndex(animationIndex, t);
+                if (frameIndex < 0 || frameIndex >= emr.KeyFrames.Count)
+                    return;
+
+                var frame = emr.KeyFrames[frameIndex];
+                if (iF < 0 || iF >= frame.Angles.Length)
+                    return;
+
+                var rawValue = (short)((int)(value * 4096) % 4096);
+
+                var v = frame.Angles[i / 3];
+                if (iC == 0) v.x = rawValue;
+                if (iC == 1) v.y = rawValue;
+                if (iC == 2) v.z = rawValue;
+                frame.Angles[i / 3] = v;
+
+                var newEmr = emr.ToEmr();
+
+                _instance._project.MainModel.SetEmr(0, newEmr);
+                _instance._emr = newEmr;
+                _instance._baseEmr = newEmr;
+                _instance.RefreshModelView();
             }
 
             public void Insert()
@@ -727,6 +829,11 @@ namespace emdui
         int Duration { get; }
         double Time { get; set; }
         int KeyFrame { get; set; }
+        int EntityCount { get; }
+
+        string GetEntityName(int i);
+        double? GetEntity(int i, int t);
+        void SetEntity(int entity, int time, double value);
 
         void Insert();
         void Duplicate();

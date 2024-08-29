@@ -7,22 +7,33 @@
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800"
              Focusable="True"
-             PreviewKeyDown="canvas_PreviewKeyDown">
+             PreviewKeyDown="canvas_PreviewKeyDown"
+             PreviewMouseDown="canvas_PreviewMouseDown"
+             PreviewMouseMove="canvas_PreviewMouseMove"
+             PreviewMouseUp="canvas_PreviewMouseUp"
+             PreviewMouseWheel="canvas_PreviewMouseWheel">
     <DockPanel>
         <Border DockPanel.Dock="Top" Background="DarkGray">
             <ToolBarTray HorizontalAlignment="Right" Background="Transparent" IsLocked="True">
                 <ToolBar x:Name="toolbar" Background="Transparent" OverflowMode="Never" Padding="0,0,32,0" Margin="0,0,-20,0" />
             </ToolBarTray>
         </Border>
-        <Border Padding="32,0,0,0">
-            <ScrollViewer Background="White" HorizontalScrollBarVisibility="Visible">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <ListView Grid.Column="0" x:Name="entityList" SelectionChanged="entityList_SelectionChanged" />
+            <GridSplitter Grid.Column="1" Background="Transparent" Width="4" VerticalAlignment="Stretch" ResizeBehavior="PreviousAndNext" />
+            <ScrollViewer Grid.Column="2" x:Name="scrollViewer" Background="White" HorizontalScrollBarVisibility="Visible">
                 <Canvas x:Name="canvas"
+                        SnapsToDevicePixels="True"
                         Background="White"
+                        HorizontalAlignment="Left"
                         Width="1100"
-                        Height="1000"
-                        PreviewMouseDown="canvas_PreviewMouseDown"
-                        PreviewMouseMove="canvas_PreviewMouseMove" />
+                        Height="1000" />
             </ScrollViewer>
-        </Border>
+        </Grid>
     </DockPanel>
 </UserControl>

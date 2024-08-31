@@ -1,0 +1,52 @@
+﻿<UserControl x:Class="emdui.Timeline"
+             x:Name="root"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:emdui"
+             xmlns:system="clr-namespace:System;assembly=mscorlib"
+             mc:Ignorable="d" 
+             d:DesignHeight="350" d:DesignWidth="600">
+    <ScrollViewer Grid.Column="2"
+                  x:Name="scrollViewer"
+                  Background="White"
+                  HorizontalScrollBarVisibility="Visible"
+                  VerticalScrollBarVisibility="Disabled"
+                  BorderThickness="0">
+        <Grid x:Name="container"
+              Background="Transparent"
+              PreviewMouseDown="Grid_PreviewMouseDown"
+              PreviewMouseMove="Grid_PreviewMouseMove"
+              PreviewMouseUp="Grid_PreviewMouseUp"
+              PreviewMouseWheel="Grid_PreviewMouseWheel"
+              PreviewKeyDown="container_PreviewKeyDown"
+              MouseDown="container_MouseDown"
+              MouseMove="Grid_MouseMove"
+              HorizontalAlignment="Left"
+              Width="4096"
+              Focusable="True"
+              FocusVisualStyle="{x:Null}"
+              SnapsToDevicePixels="True">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <local:TimeCodeBar Grid.Row="0"
+                                   x:Name="timeCodeBar"
+                                   Duration="{Binding Duration, ElementName=root}"
+                                   Scale="{Binding Scale, ElementName=root}" />
+                <Grid Grid.Row="1">
+                    <local:TimelineBackdrop x:Name="timelineBackdrop"
+                                            Scale="{Binding Scale, ElementName=root}"
+                                            IsHitTestVisible="False" />
+                    <Grid x:Name="seriesContainer" />
+                </Grid>
+            </Grid>
+            <local:CurrentTimeMarker Scale="{Binding Scale, ElementName=root}"
+                                     Time="{Binding Time, ElementName=root}"
+                                     IsHitTestVisible="False" />
+        </Grid>
+    </ScrollViewer>
+</UserControl>

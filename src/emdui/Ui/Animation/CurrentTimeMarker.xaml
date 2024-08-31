@@ -1,0 +1,30 @@
+﻿<UserControl x:Class="emdui.CurrentTimeMarker"
+             x:Name="root"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:emdui"
+             mc:Ignorable="d"
+             d:DesignWidth="100"
+             d:DesignHeight="100">
+    <Grid HorizontalAlignment="Left">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Border Grid.Row="0"
+                Background="#66F"
+                BorderBrush="Black"
+                BorderThickness="1"
+                Padding="0">
+            <TextBlock FontSize="10"
+                       TextAlignment="Center"
+                       Margin="-1,-1,-1,0"
+                       Height="14"
+                       Width="{Binding Scale, ElementName=root}"
+                       Text="{Binding Time, ElementName=root}" />
+        </Border>
+        <Border Grid.Row="1" Background="Black" Width="1" />
+    </Grid>
+</UserControl>

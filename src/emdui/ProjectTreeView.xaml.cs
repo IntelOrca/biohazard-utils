@@ -500,6 +500,7 @@ namespace emdui
                 {
                     mainWindow.LoadMesh(pldFile.GetMesh(0));
                     mainWindow.LoadAnimation(emr, Edd, Index);
+                    mainWindow.SetActiveModelFile(pldFile);
                 }
                 else if (ProjectFile.Content is PlwFile plwFile)
                 {
@@ -517,12 +518,14 @@ namespace emdui
 
                     mainWindow.LoadMesh(mesh, texture);
                     mainWindow.LoadAnimation(emr, Edd, Index);
+                    mainWindow.SetActiveModelFile(plwFile);
                 }
                 else if (ProjectFile.Content is EmdFile emdFile)
                 {
                     var meshIndex = emdFile.Version == BioVersion.Biohazard3 ? 1 : 0;
                     mainWindow.LoadMesh(emdFile.GetMesh(meshIndex));
                     mainWindow.LoadAnimation(emr, Edd, Index);
+                    mainWindow.SetActiveModelFile(emdFile);
                 }
             }
         }

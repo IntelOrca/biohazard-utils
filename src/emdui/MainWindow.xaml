@@ -110,7 +110,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*" />
                     <RowDefinition Height="4" />
-                    <RowDefinition Height="300" />
+                    <RowDefinition Height="300" MinHeight="200" />
                 </Grid.RowDefinitions>
                 <Grid Grid.Row="0">
                     <Grid.ColumnDefinitions>
@@ -129,23 +129,11 @@
 
                 <TabControl Grid.Row="2" x:Name="workflowTabControl">
                     <TabItem Header="Texture">
-                        <Grid Grid.Row="1" >
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition />
-                            </Grid.ColumnDefinitions>
-                            <GroupBox Grid.Column="0" Header="Texture">
-                                <local:TimView Grid.Column="0" x:Name="timImage" TimUpdated="timImage_TimUpdated" />
-                            </GroupBox>
-                            <GroupBox Grid.Column="1" Header="Texture">
-                                <StackPanel>
-                                    <Label>Animation:</Label>
-                                    <ComboBox x:Name="animationDropdown" />
-                                    <Label>Time:</Label>
-                                    <TextBlock x:Name="timeTextBlock">0.0</TextBlock>
-                                </StackPanel>
-                            </GroupBox>
-                        </Grid>
+                        <local:TimView Grid.Column="0"
+                                       x:Name="timImage"
+                                       HorizontalAlignment="Left"
+                                       VerticalAlignment="Top"
+                                       TimUpdated="timImage_TimUpdated" />
                     </TabItem>
                     <TabItem Header="Animation">
                         <local:TimelineView x:Name="animationTimeline" />

@@ -19,6 +19,7 @@ namespace emdui
 
         private Project _project;
 
+        private ModelFile _activeModelFile;
         private IModelMesh _mesh;
         private TimFile _tim;
         private Emr _baseEmr;
@@ -56,9 +57,27 @@ namespace emdui
 
         private void _timer_Tick(object sender, EventArgs e)
         {
-            if (_animationPlaying)
-                _time += 1;
-
+            var edd = _edd;
+            if (edd != null)
+            {
+                var duration = edd.GetAnimationDuration(_animationIndex);
+                if (duration > 0)
+                {
+                    var oldTime = _time;
+                    if (_animationPlaying)
+                    {
+                        _time += 1;
+                    }
+                    while (_time >= duration)
+                    {
+                        _time -= duration;
+                    }
+                    if (oldTime != _time)
+                    {
+                        _animationController.InvokeTimeChanged();
+                    }
+                }
+            }
             RefreshKeyframe();
         }
 
@@ -71,40 +90,12 @@ namespace emdui
             if (edd == null)
                 return;
 
-            if (animationDropdown.Items.Count != edd.AnimationCount)
-            {
-                animationDropdown.Items.Clear();
-                for (var i = 0; i < edd.AnimationCount; i++)
-                {
-                    animationDropdown.Items.Add($"Animation {i}");
-                }
-            }
-
-            if (_animationIndex != animationDropdown.SelectedIndex)
-            {
-                animationDropdown.SelectedIndex = _animationIndex;
-                // if (animationDropdown.SelectedIndex == -1)
-                // {
-                //     animationDropdown.SelectedIndex = 0;
-                // }
-                // _animationIndex = animationDropdown.SelectedIndex;
-            }
-
-            var duration = edd.GetAnimationDuration(_animationIndex);
             var emrKeyframeIndex = 0;
-            if (duration > 0)
+            if (edd.GetAnimationDuration(_animationIndex) > 0)
             {
-                while (_time >= duration)
-                {
-                    _time -= duration;
-                }
                 emrKeyframeIndex = edd.GetFrameIndex(_animationIndex, (int)_time);
             }
-
-            timeTextBlock.Text = _time.ToString("0.00");
             _scene.SetKeyframe(emrKeyframeIndex);
-
-            _animationController.InvokeStateChanged();
         }
 
         private void SetTimFile(TimFile timFile)
@@ -186,6 +177,7 @@ namespace emdui
             RefreshStatusBar();
 
             RefreshKeyframe();
+            _animationController.InvokeDataChanged();
         }
 
         private void RefreshHighlightedPart()
@@ -371,6 +363,11 @@ namespace emdui
         {
             SetTimFile(timImage.Tim);
             RefreshModelView();
+        }
+
+        public void SetActiveModelFile(ModelFile modelFile)
+        {
+            _activeModelFile = modelFile;
         }
 
         public void LoadMesh(IModelMesh mesh, TimFile texture = null)
@@ -615,6 +612,8 @@ namespace emdui
             {
                 ChangeSpeed(weapon, speed);
             }
+
+            _animationController.InvokeDataChanged();
         }
 
         private void ChangeSpeed(ModelFile model, double speed)
@@ -636,6 +635,8 @@ namespace emdui
 
             model.SetEdd(0, newEdd);
             model.SetEmr(0, newEmr);
+
+            _animationController.InvokeDataChanged();
         }
 
         private class AnimationController : IAnimationController
@@ -645,13 +646,24 @@ namespace emdui
             public bool Playing
             {
                 get => _instance._animationPlaying;
-                set => _instance._animationPlaying = value;
+                set
+                {
+                    if (_instance._animationPlaying != value)
+                    {
+                        _instance._animationPlaying = value;
+                        InvokeTimeChanged();
+                    }
+                }
             }
             public int Duration => _instance._edd?.GetAnimationDuration(_instance._animationIndex) ?? 0;
             public double Time
             {
                 get => _instance._time;
-                set => _instance._time = value;
+                set
+                {
+                    _instance._time = value;
+                    InvokeTimeChanged();
+                }
             }
             public int KeyFrame
             {
@@ -669,7 +681,7 @@ namespace emdui
                 get
                 {
                     var emr = _instance._emr;
-                    if (emr.KeyFrames.Length == 0)
+                    if (emr == null || emr.KeyFrames.Length == 0)
                         return 0;
 
                     var firstKeyFrame = emr.KeyFrames[0];
@@ -678,7 +690,8 @@ namespace emdui
             }
 
 
-            public event EventHandler StateChanged;
+            public event EventHandler DataChanged;
+            public event EventHandler TimeChanged;
 
             public AnimationController(MainWindow instance)
             {
@@ -725,10 +738,20 @@ namespace emdui
                     return null;
 
                 var result = frame.GetAngle(i / 3);
-                if (iC == 0) return result.x / 4096.0f;
-                if (iC == 1) return result.y / 4096.0f;
-                if (iC == 2) return result.z / 4096.0f;
-                throw new Exception();
+                double r = 0;
+                if (iC == 0) r = result.x / 4096.0f;
+                if (iC == 1) r = result.y / 4096.0f;
+                if (iC == 2) r = result.z / 4096.0f;
+
+                r = Wrap((r * 2 - 1) + 1);
+                return r;
+            }
+
+            private static double Wrap(double x)
+            {
+                while (x < 1) x += 2;
+                while (x > 1) x -= 2;
+                return x;
             }
 
             public void SetEntity(int i, int t, double value)
@@ -751,7 +774,8 @@ namespace emdui
                 if (iF < 0 || iF >= frame.Angles.Length)
                     return;
 
-                var rawValue = (short)((int)(value * 4096) % 4096);
+                var denormalizedValue = (Wrap(value - 1) + 1) / 2;
+                var rawValue = (short)((int)(denormalizedValue * 4096) % 4096);
 
                 var v = frame.Angles[i / 3];
                 if (iC == 0) v.x = rawValue;
@@ -761,10 +785,12 @@ namespace emdui
 
                 var newEmr = emr.ToEmr();
 
-                _instance._project.MainModel.SetEmr(0, newEmr);
+                _instance._activeModelFile.SetEmr(0, newEmr);
                 _instance._emr = newEmr;
                 _instance._baseEmr = newEmr;
                 _instance.RefreshModelView();
+
+                InvokeDataChanged();
             }
 
             public void Insert()
@@ -783,6 +809,8 @@ namespace emdui
                 _instance._emr = newEmr;
                 _instance._baseEmr = newEmr;
                 _instance.RefreshModelView();
+
+                InvokeDataChanged();
             }
 
             public void Duplicate()
@@ -799,6 +827,8 @@ namespace emdui
                     _instance._project.MainModel.SetEdd(0, newEdd);
                     _instance._edd = newEdd;
                 }
+
+                InvokeDataChanged();
             }
 
             public void Delete()
@@ -815,15 +845,19 @@ namespace emdui
                     _instance._project.MainModel.SetEdd(0, newEdd);
                     _instance._edd = newEdd;
                 }
+
+                InvokeDataChanged();
             }
 
-            public void InvokeStateChanged() => StateChanged?.Invoke(this, EventArgs.Empty);
+            public void InvokeDataChanged() => DataChanged?.Invoke(this, EventArgs.Empty);
+            public void InvokeTimeChanged() => TimeChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 
     public interface IAnimationController
     {
-        event EventHandler StateChanged;
+        event EventHandler DataChanged;
+        event EventHandler TimeChanged;
 
         bool Playing { get; set; }
         int Duration { get; }

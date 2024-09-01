@@ -137,6 +137,11 @@ namespace emdui
 
         protected override void OnPreviewMouseMove(MouseEventArgs e)
         {
+            if (e.LeftButton == MouseButtonState.Released)
+            {
+                _grabbedPoint = null;
+            }
+
             if (_grabbedPoint != null)
             {
                 var time = _grabbedPoint.Time;
@@ -145,6 +150,11 @@ namespace emdui
                     new Vector(_grabbedPoint.Width / 2, _grabbedPoint.Height / 2);
                 var oldValue = _points[time];
                 var newValue = YToValue(newPoint.Y);
+                if ((Keyboard.Modifiers & ModifierKeys.Control) != 0)
+                {
+                    newValue = Math.Round(newValue / 0.25) * 0.25;
+                }
+
                 _grabbedPoint.Value = newValue;
                 _points[time] = newValue;
                 Refresh();

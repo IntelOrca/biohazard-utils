@@ -781,7 +781,9 @@ namespace emdui
                     return;
 
                 var denormalizedValue = (Wrap(value - 1) + 1) / 2;
-                var rawValue = (short)((int)(denormalizedValue * 4096) % 4096);
+                var rawValue = value <= -1
+                    ? (short)(2049)
+                    : (short)((int)(denormalizedValue * 4096) % 4096);
 
                 var v = frame.Angles[i / 3];
                 if (iC == 0) v.x = rawValue;

@@ -150,10 +150,17 @@ namespace IntelOrca.Biohazard.Model
             public void Insert(int time)
             {
                 var frames = Frames;
-                var left = frames[time];
-                var right = time == frames.Count - 1 ? frames[0] : frames[time + 1];
-                var mid = Lerp(left.EmrFrame, right.EmrFrame, 0.5);
-                frames.Insert(time + 1, new Frame(0, mid));
+                if (frames.Count == 0)
+                {
+                    frames.Add(new Frame(0, new EmrFrame()));
+                }
+                else
+                {
+                    var left = frames[time];
+                    var right = time == frames.Count - 1 ? frames[0] : frames[time + 1];
+                    var mid = Lerp(left.EmrFrame, right.EmrFrame, 0.5);
+                    frames.Insert(time + 1, new Frame(0, mid));
+                }
             }
 
             private static EmrFrame Lerp(EmrFrame a, EmrFrame b, double t)

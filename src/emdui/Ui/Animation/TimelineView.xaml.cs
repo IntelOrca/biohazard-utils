@@ -53,7 +53,7 @@ namespace emdui
 
         private void InitializeToolbar()
         {
-            AddToolbarButton("IconContentDuplicate", "Insert keyframe", () => _controller.Insert());
+            AddToolbarButton("IconAdd", "Insert keyframe", () => _controller.Insert());
             AddToolbarButton("IconContentDuplicate", "Duplicate current keyframe", () => _controller.Duplicate());
             AddToolbarButton("IconDelete", "Delete current keyframe", () => _controller.Delete());
             AddToolbarSeparator();

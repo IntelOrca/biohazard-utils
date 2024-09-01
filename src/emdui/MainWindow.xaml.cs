@@ -661,7 +661,7 @@ namespace emdui
                 get => _instance._time;
                 set
                 {
-                    _instance._time = value;
+                    _instance._time = Math.Max(0, Math.Min(Duration - 1, value));
                     InvokeTimeChanged();
                 }
             }
@@ -723,6 +723,9 @@ namespace emdui
                 var iC = i % 3;
 
                 var animationIndex = _instance._animationIndex;
+                if (animationIndex == -1)
+                    return null;
+
                 var edd = _instance._edd;
                 var emr = _instance._emr;
                 var duration = edd.GetAnimationDuration(animationIndex);
@@ -760,6 +763,9 @@ namespace emdui
                 var iC = i % 3;
 
                 var animationIndex = _instance._animationIndex;
+                if (animationIndex == -1)
+                    return;
+
                 var edd = _instance._edd;
                 var emr = _instance._emr.ToBuilder();
                 var duration = edd.GetAnimationDuration(animationIndex);
@@ -796,6 +802,9 @@ namespace emdui
             public void Insert()
             {
                 var animationIndex = _instance._animationIndex;
+                if (animationIndex == -1)
+                    return;
+
                 var keyFrame = KeyFrame;
 
                 var animationBuilder = AnimationBuilder.FromEddEmr(_instance._edd, _instance._emr);
@@ -816,24 +825,38 @@ namespace emdui
             public void Duplicate()
             {
                 var animationIndex = _instance._animationIndex;
+                if (animationIndex == -1)
+                    return;
+
                 var frameIndex = KeyFrame;
 
                 var edd = (Edd1.Builder)_instance._edd.ToBuilder();
                 var animation = edd.Animations[animationIndex];
-                if (animation.Frames.Count > frameIndex)
+                if (animation.Frames.Count == 0)
+                {
+                    animation.Frames.Add(new Edd1.Frame());
+                }
+                else if (animation.Frames.Count > frameIndex)
                 {
                     animation.Frames.Insert(frameIndex + 1, animation.Frames[frameIndex]);
-                    var newEdd = edd.ToEdd();
-                    _instance._project.MainModel.SetEdd(0, newEdd);
-                    _instance._edd = newEdd;
                 }
+
+                var newEdd = edd.ToEdd();
+                _instance._project.MainModel.SetEdd(0, newEdd);
+                _instance._edd = newEdd;
 
                 InvokeDataChanged();
             }
 
             public void Delete()
             {
+                if (Duration == 0)
+                    return;
+
                 var animationIndex = _instance._animationIndex;
+                if (animationIndex == -1)
+                    return;
+
                 var frameIndex = KeyFrame;
 
                 var edd = (Edd1.Builder)_instance._edd.ToBuilder();
@@ -845,6 +868,9 @@ namespace emdui
                     _instance._project.MainModel.SetEdd(0, newEdd);
                     _instance._edd = newEdd;
                 }
+
+                if (Time >= Duration)
+                    Time = Duration - 1;
 
                 InvokeDataChanged();
             }

@@ -46,6 +46,13 @@ namespace IntelOrca.Biohazard.Model
             return frames[frameIndex].Index;
         }
 
+        public int GetFrameFunction(int index, int time)
+        {
+            var frames = GetFrames(index);
+            var frameIndex = Math.Max(0, Math.Min(frames.Length - 1, time));
+            return frames[frameIndex].Flags;
+        }
+
         IEddBuilder IEdd.ToBuilder() => ToBuilder();
         public Builder ToBuilder()
         {
@@ -82,9 +89,9 @@ namespace IntelOrca.Biohazard.Model
                 set => _value = (uint)(_value & ~0xFFF | (uint)value & 0xFFF);
             }
 
-            public ushort Flags
+            public int Flags
             {
-                get => (ushort)(_value >> 12);
+                get => (int)(_value >> 12);
                 set => _value = ((uint)value << 12) | (_value & 0xFFF);
             }
         }

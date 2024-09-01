@@ -8,6 +8,8 @@
         Title="TITLE"
         SizeToContent="WidthAndHeight"
         WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
         MinWidth="300"
         MinHeight="100">
     <Grid Margin="8">

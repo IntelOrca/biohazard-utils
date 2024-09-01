@@ -1,9 +1,9 @@
 ﻿using System;
+using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using System.Windows.Shapes;
 using System.Windows.Threading;
 
 namespace emdui
@@ -15,15 +15,8 @@ namespace emdui
     {
         private Button _playButton;
         private Button _stopButton;
-        private Line _currentTimeVerticalLine;
-        private Rectangle _lastEntityPoint;
-        private Rectangle _pickupEntityPoint;
-        private double _pickupOffset;
-
         private IAnimationController _controller;
-        private int _duration;
         private int? _selectedEntity;
-        private double _scale = 30;
 
         public IAnimationController Controller
         {
@@ -57,6 +50,8 @@ namespace emdui
             AddToolbarButton("IconContentDuplicate", "Duplicate current keyframe", () => _controller.Duplicate());
             AddToolbarButton("IconDelete", "Delete current keyframe", () => _controller.Delete());
             AddToolbarSeparator();
+            AddToolbarButton("IconFunction", "Keyframe function", () => EditKeyframeFunction());
+            AddToolbarSeparator();
             AddToolbarButton("IconSkipBackward", "Seek to first key frame", () => _controller.KeyFrame = 0);
             AddToolbarButton("IconStepBackward", "Seek to previous key frame", () => _controller.KeyFrame--);
             _playButton = AddToolbarButton("IconPlay", "Play animation", () => _controller.Playing = true);
@@ -87,6 +82,21 @@ namespace emdui
             return button;
         }
 
+        private void EditKeyframeFunction()
+        {
+            var time = _controller.KeyFrame;
+            var f = _controller.GetFunction(time);
+            var result = InputWindow.Show(
+                "Keyframe Function",
+                "Type in the function number for the keyframe.\nThis can control when the floor sound plays, or when the ammo count is set.",
+                $"0x{f:X}",
+                s => ParseFunctionNumber(s) != null);
+            if (result != null && ParseFunctionNumber(result) is int newValue && newValue != f)
+            {
+                _controller.SetFunction(time, newValue);
+            }
+        }
+
         private void OnControllerDataChanged(object sender, EventArgs e)
         {
             Dispatcher.Invoke(() =>
@@ -102,6 +112,7 @@ namespace emdui
                 timeline.Duration = _controller.Duration;
                 timeline.Time = _controller.Time;
                 UpdateToolbarVisibility();
+                UpdateFlags();
                 UpdateSeries();
             }, DispatcherPriority.Render);
         }
@@ -128,6 +139,18 @@ namespace emdui
                 _stopButton.Visibility = Visibility.Collapsed;
             }
             timeline.Playing = _controller.Playing;
+        }
+
+        private void UpdateFlags()
+        {
+            var duration = _controller.Duration;
+            var allFlags = new int[duration];
+            for (var t = 0; t < duration; t++)
+            {
+                var flags = _controller.GetFunction(t);
+                allFlags[t] = flags;
+            }
+            timeline.Flags = allFlags;
         }
 
         private void UpdateSeries()
@@ -175,6 +198,25 @@ namespace emdui
         private void timeline_PlayToggled(object sender, EventArgs e)
         {
             _controller.Playing = !_controller.Playing;
+        }
+
+        private static int? ParseFunctionNumber(string s)
+        {
+            s = s.Trim();
+            uint result;
+            if (s.StartsWith("0x"))
+            {
+                if (!uint.TryParse(s.Substring(2), NumberStyles.HexNumber, null, out result))
+                    return null;
+            }
+            else
+            {
+                if (!uint.TryParse(s, out result))
+                    return null;
+            }
+            if (result > 0xFFFFF)
+                return null;
+            return (int)result;
         }
     }
 }

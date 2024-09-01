@@ -57,6 +57,12 @@ namespace emdui
             set => SetValue(TimeProperty, value);
         }
 
+        public int[] Flags
+        {
+            get => timelineFlagBar.Flags;
+            set => timelineFlagBar.Flags = value;
+        }
+
         public bool Playing { get; set; }
 
         public TimelineSeries[] Series

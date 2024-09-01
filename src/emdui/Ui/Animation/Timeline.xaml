@@ -31,13 +31,17 @@
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
                 <local:TimeCodeBar Grid.Row="0"
                                    x:Name="timeCodeBar"
                                    Duration="{Binding Duration, ElementName=root}"
                                    Scale="{Binding Scale, ElementName=root}" />
-                <Grid Grid.Row="1">
+                <local:TimelineFunctionBar Grid.Row="1"
+                                       x:Name="timelineFlagBar"
+                                       Scale="{Binding Scale, ElementName=root}" />
+                <Grid Grid.Row="2">
                     <local:TimelineBackdrop x:Name="timelineBackdrop"
                                             Scale="{Binding Scale, ElementName=root}"
                                             IsHitTestVisible="False" />

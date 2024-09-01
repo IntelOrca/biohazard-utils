@@ -20,5 +20,13 @@
     <Compile Update="EmdUISettings.cs">
       <Generator>MSBuild:Compile</Generator>
     </Compile>
+    <Compile Update="Ui\Animation\TimelineFunctionBar.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="Ui\Animation\TimelineFunctionBar.xaml">
+      <SubType>Designer</SubType>
+    </Page>
   </ItemGroup>
 </Project>

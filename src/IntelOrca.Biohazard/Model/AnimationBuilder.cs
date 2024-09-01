@@ -221,10 +221,10 @@ namespace IntelOrca.Biohazard.Model
 
         public class Frame
         {
-            public ushort Flags { get; set; }
+            public int Flags { get; set; }
             public EmrFrame EmrFrame { get; set; }
 
-            public Frame(ushort flags, EmrFrame emrFrame)
+            public Frame(int flags, EmrFrame emrFrame)
             {
                 Flags = flags;
                 EmrFrame = emrFrame;

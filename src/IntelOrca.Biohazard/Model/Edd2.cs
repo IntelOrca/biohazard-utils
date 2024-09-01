@@ -45,6 +45,13 @@ namespace IntelOrca.Biohazard.Model
             return (int)(animation.StartFrame + frames[time].Index);
         }
 
+        public int GetFrameFunction(int index, int time)
+        {
+            var animation = Animations[index];
+            var frames = GetFrames(index);
+            return frames[time].Function;
+        }
+
         IEddBuilder IEdd.ToBuilder() => ToBuilder();
 
         public Builder ToBuilder()

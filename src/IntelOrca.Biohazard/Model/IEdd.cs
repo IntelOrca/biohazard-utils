@@ -9,6 +9,7 @@ namespace IntelOrca.Biohazard.Model
         int AnimationCount { get; }
         int GetAnimationDuration(int index);
         int GetFrameIndex(int index, int time);
+        int GetFrameFunction(int index, int time);
         IEddBuilder ToBuilder();
     }
 }

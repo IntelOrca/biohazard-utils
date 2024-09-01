@@ -698,6 +698,43 @@ namespace emdui
                 _instance = instance;
             }
 
+            public int GetFunction(int time)
+            {
+                var animationIndex = _instance._animationIndex;
+                if (animationIndex == -1)
+                    return 0;
+
+                var edd = _instance._edd;
+                if (edd == null)
+                    return 0;
+
+                return edd.GetFrameFunction(animationIndex, time);
+            }
+
+            public void SetFunction(int time, int flags)
+            {
+                var animationIndex = _instance._animationIndex;
+                if (animationIndex == -1)
+                    return;
+
+                var edd = _instance._edd;
+                if (edd == null)
+                    return;
+
+                var builder = ((Edd1)edd).ToBuilder();
+                var animation = builder.Animations[animationIndex];
+                var frame = animation.Frames[time];
+                frame.Flags = flags;
+                animation.Frames[time] = frame;
+
+                var newEdd = builder.ToEdd();
+                _instance._activeModelFile.SetEdd(0, newEdd);
+                _instance._edd = newEdd;
+                _instance.RefreshModelView();
+
+                InvokeDataChanged();
+            }
+
             public string GetEntityName(int i)
             {
                 var iF = i / 3;
@@ -748,13 +785,6 @@ namespace emdui
 
                 r = Wrap((r * 2 - 1) + 1);
                 return r;
-            }
-
-            private static double Wrap(double x)
-            {
-                while (x < 1) x += 2;
-                while (x > 1) x -= 2;
-                return x;
             }
 
             public void SetEntity(int i, int t, double value)
@@ -879,6 +909,13 @@ namespace emdui
 
             public void InvokeDataChanged() => DataChanged?.Invoke(this, EventArgs.Empty);
             public void InvokeTimeChanged() => TimeChanged?.Invoke(this, EventArgs.Empty);
+
+            private static double Wrap(double x)
+            {
+                while (x < 1) x += 2;
+                while (x > 1) x -= 2;
+                return x;
+            }
         }
     }
 
@@ -893,6 +930,8 @@ namespace emdui
         int KeyFrame { get; set; }
         int EntityCount { get; }
 
+        int GetFunction(int time);
+        void SetFunction(int time, int value);
         string GetEntityName(int i);
         double? GetEntity(int i, int t);
         void SetEntity(int entity, int time, double value);

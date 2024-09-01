@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
+using IntelOrca.Biohazard.Model;
 
 namespace emdui
 {
@@ -51,6 +52,7 @@ namespace emdui
             AddToolbarButton("IconDelete", "Delete current keyframe", () => _controller.Delete());
             AddToolbarSeparator();
             AddToolbarButton("IconFunction", "Keyframe function", () => EditKeyframeFunction());
+            AddToolbarButton("IconHumanMaleHeightVariant", "Keyframe offset", () => EditKeyframeOffset());
             AddToolbarSeparator();
             AddToolbarButton("IconSkipBackward", "Seek to first key frame", () => _controller.KeyFrame = 0);
             AddToolbarButton("IconStepBackward", "Seek to previous key frame", () => _controller.KeyFrame--);
@@ -94,6 +96,21 @@ namespace emdui
             if (result != null && ParseFunctionNumber(result) is int newValue && newValue != f)
             {
                 _controller.SetFunction(time, newValue);
+            }
+        }
+
+        private void EditKeyframeOffset()
+        {
+            var time = _controller.KeyFrame;
+            var f = _controller.GetOffset(time);
+            var result = InputWindow.Show(
+                "Keyframe Offset",
+                "Type in the offset for this keyframe.\nUse this to place the mesh at the correct height off the floor.",
+                $"{f.x},{f.y},{f.z}",
+                s => ParseOffset(s) != null);
+            if (result != null && ParseOffset(result) is Emr.Vector newValue && newValue != f)
+            {
+                _controller.SetOffset(time, newValue);
             }
         }
 
@@ -213,23 +230,43 @@ namespace emdui
             _controller.Playing = !_controller.Playing;
         }
 
-        private static int? ParseFunctionNumber(string s)
+        private static int? ParseNumber(string s, int min, int max)
         {
             s = s.Trim();
-            uint result;
+            int result;
             if (s.StartsWith("0x"))
             {
-                if (!uint.TryParse(s.Substring(2), NumberStyles.HexNumber, null, out result))
+                if (!int.TryParse(s.Substring(2), NumberStyles.HexNumber, null, out result))
                     return null;
             }
             else
             {
-                if (!uint.TryParse(s, out result))
+                if (!int.TryParse(s, out result))
                     return null;
             }
-            if (result > 0xFFFFF)
+            if (result < min || result > max)
                 return null;
             return (int)result;
+        }
+
+        private static int? ParseFunctionNumber(string s) => ParseNumber(s, 0, 0xFFFFF);
+
+        private static Emr.Vector? ParseOffset(string s)
+        {
+            var values = s
+                .Split(',')
+                .Select(ss => ParseNumber(ss, short.MinValue, short.MaxValue))
+                .ToArray();
+            if (values.Length != 3)
+                return null;
+
+            if (values.Any(x => x == null))
+                return null;
+
+            return new Emr.Vector(
+                (short)values[0],
+                (short)values[1],
+                (short)values[2]);
         }
     }
 }

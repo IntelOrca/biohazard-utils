@@ -735,6 +735,57 @@ namespace emdui
                 InvokeDataChanged();
             }
 
+            public Emr.Vector GetOffset(int time)
+            {
+                var animationIndex = _instance._animationIndex;
+                if (animationIndex == -1)
+                    return default;
+
+                var edd = _instance._edd;
+                if (edd == null)
+                    return default;
+
+                var frameIndex = edd.GetFrameIndex(animationIndex, time);
+
+                var emr = _instance._emr;
+                if (emr == null)
+                    return default;
+
+                if (frameIndex < 0 || frameIndex >= emr.KeyFrames.Length)
+                    return default;
+
+                var keyFrame = emr.KeyFrames[frameIndex];
+                return keyFrame.Offset;
+            }
+
+            public void SetOffset(int time, Emr.Vector offset)
+            {
+                var animationIndex = _instance._animationIndex;
+                if (animationIndex == -1)
+                    return;
+
+                var edd = _instance._edd;
+                if (edd == null)
+                    return;
+
+                var frameIndex = edd.GetFrameIndex(animationIndex, time);
+
+                var emr = _instance._emr;
+                if (emr == null)
+                    return;
+
+                if (frameIndex < 0 || frameIndex >= emr.KeyFrames.Length)
+                    return;
+
+                var builder = emr.ToBuilder();
+                builder.KeyFrames[frameIndex].Offset = offset;
+                _instance._emr = builder.ToEmr();
+                _instance._baseEmr = _instance._emr;
+                _instance.RefreshModelView();
+
+                InvokeDataChanged();
+            }
+
             public string GetEntityName(int i)
             {
                 var iF = i / 3;
@@ -944,6 +995,8 @@ namespace emdui
 
         int GetFunction(int time);
         void SetFunction(int time, int value);
+        Emr.Vector GetOffset(int time);
+        void SetOffset(int time, Emr.Vector offset);
         string GetEntityName(int i);
         double? GetEntity(int i, int t);
         int? GetEntityRaw(int i, int t);

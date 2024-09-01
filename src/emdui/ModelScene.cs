@@ -354,7 +354,7 @@ namespace emdui
             var relativePosition = emr.GetRelativePosition(partIndex);
 
             var transformGroup = new Transform3DGroup();
-            if (keyFrameIndex != -1)
+            if (keyFrameIndex >= 0 && keyFrameIndex < emr.KeyFrames.Length)
             {
                 var keyFrame = emr.KeyFrames[keyFrameIndex];
                 if (partIndex == 0)

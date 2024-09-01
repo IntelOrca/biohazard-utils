@@ -321,23 +321,26 @@ namespace emdui
     {
         public override ImageSource Image => (ImageSource)Application.Current.Resources["IconEDD"];
         public override string Header => "EDD";
-        public IEdd Edd { get; }
-        public int Index { get; }
+        public IEdd Edd
+        {
+            get => Model.GetEdd(ChunkIndex);
+            set => Model.SetEdd(ChunkIndex, value);
+        }
 
         public EddTreeViewItem(ProjectFile projectFile, int chunkIndex, IEdd edd)
             : base(projectFile, chunkIndex)
         {
             Edd = edd;
-            Index = chunkIndex;
 
-            var numAnimations = edd.AnimationCount;
-            for (var i = 0; i < numAnimations; i++)
-            {
-                Items.Add(new AnimationTreeViewItem(ProjectFile, chunkIndex, i));
-            }
+            CreateChildren();
 
             AddMenuItem("Import...", Import);
             AddMenuItem("Export...", Export);
+            if (Edd.Version == BioVersion.Biohazard1 || Edd.Version == BioVersion.Biohazard2)
+            {
+                AddSeperator();
+                AddMenuItem("Add animation", Add);
+            }
         }
 
         private void Import()
@@ -365,6 +368,24 @@ namespace emdui
                 .AddExtension("*.edd")
                 .Show(path => File.WriteAllBytes(path, Edd.Data.ToArray()));
         }
+
+        private void Add()
+        {
+            var edd = ((Edd1)Edd).ToBuilder();
+            edd.Animations.Add(new Edd1.Builder.Animation());
+            Edd = edd.ToEdd();
+            CreateChildren();
+        }
+
+        public void CreateChildren()
+        {
+            Items.Clear();
+            var numAnimations = Edd.AnimationCount;
+            for (var i = 0; i < numAnimations; i++)
+            {
+                Items.Add(new AnimationTreeViewItem(this, i));
+            }
+        }
     }
 
     public class AnimationTreeViewItem : ChunkTreeViewItem
@@ -372,6 +393,7 @@ namespace emdui
         public override ImageSource Image => (ImageSource)Application.Current.Resources["IconAnimation"];
         public override string Header => $"Animation {Index}";
         public int Index { get; }
+        public EddTreeViewItem Parent { get; }
 
         public IEdd Edd
         {
@@ -385,14 +407,95 @@ namespace emdui
             set => Model.SetChunk(ChunkIndex + 1, value);
         }
 
-        public AnimationTreeViewItem(ProjectFile projectFile, int chunkIndex, int index)
-            : base(projectFile, chunkIndex)
+        public AnimationTreeViewItem(EddTreeViewItem parent, int index)
+            : base(parent.ProjectFile, parent.ChunkIndex)
         {
+            Parent = parent;
             Index = index;
+
+            if (Edd.Version == BioVersion.Biohazard1 || Edd.Version == BioVersion.Biohazard2)
+            {
+                AddMenuItem("Import...", Import);
+                AddMenuItem("Export...", Export);
+                AddSeperator();
+                AddMenuItem("Delete", Delete);
+                AddSeperator();
+            }
 
             AddMenuItem("Change speed...", ChangeSpeed);
             AddMenuItem("Stretch...", () => Stretch(false));
             AddMenuItem("Stretch (looping)...", () => Stretch(true));
+        }
+
+        private void Import()
+        {
+            CommonFileDialog
+                .Open()
+                .AddExtension("*.edd")
+                .Show(path =>
+                {
+                    try
+                    {
+                        var version = Edd.Version;
+                        var eddPath = Path.ChangeExtension(path, ".edd");
+                        var emrPath = Path.ChangeExtension(path, ".emr");
+                        var importedEdd = new Edd1(version, File.ReadAllBytes(eddPath));
+                        var importedEmr = new Emr(version, File.ReadAllBytes(emrPath));
+                        var importedAnimationBuilder = AnimationBuilder.FromEddEmr(importedEdd, importedEmr);
+                        if (importedAnimationBuilder.Animations.Count != 1)
+                            return;
+
+                        var animationBuilder = AnimationBuilder.FromEddEmr(Edd, Emr);
+                        animationBuilder.Animations[Index] = importedAnimationBuilder.Animations[0];
+                        var (newEdd, newEmr) = animationBuilder.ToEddEmr();
+
+                        Edd = newEdd;
+                        Emr = newEmr;
+                        OnDefaultAction();
+                    }
+                    catch
+                    {
+                    }
+                });
+        }
+
+        private void Export()
+        {
+            var dialog = CommonFileDialog.Save();
+            if (ProjectFile != null)
+            {
+                dialog.WithDefaultFileName(Path.ChangeExtension(ProjectFile.Filename, $"{Index}.EDD"));
+            }
+            dialog
+                .AddExtension("*.edd")
+                .Show(path =>
+                {
+                    var eddPath = Path.ChangeExtension(path, ".edd");
+                    var emrPath = Path.ChangeExtension(path, ".emr");
+
+                    var animationBuilder = AnimationBuilder.FromEddEmr(Edd, Emr);
+                    var animation = animationBuilder.Animations[Index];
+                    animationBuilder.Animations.Clear();
+                    animationBuilder.Animations.Add(animation);
+
+                    var (edd, emr) = animationBuilder.ToEddEmr();
+                    File.WriteAllBytes(eddPath, edd.Data.ToArray());
+                    File.WriteAllBytes(emrPath, emr.Data.ToArray());
+                });
+        }
+
+        private void Delete()
+        {
+            var animationBuilder = AnimationBuilder.FromEddEmr(Edd, Emr);
+            animationBuilder.Animations.RemoveAt(Index);
+            var (edd, emr) = animationBuilder.ToEddEmr();
+
+            Edd = edd;
+            Emr = emr;
+            Parent.CreateChildren();
+
+            var mainWindow = MainWindow.Instance;
+            mainWindow.LoadMesh(Model.GetMesh(0));
         }
 
         private void Stretch(bool looping)

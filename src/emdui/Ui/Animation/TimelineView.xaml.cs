@@ -174,6 +174,19 @@ namespace emdui
                     {
                         _controller.SetEntity(entityList.SelectedIndex, e2.Time, e2.NewValue);
                     };
+                    series.PointDoubleClicked += (s, e2) =>
+                    {
+                        var value = _controller.GetEntityRaw(entityList.SelectedIndex, e2.Time);
+                        var result = InputWindow.Show(
+                            "Edit point",
+                            "Edit the raw value of this point.",
+                            $"{value}",
+                            ss => ParseFunctionNumber(ss) != null);
+                        if (result != null && ParseFunctionNumber(result) is int newValue)
+                        {
+                            _controller.SetEntityRaw(entityList.SelectedIndex, e2.Time, newValue);
+                        }
+                    };
                     timeline.Series = new[] { series };
                 }
 

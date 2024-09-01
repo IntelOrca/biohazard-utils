@@ -27,6 +27,7 @@ namespace emdui
         private Vector _grabDelta;
 
         public event EventHandler<PointChangedEventArgs> PointChanged;
+        public event EventHandler<PointDoubleClickedEventArgs> PointDoubleClicked;
 
         public double Scale
         {
@@ -135,6 +136,19 @@ namespace emdui
             }
         }
 
+        protected override void OnPreviewMouseDoubleClick(MouseButtonEventArgs e)
+        {
+            if (e.LeftButton == MouseButtonState.Pressed)
+            {
+                var pp = VisualTreeHelper.GetParent(VisualTreeHelper.GetParent(VisualTreeHelper.GetParent(e.OriginalSource as DependencyObject)));
+                if (pp is TimelinePoint p && _pointControls.Contains(p))
+                {
+                    PointDoubleClicked?.Invoke(this, new PointDoubleClickedEventArgs(p.Time));
+                    e.Handled = true;
+                }
+            }
+        }
+
         protected override void OnPreviewMouseMove(MouseEventArgs e)
         {
             if (e.LeftButton == MouseButtonState.Released)
@@ -201,6 +215,16 @@ namespace emdui
             Time = time;
             OldValue = oldValue;
             NewValue = newValue;
+        }
+    }
+
+    public class PointDoubleClickedEventArgs : EventArgs
+    {
+        public int Time { get; }
+
+        public PointDoubleClickedEventArgs(int time)
+        {
+            Time = time;
         }
     }
 }

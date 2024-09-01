@@ -24,6 +24,8 @@ namespace emdui
             window.Title = title;
             window.descriptionLabel.Text = description;
             window.inputTextBox.Text = defaultValue;
+            window.inputTextBox.Focus();
+            window.inputTextBox.SelectAll();
             if (window.ShowDialog() == true)
             {
                 return window._result;

@@ -754,7 +754,7 @@ namespace emdui
                 return $"{partName}.{componentName}";
             }
 
-            public double? GetEntity(int i, int t)
+            public int? GetEntityRaw(int i, int t)
             {
                 var iF = i / 3;
                 var iC = i % 3;
@@ -778,16 +778,22 @@ namespace emdui
                     return null;
 
                 var result = frame.GetAngle(i / 3);
-                double r = 0;
-                if (iC == 0) r = result.x / 4096.0f;
-                if (iC == 1) r = result.y / 4096.0f;
-                if (iC == 2) r = result.z / 4096.0f;
-
-                r = Wrap((r * 2 - 1) + 1);
-                return r;
+                if (iC == 0) return result.x;
+                if (iC == 1) return result.y;
+                if (iC == 2) return result.z;
+                return null;
             }
 
-            public void SetEntity(int i, int t, double value)
+            public double? GetEntity(int i, int t)
+            {
+                if (GetEntityRaw(i, t) is int value)
+                {
+                    return Wrap(((value / 4096.0) * 2 - 1) + 1);
+                }
+                return null;
+            }
+
+            public void SetEntityRaw(int i, int t, int value)
             {
                 var iF = i / 3;
                 var iC = i % 3;
@@ -810,10 +816,7 @@ namespace emdui
                 if (iF < 0 || iF >= frame.Angles.Length)
                     return;
 
-                var denormalizedValue = (Wrap(value - 1) + 1) / 2;
-                var rawValue = value <= -1
-                    ? (short)(2049)
-                    : (short)((int)(denormalizedValue * 4096) % 4096);
+                var rawValue = (short)Math.Max(0, Math.Min(4095, value));
 
                 var v = frame.Angles[i / 3];
                 if (iC == 0) v.x = rawValue;
@@ -829,6 +832,15 @@ namespace emdui
                 _instance.RefreshModelView();
 
                 InvokeDataChanged();
+            }
+
+            public void SetEntity(int i, int t, double value)
+            {
+                var denormalizedValue = (Wrap(value - 1) + 1) / 2;
+                var rawValue = value <= -1
+                    ? (short)(2049)
+                    : (short)((int)(denormalizedValue * 4096) % 4096);
+                SetEntityRaw(i, t, rawValue);
             }
 
             public void Insert()
@@ -934,7 +946,9 @@ namespace emdui
         void SetFunction(int time, int value);
         string GetEntityName(int i);
         double? GetEntity(int i, int t);
+        int? GetEntityRaw(int i, int t);
         void SetEntity(int entity, int time, double value);
+        void SetEntityRaw(int entity, int time, int value);
 
         void Insert();
         void Duplicate();

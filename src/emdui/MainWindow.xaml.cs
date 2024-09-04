@@ -293,28 +293,6 @@ namespace emdui
 
         private void mainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-#if DEBUG
-            // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\barry\pl00.pld");
-            // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re3\pld0\hunk\PL00.PLD");
-            // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re3\pld0\leon\PL00.PLD");
-            // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\lott\PL00.PLD");
-            // LoadProject(@"F:\games\re3\mod_biorand\DATA\PLD\PL00.PLD");
-            // LoadProject(@"F:\games\re2\data\Pl0\emd0\em041.emd");
-            // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re3\pld0\regina\pl00.pld");
-            // LoadProject(@"F:\games\re2\data\Pl0\emd0\em010.emd");
-            // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\ark\pl00.pld");
-            // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld1\ashley\PL01.PLD");
-            // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re1\pld0\chris\char10.emd");
-            // LoadProject(@"M:\git\rer\IntelOrca.Biohazard.BioRand\data\re2\pld0\hunk\PL00.PLD");
-            // LoadProject(@"F:\games\re2\mod_biorand\pl0\emd0\em04b.emd");
-            // LoadProject(@"F:\games\re1\JPN\ENEMY\char10.emd");
-
-            // LoadProject(@"F:\games\re3\mod_biorand\ROOM\EMD\EM5C.EMD");
-            // LoadProject(@"F:\games\re1\JPN\ENEMY\Em1000.emd");
-
-            // _project.LoadRdt(@"F:\games\re2\data\Pl1\Rdt\ROOM6141.RDT");
-            // projectTreeView.Project = null;
-            // projectTreeView.Project = _project;
 #if false
             var texturePackerWindow = new TexturePackerWindow();
             texturePackerWindow.Meshes = _project.Files
@@ -341,7 +319,6 @@ namespace emdui
                 }
                 LoadMesh(_project.MainModel.GetMesh(0));
             }
-#endif
 #endif
         }
 
